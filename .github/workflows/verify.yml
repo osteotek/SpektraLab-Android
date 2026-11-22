@@ -15,9 +15,11 @@ jobs:
         with:
           distribution: microsoft
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # setup-android@v3 runs `sdkmanager tools`, a package Google removed, so
+      # install the SDK components directly on the pre-provisioned runner image.
       - name: Environment setup
         run: |
+          yes | sdkmanager --licenses > /dev/null || true
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "platform-tools"
           sudo apt-get update
           sudo apt-get install -y libjpeg-dev
@@ -31,8 +33,9 @@ jobs:
         # the C++ compile and RUN checks (g++ is on the ubuntu host).
         shell: pwsh
         run: |
-          $ndk = Join-Path $env:ANDROID_HOME 'ndk/28.2.13676358'
-          ./scripts/verify.ps1 -JavaHome $env:JAVA_HOME -AndroidSdkRoot $env:ANDROID_HOME -NdkPath $ndk -EngineRoot (Join-Path $PWD 'upstream')
+          $sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { '/usr/local/lib/android/sdk' }
+          $ndk = Join-Path $sdk 'ndk/28.2.13676358'
+          ./scripts/verify.ps1 -JavaHome $env:JAVA_HOME -AndroidSdkRoot $sdk -NdkPath $ndk -EngineRoot (Join-Path $PWD 'upstream')
 
   release:
     # Fork PRs cannot read repository secrets, so they only run the offline job.
