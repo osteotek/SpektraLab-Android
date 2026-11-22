@@ -1,8 +1,7 @@
 # Architectural improvement plan (post-1.7.0 adoption)
 
-**Status (2026-11-22):** Phase 0 PASSED. Phases 1, 2, 4 and 6 COMPLETE.
-Phase 3 partially complete (shared factories extracted; the remaining full
-builder move is deferred — see §6). Phase 5 is optional and deferred.
+**Status (2026-11-22):** Phase 0 PASSED. Phases 1, 2, 3, 4 and 6 COMPLETE.
+Phase 5 is optional and deferred.
 
 Every landed phase was gated with `scripts/verify.ps1`, a
 `-UsePrebuiltNative -SideBySide` APK build, and `device-golden.ps1` on the Orca
@@ -13,7 +12,7 @@ all of them.
 
 | # | Finding | Disposition |
 |---|---|---|
-| 1 | `MainActivity` is a ~34k-line god object owning 8 panel builders and ~20 sheets. | Still true, but the repeated shells now live in `ui/SheetDialogs` and `ui/PanelViews`; full builder move deferred (§6). |
+| 1 | `MainActivity` is a ~34k-line god object owning 8 panel builders and ~20 sheets. | Improved: the seven 1.7.0 panel builders now live in `ui/panels/PanelFactories`, the sheet/panel shells in `ui/SheetDialogs` / `ui/PanelViews`. Remaining size is mostly page builders, workers' wiring and state fields. |
 | 2 | The `ui/` panel factories from the earlier refactor were unused dead architecture. | RESOLVED: deleted `FilmPanel`, `ViewPanel`, `OpticsPanel`, `SimplePanels`, `PanelFactories`, `PanelHost`, `TabBar` (Phase 1). One implementation remains. |
 | 3 | Workers reached through `HostWorker` to the whole Activity; ~200 members were widened. | RESOLVED: all six workers hold typed narrow host interfaces; `HostWorker` is a marker; the checker enforces it (Phases 2 + 6). |
 | 4 | `ExportController`/`RenderController`/`ImportController` fields were dead. | RESOLVED: dead fields removed from `MainActivity`; the classes stay because `DomainTest` uses them as tested seams. |
@@ -65,15 +64,19 @@ release APK, which carries all 48 Vulkan shaders). `device-golden.ps1 -Bands
   the still-shared nested `Frame`/`Look`/`LiveClip` types are excluded until
   Phase 5.
 
-## 4. Partially complete: Phase 3
+## 4. Phase 3 — panel builders moved to `ui/`
 
-- `ui/PanelViews` now owns the shared panel section header (mixed-font title,
-  letter spacing, underlined reset action); all panel builders call it.
-- The unused pre-1.7.0 factories are gone, so there is no duplicate
-  implementation to reconcile.
-- The seven 1.7.0 builders themselves are still in `MainActivity`, because
-  moving them would require a host adapter of well over a hundred members and
-  would only relocate code — none of it is covered by the pixel golden.
+- `ui/PanelViews` owns the shared section header; `ui/SheetDialogs` owns the
+  sheet shell.
+- The seven 1.7.0 panel builders (`buildFilmPanel`, `buildViewPanel`,
+  `buildOpticsPanel`, `buildComposePanel`, `buildFormatPanel`, `buildEdgePanel`,
+  `buildFotuPanel`/`Into`) now live in `ui/panels/PanelFactories` as functions of
+  a narrow `PanelHost`. `PanelHostImpl` (root package) implements that interface
+  by delegating to `MainActivity`, keeping the Activity as lifecycle + wiring.
+- The package checker also rejects fully-qualified `MainActivity` references in
+  `ui/` (with a small allow-list of still-shared nested view types).
+- Emulator smoke: Film, Optics, Scale, Compose and Border panels all open with
+  translated labels, no crash; golden bands 0/128/512 unchanged.
 
 ## 5. Deferred: Phase 5 (Look/Frame consolidation)
 

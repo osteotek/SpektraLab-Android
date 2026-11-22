@@ -67,6 +67,14 @@ Phase A repositories now cover photos, presets, preferences and the stock
 catalog (translation stays in the UI via `decorateStockLabel`), with fakes for
 the pure interfaces.
 
+Phase C (skill §3): the seven 1.7.0 panel builders moved to
+`app.spektralab.ui.panels.PanelFactories`, each a function of a narrow
+`PanelHost` implemented by the root-package `PanelHostImpl`. `MainActivity`
+keeps only one-line delegators, so it is lifecycle + wiring + state rather than
+panel construction. Shared sheet/panel shells live in `ui/SheetDialogs` and
+`ui/PanelViews`. The package checker rejects direct `MainActivity` coupling in
+`ui/`, workers and domain/data. Golden bands 0/128/512 and panel smoke pass.
+
 Phase C started: theme tokens moved to `app.spektralab.ui.UiPalette`, and five
 self-contained Views (`Square`, `ArrowView`, `ToolGlyph`, `CappedScroll`,
 `EdgeBackdrop`, `RatioMark`, `GuideView`, `HistogramView`, `RotateScale`,

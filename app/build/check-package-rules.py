@@ -34,6 +34,15 @@ def main():
             elif package == 'ui':
                 if '.data.' in name or name.endswith('MainActivity'):
                     problems.append(f'{rel}: ui must not import {name}')
+        # Imports are not the only way to couple: fully-qualified nested types
+        # bypass them. Allow the transitional shared nested types only.
+        if package == 'ui':
+            code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', text, flags=re.S)
+            code = re.sub(r'/\*.*?\*/|//[^\n]*', '', code, flags=re.S)
+            for nested in ('Frame', 'Look', 'LiveClip', 'Knob', 'CappedScroll', 'HistogramView'):
+                code = code.replace('MainActivity.' + nested, nested)
+            if re.search(r'\bMainActivity\b', code):
+                problems.append(f'{rel}: ui must not reference MainActivity directly')
             elif package == 'data':
                 if '.ui.' in name or name.endswith('MainActivity'):
                     problems.append(f'{rel}: data must not import {name}')

@@ -39,6 +39,7 @@ import app.spektralab.engine.JpegExif;
 import app.spektralab.engine.TiffExif;
 import app.spektralab.ui.SheetDialogs;
 import app.spektralab.ui.PanelViews;
+import app.spektralab.ui.panels.PanelFactories;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -238,8 +239,8 @@ public class MainActivity extends Activity implements
     // them into `geometryCrop*` once.
     private float pendingCropX = 0f, pendingCropY = 0f, pendingCropW = 1f, pendingCropH = 1f;
     private boolean geometryFlipH = false, geometryFlipV = false;
-    private LinearLayout composeBody;
-    private TextView composeCropTab, composeRotateTab;
+    LinearLayout composeBody;
+    TextView composeCropTab, composeRotateTab;
     /** The ratio strip, kept so choosing a card does not scroll back to zero. */
     private HorizontalScrollView cropScroll;
     private int cropScrollX = 0;
@@ -354,7 +355,7 @@ public class MainActivity extends Activity implements
      *  either a grey wash or a kept window depending on a constant nobody could
      *  see. */
     String meterMethod = "protect_highlights";
-    private TextView meterChip;
+    TextView meterChip;
     /** The EDR switch in the print panel; `edrOn` is still the value. */
     private Square edrMark, spotMark, edrPlusMark;
     private Square hueOwnMark;
@@ -408,13 +409,13 @@ public class MainActivity extends Activity implements
     }
     private final Runnable undoPush = this::pushUndoNow;
     private android.widget.ImageView undoPill;
-    private float grainAmount = 1.0f;      // 0..2, engine default 1
-    private float halationAmount = 1.0f;   // 0..4
+    float grainAmount = 1.0f;      // 0..2, engine default 1
+    float halationAmount = 1.0f;   // 0..4
     // The paper's own veil is 1.0 on the wire (`GlareParams::amount`), and the
     // macOS/iOS app sends it at 1. The 3.0 this started at was a guess made
     // before that was readable: at 3 the veil is 0.09 % of the frame instead
     // of 0.03 %, which lifts the blacks a third of a stop and reads as haze.
-    private float glareAmount = 1.0f;      // 0..30, area multiplier of the paper's own
+    float glareAmount = 1.0f;      // 0..30, area multiplier of the paper's own
     /**
      * RFC-023's highlight room: stops of scene highlight the print is given
      * back before it is laid onto the paper's shoulder. 0 is the stage off.
@@ -431,14 +432,14 @@ public class MainActivity extends Activity implements
     // **1.0, not 0.** Off lets the print clip at +3.9 stops over mid-grey; the
     // 0.5..3 spacing below asks the RFC-023 shoulder for 2.2..2.9 stops of room
     // instead, which is +7 stops of ceiling for the same mid-grey (see `wireHighlightRoom`).
-    private float highlightRoom = 1.0f;    // 0..3, pull-back in stops
-    private float shadowRoom = 0.0f;       // 0..3, stops (the toe, RFC-023)
+    float highlightRoom = 1.0f;    // 0..3, pull-back in stops
+    float shadowRoom = 0.0f;       // 0..3, stops (the toe, RFC-023)
     /** **The highlight curve by hand**: knee (stops above mid-grey, where the
      *  shoulder starts), rolloff (1 = hard knee, 4 = a long soft one) and room
      *  (stops it holds above the knee). False = the RFC-023 fit keeps solving
      *  all three from the pull-back sliders; true = these three are the wire. */
-    private boolean hlManual = false;
-    private float hlKnee = 2.0f, hlRolloff = 2.0f, hlRoom = 2.4f;
+    boolean hlManual = false;
+    float hlKnee = 2.0f, hlRolloff = 2.0f, hlRoom = 2.4f;
     /**
      * **The curve the engine solved, not the one a slider guessed.**
      *
@@ -457,8 +458,8 @@ public class MainActivity extends Activity implements
     private double slFitHk = 1.0, slFitHr = 0.0, slFitSk = -2.0, slFitSr = 0.0;
     private String slFitStock;
     private long slFitKey = Long.MIN_VALUE;
-    private float halationBoost = 0.0f;    // 0..8 EV, energy a clipped highlight lost
-    private float halationScatter = 1.0f;  // 0..1, in-emulsion scatter mix
+    float halationBoost = 0.0f;    // 0..8 EV, energy a clipped highlight lost
+    float halationScatter = 1.0f;  // 0..1, in-emulsion scatter mix
     /**
      * How far the in-emulsion scatter spreads, 0..1 -> 1x..12x the film's own
      * radius. The film's radius is sub-pixel, so at 0 the scatter slider has
@@ -466,12 +467,12 @@ public class MainActivity extends Activity implements
      * the physical value and the default, so a frame that never touches it
      * renders exactly as before.
      */
-    private float scatterRadius = 0.0f;
-    private float lensBlur = 0.0f;         // 0..200 µm
-    private float yFilter = 0.0f;          // -1..1, enlarger yellow
-    private float mFilter = 0.0f;          // -1..1, enlarger magenta
-    private float filterScale = 1.0f;      // 1..60 CC
-    private float preflash = 0.0f;         // 0..1
+    float scatterRadius = 0.0f;
+    float lensBlur = 0.0f;         // 0..200 µm
+    float yFilter = 0.0f;          // -1..1, enlarger yellow
+    float mFilter = 0.0f;          // -1..1, enlarger magenta
+    float filterScale = 1.0f;      // 1..60 CC
+    float preflash = 0.0f;         // 0..1
     private float edgeFog = 1.0f;          // 0..4
     /** 印刷边框 (fotufilm's print-frame model). */
     private String pfKind = "none";
@@ -498,7 +499,7 @@ public class MainActivity extends Activity implements
     // **On by default.** EDR is the print profile's own extended shoulder: it moves
     // paper white from 220/255 to 251/255 and lifts the clipping point from +3.9 to
     // +5.3 stops, while mid-grey stays bit-identical (staircase: 116.0 both ways).
-    private float scannerWhite = 0f, scannerBlack = 0f, edrOn = 1f;
+    float scannerWhite = 0f, scannerBlack = 0f, edrOn = 1f;
     /**
      * 相纸列表里的「无相纸」。**一个输出选择，不是一个参数。**
      *
@@ -511,10 +512,10 @@ public class MainActivity extends Activity implements
     // the scanner's own lens, the halo's headroom, the density curve's gamma,
     // and the two switches that pick a different output path.
     float glareActive = 1f;
-    private float scannerLensBlur = 0f, halationHeadroom = 4f, densityGamma = 1f;
-    private boolean digitalIntermediate = false, outputCctf = true;
+    float scannerLensBlur = 0f, halationHeadroom = 4f, densityGamma = 1f;
+    boolean digitalIntermediate = false, outputCctf = true;
     /** The blue layer's offset on the digital-intermediate path. */
-    private boolean diBlueComp = false;
+    boolean diBlueComp = false;
     // 1 = undo the measured hue drift completely (greens land where the source
     // had them); 0 = leave each stock's own colour alone. The correction is what
     // made every stock converge on one palette -- the "no film character" report.
@@ -531,7 +532,7 @@ public class MainActivity extends Activity implements
                     "kodak_vision3_200t", "kodak_vision3_250d", "kodak_vision3_500t",
                     "kodak_vision3_50d", "cinestill_800t", "kodak_verita_200d",
                     "fujifilm_pro_400h"));
-    private float shadowRolloff = 2f, maxLift = 4f;
+    float shadowRolloff = 2f, maxLift = 4f;
     private String cameraFilter = "", sceneNorm = "power";
     private String edgeMode = "strip", edgeGate = "auto", edgeHoles = "white", edgeCarrier = "none";
     private String datePlacement = "frame", dateCorner = "br", dateStyle = "lcd";
@@ -803,17 +804,17 @@ public class MainActivity extends Activity implements
     // is read off these seven -- panels, text, strokes, the canvas -- so making
     // them mutable and setting them from a preference is the entire theming
     // system: no per-widget branches, no second layout.
-    private static int UI_BLUE       = 0xFF1C2AA5;   // accent, on paper
+    static int UI_BLUE       = 0xFF1C2AA5;   // accent, on paper
     private static int UI_BLUE_LIGHT = 0xFF3B4BC0;   // accent, lighter
     private static int UI_PAPER      = 0xFFF1F1EE;   // panel background
     private static int UI_GROUND     = 0xFFE3E3E0;   // card background
-    private static int UI_INK        = 0xFF171717;   // text
+    static int UI_INK        = 0xFF171717;   // text
     // **Secondary text, measured rather than eyeballed.** #777772 on #F1F1EE is
     // 3.98:1, and on a card (#E3E3E0) 3.50:1 -- under WCAG AA's 4.5:1 for body
     // text, on a UI whose hints run at 7.5 sp. #6B6B66 is 4.73:1 on the panel
     // and 4.17:1 on a card: above the line where it is read, and still far
     // enough below `UI_INK`'s 15.8:1 that the hierarchy has not moved.
-    private static int UI_MUTED      = 0xFF6B6B66;   // secondary text
+    static int UI_MUTED      = 0xFF6B6B66;   // secondary text
     private static int UI_LINE       = 0xFFCECEC8;   // strokes
     private static int UI_STAGE      = 0xFF172174;   // the canvas
     /**
@@ -951,17 +952,17 @@ public class MainActivity extends Activity implements
     }
 
     private Typeface tfDisplay;      // Inter 300 — numbers and the wordmark
-    private static Typeface tfBody;  // Inter 400 — Latin labels
+    static Typeface tfBody;  // Inter 400 — Latin labels
     /** 600 and 700 from the same variable face. A synthesised bold is the one
      *  thing in this UI whose weight changes from device to device: Skia fakes
      *  it by smearing the outline, and how far it smears is the platform's
      *  decision. These are real instances, so 8.5 sp reads the same everywhere. */
     private static Typeface tfSemi, tfBold;
-    private Typeface tfHan;          // OPPO Sans — Chinese, and anything mixed
+    Typeface tfHan;          // OPPO Sans — Chinese, and anything mixed
     private View emptyState, rawState;
     TextView fileLabel, rawName, busyLabel, originalLabel, edgeValue, formatFootValue;
     /** The 尺度 page's foot caption -- it says who owns the frame's length. */
-    private TextView formatFootLabel;
+    TextView formatFootLabel;
     /** True while the millimetre cards are locked because a rebate is on. */
     private boolean formatLocked = false;
     /**
@@ -970,7 +971,7 @@ public class MainActivity extends Activity implements
      * **one slider at a time** and a strip of chips to pick which -- thirteen
      * stacked sliders is a wall, and a wall is not a darkroom's control panel.
      */
-    private static final class Knob {
+    public static final class Knob {
         final String label, glyph;
         final float lo, hi;
         final java.util.function.Consumer<Float> set;
@@ -1003,7 +1004,7 @@ public class MainActivity extends Activity implements
             this.set = set; this.get = get; this.heavy = heavy; this.logScale = logScale;
         }
     }
-    private final java.util.List<Knob> knobs = new java.util.ArrayList<>();
+    final java.util.List<Knob> knobs = new java.util.ArrayList<>();
     private int activeKnob = 0;
     private TextView knobTitle, knobValue, knobHintView, knobCost;
     private SeekBar knobBar;
@@ -1013,7 +1014,7 @@ public class MainActivity extends Activity implements
     private TextView edgeFNumValue;
     private SeekBar dateInsetXBar, dateInsetYBar;
     private Square edgeTextMark;
-    private LinearLayout edgeRoot, edgePage, datePage, edgeInner, dateInner;
+    LinearLayout edgeRoot, edgePage, datePage, edgeInner, dateInner;
     private TextView edgeFotuNote;
     private LinearLayout edgeShapeRow;
     int edgePageIndex = -1;
@@ -1047,7 +1048,7 @@ public class MainActivity extends Activity implements
             tr("ui170.010"), tr("ui170.011"), tr("ui170.012"), tr("ui170.013"),
             tr("ui170.014"), tr("ui170.015"), tr("ui170.016"), tr("ui170.017"),
             tr("ui170.018"), tr("ui170.019"), tr("ui170.020")};
-    private LinearLayout opticsPanel;
+    LinearLayout opticsPanel;
     private boolean opticsUnlocked = false;
 
     // RFC-032/031, the two things the phone build never exposed: the rebate the
@@ -1166,8 +1167,8 @@ public class MainActivity extends Activity implements
         rebuildFormatCards();
     }
     private final List<String> edgeLabels = new ArrayList<>(), edgeIds = new ArrayList<>();
-    private LinearLayout controls, panelHolder, filmCardStrip, brandRow, formatCardStrip;
-    private HorizontalScrollView filmScroll, formatScroll;
+    LinearLayout controls, panelHolder, filmCardStrip, brandRow, formatCardStrip;
+    HorizontalScrollView filmScroll, formatScroll;
 
     // ------------------------------------------------------------- 横屏两栏
     //
@@ -1185,9 +1186,9 @@ public class MainActivity extends Activity implements
     private android.widget.ScrollView panelScroll;
     /** 横屏钉在右栏底部的相纸行（竖屏里它属于胶片页）。 */
     private LinearLayout paperDock;
-    private View filmPaperRow;
+    View filmPaperRow;
     /** 货架卡片的容器：竖屏装着那个横向滚动器，横屏直接装两列网格。 */
-    private LinearLayout filmShelfHost;
+    LinearLayout filmShelfHost;
     private View editorRule;
     /** 两栏之间那根 1 px 的线，横屏才有。 */
     private boolean landscapeMode;
@@ -2111,7 +2112,7 @@ public class MainActivity extends Activity implements
         float fotuBlackPoint, fotuWhitePoint;
         float fotuPrinterPreflash;
     }
-    static final class Frame {
+    public static final class Frame {
         /** Not final: a revoked grant is repaired by pointing the chip at the
          *  private copy the user re-picks, and the look must survive that. */
         Uri uri;
@@ -2877,7 +2878,7 @@ public class MainActivity extends Activity implements
      *  card instead of rebuilding the strip (a rebuild reset the scroll). */
     private final java.util.Map<String, android.widget.FrameLayout> filmCardImages = new java.util.HashMap<>();
     /** The paper shelf: one long, flat card per sheet this film can take. */
-    private LinearLayout paperStrip;
+    LinearLayout paperStrip;
     /** One background pass over the catalogue, low resolution, one stock at a
      *  time. The session has a single native result buffer, so this and a
      *  user render share RENDER_LOCK. */
@@ -5242,7 +5243,7 @@ public class MainActivity extends Activity implements
         return t;
     }
 
-    private TextView label(String s, float sp, int color, Typeface tf) {
+     TextView label(String s, float sp, int color, Typeface tf) {
         TextView t = new TextView(this);
         if (hasCjk(s)) {
             t.setText(mixedText(s));       // Latin on Inter, Chinese on OPPO, run by run
@@ -15638,7 +15639,7 @@ public class MainActivity extends Activity implements
         refreshLiveBadge();
     }
 
-    private LinearLayout sectionHead(String title, Runnable reset) {
+     LinearLayout sectionHead(String title, Runnable reset) {
         return PanelViews.sectionHead(this, title, reset);
     }
 
@@ -15751,90 +15752,7 @@ public class MainActivity extends Activity implements
         return (float) Math.hypot(e.getX(0) - e.getX(1), e.getY(0) - e.getY(1));
     }
 
-    private View buildFilmPanel() {
-        LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        final LinearLayout filmHead = sectionHead(tr("film.film_paper"), this::resetFilmPanel);
-        // **The "As Shot" switch, where the original app puts the same choice.**
-        // On: the meter decides the film exposure. Off: the frame keeps the
-        // exposure the camera recorded, which is the only way a lamp in a dark
-        // room comes back dark instead of being lifted five stops onto Dmax.
-        final TextView meterLabel = label(tr("film.metering"), 8.5f, UI_MUTED, tfHan);
-        meterChip = label("", 8.5f, UI_INK, tfHan);
-        meterChip.setGravity(android.view.Gravity.CENTER);
-        // **48dp, not 40x20.** The old chip was smaller than the minimum touch
-        // target, so a tap that landed two pixels off did nothing -- which is
-        // what tr("ui170.089") was.
-        meterChip.setPadding(dp(10), dp(6), dp(10), dp(6));
-        meterChip.setMinWidth(dp(48));
-        meterChip.setMinHeight(dp(30));
-        meterChip.setOnClickListener(v -> showMeterPicker());
-        final LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(-2, -2);
-        labelLp.rightMargin = dp(6);
-        filmHead.addView(meterLabel, 1, labelLp);
-        final LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(-2, -2);
-        chipLp.rightMargin = dp(10);
-        filmHead.addView(meterChip, 2, chipLp);
-        refreshMeterChip();
-        panel.addView(filmHead, new LinearLayout.LayoutParams(-1, dp(38)));
-
-        HorizontalScrollView brandScroll = new HorizontalScrollView(this);
-        brandScroll.setHorizontalScrollBarEnabled(false);
-        brandScroll.setFillViewport(false);
-        brandRow = new LinearLayout(this);
-        brandRow.setOrientation(LinearLayout.HORIZONTAL);
-        brandRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        brandScroll.addView(brandRow, new android.widget.FrameLayout.LayoutParams(-2, dp(38)));
-        panel.addView(brandScroll, new LinearLayout.LayoutParams(-1, dp(38)));
-
-        filmScroll = new HorizontalScrollView(this);
-        filmScroll.setHorizontalScrollBarEnabled(false);
-        filmScroll.setClipToPadding(false);
-        filmScroll.setFillViewport(false);
-        filmCardStrip = new LinearLayout(this);
-        filmCardStrip.setOrientation(LinearLayout.HORIZONTAL);
-        filmCardStrip.setGravity(android.view.Gravity.TOP);
-        filmCardStrip.setPadding(0, dp(9), 0, dp(8));
-        filmScroll.addView(filmCardStrip, new android.widget.FrameLayout.LayoutParams(-2, -1));
-        // **One host, two shapes.** Portrait holds the horizontal scroller,
-        // landscape holds the same strip as a two-column grid; `applyFilmShelfMode`
-        // hands the strip over when the phone turns.
-        filmShelfHost = new LinearLayout(this);
-        filmShelfHost.setOrientation(LinearLayout.VERTICAL);
-        filmShelfHost.addView(filmScroll, new LinearLayout.LayoutParams(-1, -1));
-        panel.addView(filmShelfHost, new LinearLayout.LayoutParams(-1, dp(111)));
-
-        // **One bar, and a list behind it.** The shelf of paper boxes was the
-        // wrong shape for this row: two or three boxes fit, the rest needed a
-        // sideways swipe, and what a paper row has to answer is only "which
-        // sheet is in it". The bar states that on one line and opens the list
-        // -- with the notes and the refusals -- on a tap.
-        LinearLayout paperRow = new LinearLayout(this);
-        paperRow.setOrientation(LinearLayout.HORIZONTAL);
-        paperRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        final TextView paperCaption = label(tr("film.paper_print_film"), 7.5f, UI_MUTED, tfHan);
-        paperCaption.setSingleLine(true);
-        // The caption is the only way back to the full list, and a 10 dp line of
-        // text is not a target: padding makes it 26 dp tall without growing the
-        // row.
-        paperCaption.setPadding(0, dp(8), 0, dp(8));
-        // Long-press keeps the old list, notes and all. The strip carries only
-        // the sheets this film can take; "why can't I use the silver paper" is a
-        // question the list answers in one line.
-        paperCaption.setOnLongClickListener(v -> { showPaperPicker(); return true; });
-        LinearLayout.LayoutParams paperCapLp = new LinearLayout.LayoutParams(-2, -2);
-        paperCapLp.rightMargin = dp(8);
-        paperRow.addView(paperCaption, paperCapLp);
-
-        paperStrip = new LinearLayout(this);
-        paperStrip.setOrientation(LinearLayout.HORIZONTAL);
-        paperStrip.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        paperRow.addView(paperStrip, new LinearLayout.LayoutParams(0, dp(35), 1f));
-        filmPaperRow = paperRow;
-        panel.addView(paperRow, new LinearLayout.LayoutParams(-1, dp(35)));
-        rebuildPaperCards();
-        return panel;
-    }
+    private View buildFilmPanel() { return PanelFactories.buildFilmPanel(new PanelHostImpl(this)); }
 
     private String brandOf(String id) {
         if (id == null) return "other";
@@ -16949,7 +16867,7 @@ public class MainActivity extends Activity implements
      * -- the list keeps the notes, and keeps saying why a sheet the film cannot
      * take is greyed out, which a bar has no room for.
      */
-    private void rebuildPaperCards() {
+     void rebuildPaperCards() {
         if (paperStrip == null) return;
         paperStrip.removeAllViews();
         String id = "";
@@ -17465,7 +17383,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void showPaperPicker() {
+     void showPaperPicker() {
         if (isFotuStock(filmStock)) { showFotuMediumPicker(); return; }
         if (printIds.isEmpty()) return;
         if (isPositiveStock(filmStock)) {
@@ -17573,7 +17491,7 @@ public class MainActivity extends Activity implements
      * —— 那几档只能走 EDR / Ultra HDR。
      */
     private boolean spotOn = false;
-    private float spotX = 0.5f, spotY = 0.5f, spotR = 0.25f, spotEv = -0.6f;
+    float spotX = 0.5f, spotY = 0.5f, spotR = 0.25f, spotEv = -0.6f;
     /**
      * **相纸宽容度.** RFC-024's virtual contrast mask: the darkroom's own
      * dodging and burning, automated on a Gaussian base, applied to the
@@ -17741,7 +17659,7 @@ public class MainActivity extends Activity implements
     private final float[] cbLum = new float[4];
 
     /** Curve control points per channel: rgb, luma, red, green, blue. */
-    private final java.util.List<float[]>[] curvePoints = new java.util.List[5];
+    final java.util.List<float[]>[] curvePoints = new java.util.List[5];
     private int curveChannel = 0;
     private CurveView curveView;
 
@@ -17749,7 +17667,7 @@ public class MainActivity extends Activity implements
     private final java.util.List<Runnable> viewRefreshers = new java.util.ArrayList<>();
     // 0..3 are the strip's four pages; 4 曲线, 5 分级, 6 混色 are screens opened
     // from a page and never listed in the strip.
-    private final LinearLayout[] viewPages = new LinearLayout[7];
+    final LinearLayout[] viewPages = new LinearLayout[7];
     /** 相机曝光 is a pre-film engine parameter; fotufilm has no such slot. */
     private LinearLayout viewCameraEvBox;
     /** The two 曝光 rows' one-line explanations; they differ per engine. */
@@ -17762,7 +17680,7 @@ public class MainActivity extends Activity implements
     private int liveHistCounter;
     /** Which 光学 sub-page is showing; 重置 acts on this one only. */
     private int viewPage = 0;
-    private TextView[] viewCatChips;
+    TextView[] viewCatChips;
 
 
     /**
@@ -17784,7 +17702,7 @@ public class MainActivity extends Activity implements
      *       either end a marker appears in that corner.</li>
      * </ul>
      */
-    static class HistogramView extends View {
+    public static class HistogramView extends View {
         /** A tenth of a percent of the samples: below this it is noise. */
         private static final double CLIP_SHARE = 0.001;
         /** The three traces' colours, shared with the curve page's backdrop. */
@@ -18019,62 +17937,11 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private LinearLayout buildViewPanel() {
-        final LinearLayout panel = new LinearLayout(this);
-        viewRoot = panel;
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(sectionHead(tr("optics.optics"), this::resetViewPanel),
-                new LinearLayout.LayoutParams(-1, dp(38)));
-        // **Say why, instead of letting a live page do nothing.**
-        //
-        // The optics layer is applied to the engine's *output* -- `grade_result`
-        // on export, `copyArgbRange` on the canvas -- so with no film there is
-        // nothing for it to sit on: the sliders moved and the picture did not.
-        // A dead page with no explanation is what made a user ask for a "no
-        // film mode"; he read the silence as a missing feature. This line is the
-        // cheap half of that answer.
-        viewLockNote = label(tr("ui170.144"),
-                8.5f, UI_MUTED, tfHan);
-        viewLockNote.setPadding(dp(2), dp(4), dp(2), dp(8));
-        panel.addView(viewLockNote, new LinearLayout.LayoutParams(-1, -2));
-
-        // The six sub-pages live in the strip above the tool bar now.
-        viewCatChips = null;
-
-        for (int i = 0; i < viewPages.length; ++i) {
-            viewPages[i] = new LinearLayout(this);
-            viewPages[i].setOrientation(LinearLayout.VERTICAL);
-            viewPages[i].setVisibility(i == 0 ? View.VISIBLE : View.GONE);
-            final CappedScroll scroll = new CappedScroll(this, dp(280));
-            scroll.addView(viewPages[i], new android.widget.FrameLayout.LayoutParams(-1, -2));
-            panel.addView(scroll, new LinearLayout.LayoutParams(-1, -2));
-            // The scroll has to hide with its page, so the page list is the
-            // one that gets toggled and the scroll is kept beside it.
-            viewScrolls[i] = scroll;
-        }
-        buildTonePage(viewPages[0]);
-        buildColourPage(viewPages[1]);
-        buildEffectsPage(viewPages[2]);
-        buildDetailPage(viewPages[3]);
-        buildCurvesPage(viewPages[4]);
-        buildGradingPage(viewPages[5]);
-        buildHslPage(viewPages[6]);
-
-        for (int i = 0; i < curvePoints.length; ++i) {
-            curvePoints[i] = new java.util.ArrayList<>();
-            curvePoints[i].add(new float[]{0f, 0f});
-            curvePoints[i].add(new float[]{1f, 1f});
-        }
-        // **Locked from the first frame.** An import lands with no film, so the
-        // page has nothing to act on; leaving it bright until the first render
-        // would teach the opposite of what the note says.
-        refreshViewLock();
-        return panel;
-    }
+    private LinearLayout buildViewPanel() { return PanelFactories.buildViewPanel(new PanelHostImpl(this)); }
 
     // **One per sub-page, and the count is the loop's bound.** A sixth page
     // with a five-slot list is an AIOOBE while the panel is being built.
-    private final CappedScroll[] viewScrolls = new CappedScroll[7];
+    final CappedScroll[] viewScrolls = new CappedScroll[7];
 
     /** The six sub-pages of 光学, in the strip above the tool bar. */
     private static String[] VIEW_PAGE_NAMES = {tr("optics.brightness"), tr("optics.color"), tr("optics.effects"), tr("ui170.145")};
@@ -18297,8 +18164,8 @@ public class MainActivity extends Activity implements
     }
 
     /** The 光学 page's root and its "what this page is" line. */
-    private LinearLayout viewRoot;
-    private TextView viewLockNote;
+    LinearLayout viewRoot;
+    TextView viewLockNote;
     private LinearLayout wbDecodeBox;
     private TextView wbDecodeNote;
     /** 白平衡那七个 chip。存成字段，因为它们的选中态不是一次性的。 */
@@ -18349,7 +18216,7 @@ public class MainActivity extends Activity implements
                 tr("optics.green_magenta_balance_increase_to"));
     }
 
-    private void buildTonePage(LinearLayout page) {
+     void buildTonePage(LinearLayout page) {
         // **Two cells, not three.** 直方图 moved to the settings sheet -- it is
         // a display preference, not a parameter of the picture, and it was
         // taking a third of the page's first row. 复位 left with it: the 重置当前页
@@ -18411,7 +18278,7 @@ public class MainActivity extends Activity implements
                 tr("ui170.155"));
     }
 
-    private void buildColourPage(LinearLayout page) {
+     void buildColourPage(LinearLayout page) {
         // **Lightroom's 颜色, top to bottom.** A row of bordered doors at the
         // top -- HSL and 分级, the two buttons Lightroom puts there -- then the
         // white balance, then 色温 / 色调 / 自然饱和度 / 饱和度.
@@ -18459,7 +18326,7 @@ public class MainActivity extends Activity implements
      * <p>数量 / 半径 / 蒙版 under a 锐化 head, in that order. 纹理 left for 效果,
      * where Lightroom keeps it.
      */
-    private void buildDetailPage(LinearLayout page) {
+     void buildDetailPage(LinearLayout page) {
         page.addView(label(tr("ui170.157"), 8, UI_INK, tfHan),
                 new LinearLayout.LayoutParams(-1, dp(24)));
         adjustRow(page, tr("ui170.158"), 0f, 150f, () -> viewSharpen, v -> viewSharpen = v, false,
@@ -18474,7 +18341,7 @@ public class MainActivity extends Activity implements
                 7.5f, UI_MUTED, tfHan), new LinearLayout.LayoutParams(-1, dp(44)));
     }
 
-    private void buildGradingPage(LinearLayout page) {
+     void buildGradingPage(LinearLayout page) {
         toolHeader(page, tr("optics.grading"));
         // Four zones, one wheel -- Lightroom's shape: pick the tonal range,
         // then drag a dot. Hue is the angle, saturation the distance from grey.
@@ -18719,7 +18586,7 @@ public class MainActivity extends Activity implements
      * this layer at all: grain is a property of the emulsion, and both print
      * panels own it.
      */
-    private void buildEffectsPage(LinearLayout page) {
+     void buildEffectsPage(LinearLayout page) {
         final String[] tabs = {tr("optics.effects"), tr("ui170.166")};
         final LinearLayout tabRow = new LinearLayout(this);
         tabRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -18788,7 +18655,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 混色 -- Lightroom's screen: eight hue dots, then 色相 / 饱和度 / 明度. */
-    private void buildHslPage(LinearLayout page) {
+     void buildHslPage(LinearLayout page) {
         toolHeader(page, tr("ui170.171"));
         final LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -18824,7 +18691,7 @@ public class MainActivity extends Activity implements
         refreshHslSwatches();
     }
 
-    private void buildCurvesPage(LinearLayout page) {
+     void buildCurvesPage(LinearLayout page) {
         toolHeader(page, tr("optics.curves"));
         final String[] channels = {"RGB", tr("optics.brightness"), "R", "G", "B"};
         final LinearLayout row = new LinearLayout(this);
@@ -18948,7 +18815,7 @@ public class MainActivity extends Activity implements
      * to share a page; one button that wipes all of them is a trap, because
      * the user is looking at one of them when they press it.
      */
-    private void resetViewPanel() {
+     void resetViewPanel() {
         boolean wbReset = false;
         switch (viewPage) {
             case 1:   // 颜色
@@ -19454,106 +19321,11 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private LinearLayout buildOpticsPanel() {
-        LinearLayout panel = new LinearLayout(this);
-        // **The field the lock reads.** Without this line `setOpticsUnlocked`
-        // hit `if (opticsPanel == null) return;` every single time and the page
-        // was never dimmed -- which is why tr("ui170.179") survived a
-        // version that was supposed to fix it.
-        opticsPanel = panel;
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(sectionHead(tr("print.print_settings"), this::resetOpticsPanel),
-                new LinearLayout.LayoutParams(-1, dp(38)));
-
-        // **One page per stage, and the same seven the second engine uses.**
-        // This page used to be a single slider over a strip of twenty-two chips:
-        // the parameter you wanted was a horizontal scroll away, the one you
-        // were on was named in a readout above the bar instead of in the row you
-        // were touching, and nothing said which stage of the chain any of them
-        // belonged to. The knobs below are registered first -- they are the
-        // page's vocabulary -- and `showPrintGroup` builds the rows from them.
-        knobs.clear();
-
-        // **Log travel.** 0.25 / 1.0 / 4.0 are equal stops, and 1.0 is the
-        // neutral: on a linear bar it sat at 20 %, which is the tr("ui170.180") half
-        // only. With a ratio scale the default is the middle of the track.
-        knob(tr("print.knob.enlarger_exposure_right_is_darker"), "E",  0.25f, 4.0f,   v -> printExposure = v,   () -> printExposure, false, true);
-        knob(tr("print.knob.highlight_protection"),   "H",  0.0f,  3.0f,   v -> highlightRoom = v,   () -> highlightRoom, true);
-        knob(tr("print.knob.shadow_protection"),   "S",  0.0f,  3.0f,   v -> shadowRoom = v,      () -> shadowRoom, true);
-        // **The same shoulder, by hand.** These are not a new curve -- they are
-        // the three numbers the fit solves (`latitude_fit`), exposed so a frame
-        // the histogram reads badly can be told where the highlights are. The
-        // competitor's 「高光提升」 trio is exactly this: threshold, range,
-        // strength. Ours acts before the film, so the halo follows it too.
-        knob(tr("ui170.138"), "M", 0.0f, 1.0f, v -> hlManual = v > 0.5f, () -> hlManual ? 1f : 0f, true);
-        // **Touching one takes the curve over.** A slider that reads a number
-        // the renderer is ignoring is a lie; these three flip the mode the
-        // moment they are moved, and the switch above is the way back to auto.
-        knob(tr("ui170.139"), "T", 0.0f,  6.0f,   v -> { hlKnee = v; hlManual = true; },    () -> hlKnee, true);
-        knob(tr("ui170.140"), "R", 1.0f,  4.0f,   v -> { hlRolloff = v; hlManual = true; }, () -> hlRolloff, true);
-        knob(tr("ui170.141"), "K", 0.0f,  6.0f,   v -> { hlRoom = v; hlManual = true; },    () -> hlRoom, true);
-                // The darkroom's own two moves, as numbers: where on the print,
-                // how big, and how many stops. They live in the view layer, so
-                // they cost a re-read of the frame, not a re-develop.
-                knob(tr("ui170.181"), "LX", 0.0f, 1.0f, v -> spotX = v, () -> spotX, false);
-                knob(tr("ui170.182"), "LY", 0.0f, 1.0f, v -> spotY = v, () -> spotY, false);
-                knob(tr("ui170.183"),   "LR", 0.05f, 0.60f, v -> spotR = v, () -> spotR, false);
-                knob(tr("ui170.184"),   "LE", -2.0f, 2.0f, v -> spotEv = v, () -> spotEv, false);
-        knob(tr("print.knob.grain"),       "G",  0.0f,  2.0f,   v -> grainAmount = v,     () -> grainAmount, true);
-        knob(tr("print.knob.halation"),       "○",  0.0f,  4.0f,   v -> halationAmount = v,  () -> halationAmount, true);
-        knob(tr("print.knob.halation_boost"),   "+",  0.0f,  8.0f,   v -> halationBoost = v,   () -> halationBoost, true);
-        knob(tr("print.knob.emulsion_scatter"),   "~",  0.0f,  1.0f,   v -> halationScatter = v, () -> halationScatter, true);
-        knob(tr("print.knob.scatter_radius"),   "◍",  0.0f,  1.0f,   v -> scatterRadius = v,  () -> scatterRadius, true);
-        knob(tr("print.knob.glare"),       "✳",  0.0f,  30.0f,  v -> glareAmount = v,     () -> glareAmount);
-        knob(tr("print.knob.lens_blur"),   "◌",  0.0f,  200.0f, v -> lensBlur = v,        () -> lensBlur, true);
-        knob(tr("print.knob.yellow_filter"),     "Y",  -1.0f, 1.0f,   v -> yFilter = v,         () -> yFilter);
-        knob(tr("print.knob.magenta_filter"),   "M",  -1.0f, 1.0f,   v -> mFilter = v,         () -> mFilter);
-        knob(tr("print.knob.filter_strength"),   "C",  1.0f,  60.0f,  v -> filterScale = v,     () -> filterScale);
-
-        knob(tr("print.knob.pre_flash"),       "⚡", 0.0f,  1.0f,   v -> preflash = v,        () -> preflash);
-        knob(tr("print.knob.curve_softness"),   "∿",  1.0f,  4.0f,   v -> shadowRolloff = v,   () -> shadowRolloff, true);
-        knob(tr("print.knob.maximum_shadow_lift"),   "L",  0.25f, 12.0f,  v -> maxLift = v,         () -> maxLift, true);
-        // The switches, on a 0/1 slider: the panel has one slider by design,
-        // and a second kind of control would be a second thing to explain.
-        knob(tr("print.knob.enable_halation"),   "◐",  0.0f,  1.0f,   v -> halationOn = v,       () -> halationOn, true);
-        knob(tr("print.knob.remove_anti_halation"),   "⊘",  0.0f,  1.0f,   v -> antihalationRemoved = v, () -> antihalationRemoved, true);
-        knob(tr("print.knob.enable_grain"),   "g",  0.0f,  1.0f,   v -> grainOn = v,          () -> grainOn, true);
-        knob(tr("print.knob.interlayer_inhibition"),   "⧉",  0.0f,  2.0f,   v -> couplersOn = v,       () -> couplersOn, true);
-        knob(tr("print.knob.scan_whites"),     "W",  0.0f,  1.0f,   v -> scannerWhite = v,     () -> scannerWhite);
-        knob(tr("print.knob.scan_blacks"),     "B",  0.0f,  1.0f,   v -> scannerBlack = v,     () -> scannerBlack);
-        // Six more that the schema has had all along and the panel never
-        // showed. Booleans ride a 0..1 knob because the knob is the panel's
-        // one control; the readout says "0.00" / "1.00" and the hint says
-        // which end is which.
-        knob(tr("print.knob.enable_glare"),   "☀",  0.0f,  1.0f,   v -> glareActive = v,      () -> glareActive);
-        knob(tr("print.knob.scanner_blur"), "S",  0.0f, 20.0f,   v -> scannerLensBlur = v,  () -> scannerLensBlur);
-        knob(tr("print.knob.halation_headroom"),   "R",  0.0f,  8.0f,   v -> halationHeadroom = v, () -> halationHeadroom, true);
-        knob(tr("print.knob.density_curve"),   "γ",  0.2f,  4.0f,   v -> densityGamma = v,     () -> densityGamma, true);
-        knob(tr("ui170.185"), "I", 0.0f, 1.0f, v -> diBlueComp = v > 0.5f,
-             () -> diBlueComp ? 1f : 0f, true);
-        knob(tr("print.knob.digital_intermediate"), "I",  0.0f,  1.0f,   v -> digitalIntermediate = v > 0.5f,
-                                                                    () -> digitalIntermediate ? 1f : 0f);
-        knob(tr("print.knob.output_encoding"),   "E",  0.0f,  1.0f,   v -> outputCctf = v > 0.5f,
-                                                                    () -> outputCctf ? 1f : 0f);
-
-
-        // The six controls that are not knobs are rows on the page they belong
-        // to now: 配光 / 保护基准 / EDR with the tone, 胶片色相 with the colour,
-        // 镜头滤镜 with the lens, 预览色域 with the sheet.
-        printBody = new LinearLayout(this);
-        printBody.setOrientation(LinearLayout.VERTICAL);
-        // **The same 250 dp cap the other engine's print panel has**, so a frame
-        // that changes engines does not move the photograph.
-        final CappedScroll printScroll = new CappedScroll(this, dp(250));
-        printScroll.addView(printBody, new android.widget.FrameLayout.LayoutParams(-1, -2));
-        panel.addView(printScroll, new LinearLayout.LayoutParams(-1, -2));
-        showPrintGroup(0);
-        return panel;
-    }
+    private LinearLayout buildOpticsPanel() { return PanelFactories.buildOpticsPanel(new PanelHostImpl(this)); }
 
     /** Which page of the print panel is in front; the strip shows the same one. */
     private int printGroup = 0;
-    private LinearLayout printBody;
+    LinearLayout printBody;
     private final java.util.List<Runnable> printRefreshers = new java.util.ArrayList<>();
 
     /**
@@ -19565,7 +19337,7 @@ public class MainActivity extends Activity implements
      * a lens, onto a sheet. The rows are the first engine's own parameters,
      * filed by the stage they act on instead of by the order they were added.
      */
-    private void showPrintGroup(int index) {
+     void showPrintGroup(int index) {
         if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
             final int wanted = index;
             runOnUiThread(() -> showPrintGroup(wanted));
@@ -19813,19 +19585,19 @@ public class MainActivity extends Activity implements
         return null;
     }
     /** One chip in the strip, plus the entry that makes it live. */
-    private void knob(String label, String glyph, float lo, float hi,
+     void knob(String label, String glyph, float lo, float hi,
                       java.util.function.Consumer<Float> set, java.util.function.Supplier<Float> get) {
         knob(label, glyph, lo, hi, set, get, false);
     }
 
     /** `heavy` marks a shoot-layer field: dragging it re-develops the film. */
-    private void knob(String label, String glyph, float lo, float hi,
+     void knob(String label, String glyph, float lo, float hi,
                       java.util.function.Consumer<Float> set, java.util.function.Supplier<Float> get,
                       boolean heavy) {
         knob(label, glyph, lo, hi, set, get, heavy, false);
     }
 
-    private void knob(String label, String glyph, float lo, float hi,
+     void knob(String label, String glyph, float lo, float hi,
                       java.util.function.Consumer<Float> set, java.util.function.Supplier<Float> get,
                       boolean heavy, boolean logScale) {
         knobs.add(new Knob(label, glyph, lo, hi, set, get, heavy, logScale));
@@ -20156,28 +19928,9 @@ public class MainActivity extends Activity implements
      * get their own page, laid out the way a picture editor does it: ratios as
      * shapes you can see, rotation as a dial you can feel.
      */
-    private LinearLayout buildComposePanel() {
-        LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(sectionHead(tr("compose.composition"), this::resetComposePanel),
-                new LinearLayout.LayoutParams(-1, dp(38)));
+    private LinearLayout buildComposePanel() { return PanelFactories.buildComposePanel(new PanelHostImpl(this)); }
 
-        LinearLayout sub = new LinearLayout(this);
-        sub.setOrientation(LinearLayout.HORIZONTAL);
-        composeCropTab = composeTabView(tr("compose.crop"), 0);
-        composeRotateTab = composeTabView(tr("compose.rotate"), 1);
-        sub.addView(composeCropTab, new LinearLayout.LayoutParams(0, dp(32), 1f));
-        sub.addView(composeRotateTab, new LinearLayout.LayoutParams(0, dp(32), 1f));
-        panel.addView(sub, new LinearLayout.LayoutParams(-1, dp(32)));
-
-        composeBody = new LinearLayout(this);
-        composeBody.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(composeBody, new LinearLayout.LayoutParams(-1, -2));
-        showComposePage(0);      // the page is built hidden; it must still have content
-        return panel;
-    }
-
-    private TextView composeTabView(String text, int page) {
+     TextView composeTabView(String text, int page) {
         final TextView tv = label(text, 12, UI_MUTED, tfHan);
         tv.setGravity(android.view.Gravity.CENTER);
         tv.setOnClickListener(v -> showComposePage(page));
@@ -20190,7 +19943,7 @@ public class MainActivity extends Activity implements
                 : (flags & ~android.graphics.Paint.UNDERLINE_TEXT_FLAG));
     }
 
-    private void showComposePage(int page) {
+     void showComposePage(int page) {
         composeSubPage = page;
         if (composeBody == null) return;
         composeCropTab.setTextColor(page == 0 ? UI_INK : UI_MUTED);
@@ -20880,7 +20633,7 @@ public class MainActivity extends Activity implements
      * together, so nudging the angle back to zero also threw away a crop the
      * user had just framed. Each sub-page owns its own numbers now.
      */
-    private void resetComposePanel() {
+     void resetComposePanel() {
         if (composeSubPage == 0) {
             geometryCropW = 1f; geometryCropH = 1f;
             geometryCropX = 0f; geometryCropY = 0f;
@@ -21192,34 +20945,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private LinearLayout buildFormatPanel() {
-        LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(sectionHead(tr("border.frame_scale"), this::resetFormatPanel),
-                new LinearLayout.LayoutParams(-1, dp(38)));
-        HorizontalScrollView scroll = new HorizontalScrollView(this);
-        scroll.setHorizontalScrollBarEnabled(false);
-        scroll.setClipToPadding(false);
-        formatCardStrip = new LinearLayout(this);
-        formatCardStrip.setOrientation(LinearLayout.HORIZONTAL);
-        formatCardStrip.setPadding(0, dp(10), 0, 0);
-        formatScroll = scroll;
-        scroll.addView(formatCardStrip, new android.widget.FrameLayout.LayoutParams(-2, dp(127)));
-        panel.addView(scroll, new LinearLayout.LayoutParams(-1, dp(127)));
-
-        LinearLayout foot = new LinearLayout(this);
-        foot.setOrientation(LinearLayout.HORIZONTAL);
-        foot.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        formatFootLabel = label(tr("border.physical_film_size_crop_and"), 8.5f, UI_MUTED, tfHan);
-        foot.addView(formatFootLabel, new LinearLayout.LayoutParams(0, -2, 1f));
-        formatFootValue = label("36 mm", 9, UI_BLUE, tfBody);
-        formatFootValue.setFontFeatureSettings("tnum");   // live number, not typed
-        foot.addView(formatFootValue);
-        panel.addView(foot, new LinearLayout.LayoutParams(-1, dp(28)));
-
-        rebuildFormatCards();
-        return panel;
-    }
+    private LinearLayout buildFormatPanel() { return PanelFactories.buildFormatPanel(new PanelHostImpl(this)); }
 
     // ---------------------------------------------------------------- glow
     /**
@@ -21567,7 +21293,7 @@ public class MainActivity extends Activity implements
         if (formatLocked != overscanOn) rebuildFormatCards();
     }
 
-    private void rebuildFormatCards() {
+     void rebuildFormatCards() {
         if (formatCardStrip == null) return;
         formatCardStrip.removeAllViews();
         formatCards.clear();
@@ -21679,44 +21405,16 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private LinearLayout buildEdgePanel() {
-        edgeRoot = new LinearLayout(this);
-        edgeRoot.setOrientation(LinearLayout.VERTICAL);
+    private LinearLayout buildEdgePanel() { return PanelFactories.buildEdgePanel(new PanelHostImpl(this)); }
 
-        // Two big cards. A card is a switch, a one-line summary, and a door
-        // into its own page -- not fifteen controls at once.
-        LinearLayout home = new LinearLayout(this);
-        home.setOrientation(LinearLayout.VERTICAL);
-        home.addView(sectionHead(tr("border.frame_imprint"), this::resetEdgePanel),
-                new LinearLayout.LayoutParams(-1, dp(38)));
-
-        HorizontalScrollView cardScroll = new HorizontalScrollView(this);
-        cardScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout cardStrip = new LinearLayout(this);
-        cardStrip.setOrientation(LinearLayout.HORIZONTAL);
-        cardStrip.addView(bigCard(tr("border.film_border"), "REBATE", this::edgeSummary, () -> openEdgePage(0)),
-                cardLp());
-        cardStrip.addView(bigCard(tr("border.date_stamp"), "DATE BACK", this::dateSummary, () -> openEdgePage(1)),
-                cardLp());
-        cardStrip.addView(bigCard(tr("ui170.226"), "PRINT FRAME", this::pfSummary, () -> openEdgePage(2)),
-                cardLp());
-        cardScroll.addView(cardStrip, new android.widget.FrameLayout.LayoutParams(-2, -2));
-        home.addView(cardScroll, new LinearLayout.LayoutParams(-1, -2));
-
-        edgeRoot.addView(home, new LinearLayout.LayoutParams(-1, -2));
-        buildEdgePages();
-        refreshEdgeGroups();
-        return edgeRoot;
-    }
-
-    private LinearLayout.LayoutParams cardLp() {
+     LinearLayout.LayoutParams cardLp() {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(176), -2);
         lp.rightMargin = dp(6);
         return lp;
     }
 
     /** An entry card: the scale page's row, a summary, and a chevron. */
-    private View bigCard(String title, String subtitle,
+     View bigCard(String title, String subtitle,
                          java.util.function.Supplier<String> summary,
                          Runnable onOpen) {
         LinearLayout card = new LinearLayout(this);
@@ -21771,7 +21469,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private String edgeSummary() {
+     String edgeSummary() {
         if (!overscanOn) return tr("border.off_tap_to_configure");
         final int at = edgeIds.indexOf(overscanFormat);
         final String gate = at >= 0 && at < edgeLabels.size() ? edgeLabels.get(at) : overscanFormat;
@@ -21779,7 +21477,7 @@ public class MainActivity extends Activity implements
                 + tr("border.frame") + (frameNumber < 0.5f ? tr("meter.auto") : String.valueOf(Math.round(frameNumber)));
     }
 
-    private String dateSummary() {
+     String dateSummary() {
         if (!dateOn) return tr("border.off_tap_to_configure");
         return (dateText == null || dateText.isEmpty() ? imprintDate() : dateText)
                 + " · " + labelOf(STYLE_LABELS, STYLE_IDS, dateStyle)
@@ -21868,7 +21566,7 @@ public class MainActivity extends Activity implements
         return i >= 0 ? PF_LABELS[i] : PF_LABELS[0];
     }
 
-    private String pfSummary() {
+     String pfSummary() {
         if (pfKind == null || "none".equals(pfKind)) return tr("border.off_tap_to_configure");
         return pfLabel() + (pfNeedsMargin() ? tr("ui170.227") + fmt1(pfMargin) + " mm" : "");
     }
@@ -21959,7 +21657,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The two detail pages, built once, shown one at a time. */
-    private void buildEdgePages() {
+     void buildEdgePages() {
         // **`onEdgeChanged`, not a copy of it.** This hook rebuilt the frame
         // through the session, which a fotufilm frame does not have -- so on that
         // engine every drawn control (片边文字, 片基雾, 张数, the date's four)
@@ -22267,13 +21965,13 @@ public class MainActivity extends Activity implements
         return scroll;
     }
 
-    private static final class CappedScroll extends ScrollView {
+    public static final class CappedScroll extends ScrollView {
         private final int cap;
 
         /** The most this box will ever ask for, in px. */
         int cap() { return cap; }
 
-        CappedScroll(android.content.Context context, int cap) {
+        public CappedScroll(android.content.Context context, int cap) {
             super(context);
             this.cap = cap;
             setVerticalScrollBarEnabled(false);
@@ -22399,7 +22097,7 @@ public class MainActivity extends Activity implements
         refreshEdgeCards();
     }
 
-    private void refreshEdgeGroups() {
+     void refreshEdgeGroups() {
         if (edgeRoot == null) return;
         // **Everything except the switch itself.** `setEnabledDeep` recursed
         // into the whole page, which disabled the very toggle that turns the
@@ -24017,7 +23715,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The seven meters, one row each, with what each one actually does. */
-    private void showMeterPicker() {
+     void showMeterPicker() {
         final java.util.List<String> labels = new java.util.ArrayList<>();
         final java.util.List<String> notes = new java.util.ArrayList<>();
         int at = 0;
@@ -24044,7 +23742,7 @@ public class MainActivity extends Activity implements
         if (uiReady && session != null) renderImage();
     }
 
-    private void refreshMeterChip() {
+     void refreshMeterChip() {
         if (meterChip == null) return;
         // **The second engine has no metering method to choose.**
         //
@@ -24069,7 +23767,7 @@ public class MainActivity extends Activity implements
         meterChip.setBackground(outlineBox(on));
     }
 
-    private void resetFilmPanel() {
+     void resetFilmPanel() {
         // 原图 is the reset: no stock, no render, the imported frame as it was.
         //
         // **The reset has to move the canvas itself.** This used to clear
@@ -24109,7 +23807,7 @@ public class MainActivity extends Activity implements
         updateFilmSelection();
     }
 
-    private void resetOpticsPanel() {
+     void resetOpticsPanel() {
         printExposure = 1.0f;
         grainAmount = 1.0f;
         halationAmount = 1.0f;
@@ -24134,7 +23832,7 @@ public class MainActivity extends Activity implements
         bar.setProgress(Math.round((value - lo) / (hi - lo) * 1000f));
     }
 
-    private void resetFormatPanel() {
+     void resetFormatPanel() {
         formatIndex = 0;
         filmFormatMm = FORMAT_MM[0];
         refreshFormatFoot();
@@ -24307,7 +24005,7 @@ public class MainActivity extends Activity implements
                 });
     }
 
-    private void resetEdgePanel() {
+     void resetEdgePanel() {
         if (edgePageIndex == 0) { resetOverscanPage(); return; }
         if (edgePageIndex == 1) { resetDatePage(); return; }
         resetOverscanPage();
@@ -25945,7 +25643,7 @@ public class MainActivity extends Activity implements
      * at all, so the film is rendered from the untouched source no matter what
      * these sliders say. Leaving the controls live taught the opposite.
      */
-    private void refreshViewLock() {
+     void refreshViewLock() {
         final boolean fotu = isFotuStock(filmStock);
         if (viewCameraEvBox != null) {
             setEnabledDeepExcept(viewCameraEvBox, !fotu, null);
@@ -32520,7 +32218,7 @@ public class MainActivity extends Activity implements
                 : String.format(java.util.Locale.US, tr("ui170.468"), fotuPush));
     }
 
-    private void resetFotuPanel() {
+     void resetFotuPanel() {
         fotuEv = 0f;
         fotuHighlights = 0f;
         fotuShadows = 0f;
@@ -32734,8 +32432,8 @@ public class MainActivity extends Activity implements
     private android.view.Choreographer.FrameCallback frameProbe;
     private long probeAt, probeWorst, probeFrames;
     private int lineGen = 0;
-    private LinearLayout fotuBody;
-    private TextView[] fotuGroupTabs;
+    LinearLayout fotuBody;
+    TextView[] fotuGroupTabs;
 
     /**
      * The second engine's print panel, one page per group.
@@ -32749,55 +32447,9 @@ public class MainActivity extends Activity implements
      * Each page now holds one physical stage of the chain, in the order the
      * light goes through it.
      */
-    private View buildFotuPanel() {
-        final LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        try {
-            buildFotuPanelInto(panel);
-        } catch (Throwable t) {
-            // Same rule as the pages: this is `onCreate`, and an exception here
-            // is an app that will not open.
-            panel.removeAllViews();
-            panel.addView(label(tr("ui170.472") + t, 8f, UI_INK, tfHan),
-                    new LinearLayout.LayoutParams(-1, dp(34)));
-            try {
-                DebugSink.text("fotupanel", "build: " + t + "\n"
-                        + android.util.Log.getStackTraceString(t));
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:33630", ignored); }
-        }
-        return panel;
-    }
+    private View buildFotuPanel() { return PanelFactories.buildFotuPanel(new PanelHostImpl(this)); }
 
-    private void buildFotuPanelInto(LinearLayout panel) {
-        panel.addView(sectionHead(tr("ui170.473"), this::resetFotuPanel),
-                new LinearLayout.LayoutParams(-1, dp(38)));
-
-        // The seven pages are the strip above the tool bar now, not a row of
-        // words inside this panel: they were sitting between the heading and the
-        // sliders, i.e. in the middle of the page they switch away from.
-        fotuGroupTabs = null;
-
-        fotuBody = new LinearLayout(this);
-        fotuBody.setOrientation(LinearLayout.VERTICAL);
-        // **The cap is what the eight long pages have in common, and it is why
-        // 影调 -> 色彩 does not change height: both want more room than the box
-        // gives, so both sit at the cap.** The pages that *do* differ are the
-        // short ones -- 胶片 is three rows (156 dp), 镜头 four (208 dp) -- and
-        // those were the jumps nobody could see: the animation was travelling
-        // `fotuBody`'s own height, which is hidden behind this cap. Raising the
-        // cap buys nothing (光晕 at 314 dp against its own 312 is two pixels) and
-        // costs the photograph 60 dp of height, so it stays at 250.
-        final CappedScroll scroll = new CappedScroll(this, dp(250));
-        scroll.addView(fotuBody, new android.widget.FrameLayout.LayoutParams(-1, -2));
-        panel.addView(scroll, new LinearLayout.LayoutParams(-1, -2));
-
-        final TextView note = label(tr("ui170.474")
-                + tr("ui170.475"), 7.5f, UI_MUTED, tfHan);
-        note.setPadding(0, dp(4), 0, dp(6));
-        panel.addView(note);
-
-        showFotuGroup(0);
-    }
+    private void buildFotuPanelInto(LinearLayout panel) { PanelFactories.buildFotuPanelInto(new PanelHostImpl(this), panel); }
 
     /**
      * One page of it. Rebuilt on every switch, so the widgets read the fields.
@@ -32809,7 +32461,7 @@ public class MainActivity extends Activity implements
      * frame of a restored session. A call that arrives on the wrong thread is
      * posted instead of run.
      */
-    private void showFotuGroup(int index) {
+     void showFotuGroup(int index) {
         if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
             final int wanted = index;
             runOnUiThread(() -> showFotuGroup(wanted));
@@ -33176,7 +32828,7 @@ public class MainActivity extends Activity implements
     private static final int LIVE_CLIP_FULL_EDGE = 2160;
 
     /** A carved-out clip waiting to be attached to the frame being imported. */
-    static final class LiveClip {
+    public static final class LiveClip {
         final String path;
         final long tsUs;
         LiveClip(String path, long tsUs) { this.path = path; this.tsUs = tsUs; }
@@ -36042,5 +35694,6 @@ public class MainActivity extends Activity implements
         return label(text, sp, color, font);
     }
     @Override public String resetText() { return tr("editor.reset_this_page"); }
+
 
 }
