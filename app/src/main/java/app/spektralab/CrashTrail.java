@@ -33,7 +33,7 @@ import android.content.SharedPreferences;
  * commit. Steps that bracket something expensive (`markNow`) force it through,
  * because those are the ones worth losing nothing for.
  */
-final class CrashTrail {
+public final class CrashTrail {
     private static final String FILE = "trail";
     private static final String KEY = "ring";
     private static final int CAP = 64;
@@ -95,7 +95,7 @@ final class CrashTrail {
     }
 
     /** The whole ring from the previous launch, or "" when it ended cleanly. */
-    static String previous(Context context) {
+    public static String previous(Context context) {
         if (context == null) return "";
         try {
             return context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY, "");
@@ -134,7 +134,7 @@ final class CrashTrail {
     }
 
     /** Called once the trail has been reported, and again on a clean exit. */
-    static void clear(Context context) {
+    public static void clear(Context context) {
         if (context == null) return;
         synchronized (LOCK) {
             RING.clear();

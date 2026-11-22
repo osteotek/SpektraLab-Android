@@ -51,7 +51,7 @@ public final class Probe {
     }
 
     /** Blocking; only for the line just before something that can kill us. */
-    static void now(String area, String body) {
+    public static void now(String area, String body) {
         try { DebugSink.textNow("probe-" + area, body); } catch (Throwable ignored) { }
     }
 
