@@ -9,6 +9,8 @@
  */
 package app.spektralab;
 
+import static app.spektralab.AppLanguage.tr;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -357,17 +359,17 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             "", "balanced", "highlight_weighted", "protect_highlights", "protect_shadows",
             "center", "center_weighted", "average", "median"};
     private static final String[] METER_NAMES = {
-            "关闭", "平衡", "亮部重点", "保护高光", "保留暗部", "中心", "中心加权", "平均", "中位数"};
+            tr("crash.close"), tr("meter.balanced"), "亮部重点", tr("meter.protect_highlights"), tr("meter.protect_shadows"), tr("meter.center"), tr("meter.center_weighted"), tr("meter.average"), tr("meter.median")};
     private static final String[] METER_NOTES = {
-            "不测光，用文件自己的曝光",
-            "全幅中位数对准中灰；暗场景会被提亮好几挡",
+            tr("meter.skip_metering_and_use_the"),
+            tr("meter.align_the_full_frame_median"),
             "按亮度平方加权取中灰：亮的地方说话最重——人像脸上的补光会被压下来，不靠钳位",
-            "平衡再压住高光两挡；有灯的画面不会糊成一片白",
-            "平衡再抬起暗部；阴影留住，亮部跟着走",
-            "只按画面中心测，忽略四周",
-            "中心高斯加权后取平均——旧版默认，最容易被高光带跑",
-            "整幅算术平均，完全不加权",
-            "整幅中位亮度，最不容易被单个亮斑左右"};
+            tr("meter.start_with_balanced_and_hold"),
+            tr("meter.start_with_balanced_and_lift"),
+            tr("meter.meter_only_the_center_of"),
+            tr("meter.average_with_gaussian_center_weighting"),
+            tr("meter.take_the_unweighted_average_across"),
+            tr("meter.take_the_median_luminance_across")};
 
     // ── undo ──────────────────────────────────────────────────────
     /** One JSON snapshot per settled edit, newest first. */
@@ -842,7 +844,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      * The unchecked outline of a `Square`.
      *
      * <p>It was the literal `0x66171717` -- a 40% black hairline that is
-     * invisible on the dark theme's panel, which is why "开启片边" and 时间水印
+     * invisible on the dark theme's panel, which is why tr("border.enable_film_border") and 时间水印
      * became un-clickable-looking holes on a black background.
      */
     /** The two switch rows, so the page's dimming can skip them. */
@@ -966,19 +968,19 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      *  on 1.7.0, which took the canvas and the tab bar with it. */
     private static final int EDGE_SUBPAGE_CAP_DP = 400;
     private static final String[] MODE_IDS = {"strip", "filed"};
-    private static final String[] MODE_LABELS = {"整条 strip", "窄边 filed"};
+    private static final String[] MODE_LABELS = {tr("meter.full_strip"), tr("meter.filed_edge")};
     private static final String[] GATE_IDS = {"auto", "square", "rounded", "eared", "shouldered", "kicked"};
-    private static final String[] GATE_LABELS = {"自动", "方角", "圆角", "带耳", "带肩", "踢角"};
+    private static final String[] GATE_LABELS = {tr("meter.auto"), tr("meter.square"), tr("meter.rounded"), tr("meter.tabbed"), tr("meter.shouldered"), tr("meter.notched")};
     private static final String[] HOLES_IDS = {"white", "black"};
-    private static final String[] HOLES_LABELS = {"白齿孔（扫描）", "黑齿孔（暗房）"};
+    private static final String[] HOLES_LABELS = {tr("meter.white_sprocket_holes_scan"), tr("meter.black_sprocket_holes_darkroom")};
     private static final String[] CARRIER_IDS = {"none", "black", "open"};
-    private static final String[] CARRIER_LABELS = {"无", "黑色片夹", "开放"};
+    private static final String[] CARRIER_LABELS = {tr("meter.none"), tr("meter.black_holder"), tr("meter.open")};
     private static final String[] PLACE_IDS = {"frame", "rebate"};
-    private static final String[] PLACE_LABELS = {"画面内", "片边"};
+    private static final String[] PLACE_LABELS = {tr("meter.in_image"), tr("border.film_border")};
     private static final String[] CORNER_IDS = {"br", "bl", "tr", "tl"};
     private static final String[] STYLE_IDS = {"lcd", "dots", "data"};
-    private static final String[] STYLE_LABELS = {"LCD 七段", "点阵 dots", "拍摄数据 data"};
-    private static final String[] CORNER_LABELS = {"右下", "左下", "右上", "左上"};
+    private static final String[] STYLE_LABELS = {tr("meter.seven_segment_lcd"), tr("meter.dot_matrix"), tr("meter.shooting_data")};
+    private static final String[] CORNER_LABELS = {tr("meter.bottom_right"), tr("meter.bottom_left"), tr("meter.top_right"), tr("meter.top_left")};
     private static final String[] PF_IDS = {
             "none", "film", "film-positive", "slide-mount",
             "paper-4x6", "paper-5x7", "paper-8x10", "paper-5x5",
@@ -1006,7 +1008,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     /** 片边: the ten carriers the engine's overscan knows. */
     private static final String[] EDGE_LABELS = {
-            "135 全画幅", "135 半格", "135 XPan", "645",
+            tr("meter.35_mm_full_frame"), tr("meter.35_mm_half_frame"), "135 XPan", "645",
             "6×6", "6×7", "6×8", "6×9", "6×12", "6×17",
             "Super 35", "16mm 电影", "Super 8", "4×5 页片",
             "Instax mini", "Instax SQ", "Instax wide"};
@@ -2672,7 +2674,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 try {
                     DebugSink.text("session", "dropped " + dropped + " unreadable frames");
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:2598", ignored); }
-                showInAppToast(dropped + " 张照片的读取权限已失效，已从照片栏移除");
+                showInAppToast(dropped + tr("frame.photos_were_removed_from_the"));
             }
             if (frames.isEmpty()) return false;
             // The saved index was an index into the old list. The frame itself
@@ -3042,11 +3044,11 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     // tap asks which machine develops it. `其他` is where the makers only the
     // second engine carries (Agfa, Lomography, Harman, AR-5) are filed.
     private static final String[] BRAND_IDS = {"all", "kodak", "fujifilm", "ilford", "cinestill", "other"};
-    private static final String[] BRAND_NAMES = {"全部", "KODAK", "FUJIFILM", "ILFORD", "CINESTILL", "其他"};
+    private static final String[] BRAND_NAMES = {tr("meter.all"), "KODAK", "FUJIFILM", "ILFORD", "CINESTILL", "其他"};
     // **One card per gate, in the gates' own order.** This used to be a
     // separate ladder (36/24/65/56/56/70/84/120/170) that only resembled the
     // gates: 6x8 had no card, 6x12 and 6x17 were 120/170, and 56 appeared twice
-    // with nothing to say which was which -- so "645" and "135 半格" could not be
+    // with nothing to say which was which -- so "645" and tr("meter.35_mm_half_frame") could not be
     // told apart from "6x6", and two of the ten gates had no card at all. Now
     // index i is EDGE_IDS[i], which is what `applyGate` needs.
     private static final String[] FORMAT_NAMES = EDGE_LABELS;
@@ -4532,7 +4534,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             showActionSheet("这台屏幕没有 HDR 显示",
                     "系统报告这块屏幕没有 HDR 模式，画面里的亮部无法超过 SDR 白。"
                     + "导出的 Ultra HDR 文件在支持 HDR 的屏幕或软件里仍然有效。",
-                    new String[]{"知道了"}, done -> { });
+                    new String[]{tr("print.ok")}, done -> { });
             return;
         }
         final float h = hdrHeadroomStops();
@@ -10925,7 +10927,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         nrLp.bottomMargin = dp(140);
         root.addView(negReopen, nrLp);
 
-        final TextView settings = label("设置", 9, LT_KLEIN, tfHan);
+        final TextView settings = label(tr("editor.settings"), 9, LT_KLEIN, tfHan);
         settings.setGravity(android.view.Gravity.CENTER);
         settings.setPadding(dp(13), dp(8), dp(13), dp(8));
         settings.setBackground(ltCard(LT_PAPER, LT_KLEIN, dp(1.2f)));
@@ -11011,7 +11013,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // **Words, plainly.** The stock is a caption, not a shelf: two lines of
         // text read at arm's length, and nothing here competes with the picture
         // for attention.
-        lightFilmValue = infoCard(cards, "胶片", true);
+        lightFilmValue = infoCard(cards, tr("navigation.film"), true);
         lightPaperValue = infoCard(cards, "相纸", false);
         lightInfo.addView(cards);
         final android.widget.FrameLayout.LayoutParams infoLp =
@@ -11490,7 +11492,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private void recordExport(android.net.Uri uri, String fileName, String baseName) {
         try {
             final boolean orig = baseName != null && baseName.contains("_ORIG_");
-            final String film = orig ? "原图" : prettyStock(filmStock);
+            final String film = orig ? tr("film.original") : prettyStock(filmStock);
             final String paper = orig ? "" : prettyStock(printStock);
             // The exported JPEG is written by this app and carries only part of
             // the source's EXIF, so the rest is taken from the frame it came from
@@ -11798,8 +11800,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                             new android.app.AlertDialog.Builder(this);
                     b.setTitle("删除这个文件？");
                     b.setMessage(e.name + "\n\n会从相册里真正删掉，无法恢复。");
-                    b.setNegativeButton("取消", null);
-                    b.setPositiveButton("删除", (d, w) -> deletePrint(index, e));
+                    b.setNegativeButton(tr("editor.cancel"), null);
+                    b.setPositiveButton(tr("preset.delete"), (d, w) -> deletePrint(index, e));
                     b.show();
                 }, null, null);
     }
@@ -13315,7 +13317,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         load.setBackgroundColor(UI_PAPER);
         load.setPadding(dp(18), 0, dp(18), 0);
         load.setOnClickListener(v -> showImportMenu());
-        load.addView(label("选择照片", 9, UI_BLUE, tfHan));
+        load.addView(label(tr("frame.choose_photos"), 9, UI_BLUE, tfHan));
         editorPickCard = load;
         ArrowView loadArrow = new ArrowView(this, UI_BLUE);
         LinearLayout.LayoutParams arrowLp = new LinearLayout.LayoutParams(dp(14), dp(14));
@@ -13744,7 +13746,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // system killed never reaches `onDestroy`. `ApplicationExitInfo` still
         // has a row for that ordinary exit (reason 1 or 10), so reading it
         // first turned every "swipe the app away, open it again" into
-        // "上次启动异常退出" -- with nothing in the trail, because it had been
+        // tr("crash.the_app_closed_unexpectedly_last") -- with nothing in the trail, because it had been
         // cleared on the way out.
         if (trail.isEmpty()) {
             Probe.log("exit", "skip=empty ring");
@@ -13795,7 +13797,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // 16 = package updated (an overwrite install); the rest of the numbers
         // outside 2..6 are ordinary lifecycle ends. `ApplicationExitInfo` has a
         // row for all of them, and reporting on every row is what turned
-        // "覆盖安装" into "上次启动异常退出". 2..6 are the ones where the process
+        // "覆盖安装" into tr("crash.the_app_closed_unexpectedly_last"). 2..6 are the ones where the process
         // did not get to finish: SIGNALED, LOW_MEMORY, Java crash, native
         // crash, ANR. If the list cannot be read, the non-empty trail is
         // evidence enough to ask.
@@ -13867,7 +13869,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 // **Silence here is what made the first report unreadable.** An
                 // exit row that cannot be read looks exactly like one that was
                 // never written, and the two mean opposite things.
-                body.append("exit: 读不到 ApplicationExitInfo（").append(e).append("）\n");
+                body.append(tr("crash.exit_could_not_read_applicationexitinfo")).append(e).append("）\n");
             }
         }
         // **A non-crashing exit reason leaves nothing to ask about.**
@@ -13945,15 +13947,15 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             // neither is a defect in the code path the trail names, and calling
             // both "异常退出" is how a 600 MB import reads as a mystery crash.
             final boolean reclaimed = lastExitReason == 3 || lastExitReason == 2;
-            b.setTitle(reclaimed ? "上次被系统回收了" : "上次启动异常退出");
+            b.setTitle(reclaimed ? tr("crash.android_closed_the_app_last") : tr("crash.the_app_closed_unexpectedly_last"));
             b.setMessage(reclaimed
-                    ? "最后一步：" + where
+                    ? tr("crash.last_step") + where
                         + "\n\n系统当时内存不够，把应用回收了——多半是这张图太大，不是程序出错。"
                         + "\n\n把这份记录发我可以确认尺寸；也可以直接重开，导入时选「缩到建议尺寸」。"
-                    : "最后一步：" + where
+                    : tr("crash.last_step") + where
                         + "\n\n这台机器的崩溃日志对定位很关键。要不要发我一份？");
-            b.setPositiveButton("发送日志", (d, w) -> shareCrashReport());
-            b.setNegativeButton("关闭", null);
+            b.setPositiveButton(tr("crash.send_log"), (d, w) -> shareCrashReport());
+            b.setNegativeButton(tr("crash.close"), null);
             showThemed(b.create());
         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:13882", ignored); }
     }
@@ -13965,18 +13967,18 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             text.append("build=").append(SpektraLabEngine.buildInfo()).append('\n');
             // `probe` is filled by `ensureEngine()`, and this report is offered
             // on the launch *after* the exit -- before the user has imported
-            // anything. "设备信息读取失败" there is the engine simply not having
+            // anything. tr("file.could_not_read_device_information") there is the engine simply not having
             // been created yet, and it reads as a broken device probe.
             text.append("device=").append(deviceLine()).append("\n\n");
             text.append("ref=").append(DebugSink.REF).append('\n');
             text.append(body);
             final Intent send = new Intent(Intent.ACTION_SEND);
             send.setType("text/plain");
-            send.putExtra(Intent.EXTRA_SUBJECT, "SpektraLab 崩溃报告");
+            send.putExtra(Intent.EXTRA_SUBJECT, tr("crash.spektralab_crash_report_2"));
             send.putExtra(Intent.EXTRA_TEXT, text.toString());
-            startActivity(Intent.createChooser(send, "发送崩溃报告"));
+            startActivity(Intent.createChooser(send, tr("crash.send_crash_report")));
         } catch (Throwable t) {
-            if (statusText != null) statusText.setText("没有可发送的内容");
+            if (statusText != null) statusText.setText(tr("crash.nothing_to_send"));
         }
     }
 
@@ -14336,7 +14338,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private String deviceLine() {
         if (probe != null && probe.valid) return probe.describe();
         final String last = getSharedPreferences("ui", MODE_PRIVATE).getString("last_device", null);
-        return last == null ? "(engine not created this launch)" : last + " · 上次启动";
+        return last == null ? "(engine not created this launch)" : last + tr("editor.previous_launch");
     }
 
     private void rememberDevice() {
@@ -14464,7 +14466,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 "ic_menu_white", "drawable", getPackageName()));
         menuPill.setAlpha(0.85f);
         menuPill.setPadding(dp(6), dp(6), dp(6), dp(6));
-        menuPill.setContentDescription("设置");
+        menuPill.setContentDescription(tr("editor.settings"));
         menuPill.setOnClickListener(v -> showSettings());
         // **Left of the wordmark, not between it and the version.** The menu
         // belongs at the edge of the bar, where every other app puts it;
@@ -14498,7 +14500,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         undoLp.rightMargin = dp(6);
         top.addView(undoPill, undoLp);
 
-        sharePill = label("分享", 11, uiOnCanvas(), tfHan);
+        sharePill = label(tr("editor.share"), 11, uiOnCanvas(), tfHan);
         sharePill.setGravity(android.view.Gravity.CENTER);
         sharePill.setShadowLayer(dp(3), 0, dp(1), 0xCC000000);
         sharePill.setBackground(null);
@@ -14600,14 +14602,14 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         foot.setPadding(dp(16), 0, dp(16), 0);
         foot.setClickable(false);
 
-        fileLabel = label("未选择照片", 7, uiOnCanvas(), tfHan);
+        fileLabel = label(tr("editor.no_photo_selected"), 7, uiOnCanvas(), tfHan);
         fileLabel.setAlpha(0.76f);
         fileLabel.setSingleLine(true);
         fileLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         fileLabel.setShadowLayer(dp(2), 0, dp(1), 0x99000000);
         foot.addView(fileLabel, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        statusText = label("等待导入", 7, uiOnCanvas(), tfHan);
+        statusText = label(tr("editor.waiting_for_import"), 7, uiOnCanvas(), tfHan);
         statusText.setSingleLine(true);
         statusText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         statusText.setGravity(android.view.Gravity.END);
@@ -14623,7 +14625,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         statusLp.leftMargin = dp(12);
         foot.addView(statusText, statusLp);
 
-        abortBatchPill = label("停止", 7, 0xFFFFFFFF, tfHan);
+        abortBatchPill = label(tr("editor.stop"), 7, 0xFFFFFFFF, tfHan);
         abortBatchPill.setGravity(android.view.Gravity.CENTER);
         android.graphics.drawable.GradientDrawable abortBg =
                 new android.graphics.drawable.GradientDrawable();
@@ -14635,7 +14637,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         abortBatchPill.setOnClickListener(v -> {
             if (!batchExportRunning) return;
             batchExportAbort = true;
-            statusText.setText("正在停止…（当前这张写完就停）");
+            statusText.setText(tr("editor.stopping_after_the_current_photo"));
         });
         LinearLayout.LayoutParams abortLp = new LinearLayout.LayoutParams(-2, -2);
         abortLp.leftMargin = dp(8);
@@ -15445,7 +15447,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             // SIGSEGV at 7.6 GB RSS. One toast is cheaper than that.
             box.setOnClickListener(v -> {
                 if (batchExportRunning) {
-                    showInAppToast("批量导出中，等它跑完再换图");
+                    showInAppToast(tr("editor.wait_for_batch_export_to"));
                     return;
                 }
                 reopenFrame(index);
@@ -15454,20 +15456,20 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 // Deleting a frame mid-batch is the same race from the other
                 // side: the loop reads `frames.get(index)` after every await.
                 if (batchExportRunning) {
-                    showInAppToast("批量导出中，等它跑完再改动照片栏");
+                    showInAppToast(tr("editor.wait_for_batch_export_to_2"));
                     return true;
                 }
-                showActionSheet(frame.name == null ? "这张照片" : frame.name,
-                        "参数是每张照片各自的：复制过去只改这条栏里的设置，文件不动。",
-                        new String[]{"把这张的参数应用到其它照片…", "删掉其中几张…",
-                                "删除这张", "取消"}, which -> {
+                showActionSheet(frame.name == null ? tr("editor.this_photo") : frame.name,
+                        tr("editor.settings_are_per_photo_applying"),
+                        new String[]{tr("editor.apply_edits_to_other_photos"), tr("editor.delete_selected_photos"),
+                                tr("editor.delete_this_photo"), tr("editor.cancel")}, which -> {
                             if (which == 0) showApplyLookSheet(index);
                             else if (which == 1) showBatchDeleteSheet();
                             else if (which == 2) removeFrame(index);
                         });
                 return true;
             });
-            box.setContentDescription(frame.name == null ? "照片" : frame.name);
+            box.setContentDescription(frame.name == null ? tr("editor.photo") : frame.name);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(42), dp(42));
             lp.rightMargin = dp(6);
             thumbStrip.addView(box, lp);
@@ -15512,7 +15514,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             clearShelfCache();
             if (compare != null) { compare.clear(); compare.resetView(); }
             // The session used to outlive its own frame: delete every chip and
-            // "导出" still produced a picture from the closed-over state.
+            // tr("editor.export") still produced a picture from the closed-over state.
             synchronized (renderMutex) {
                 if (session != null) { session.close(); session = null; }
             }
@@ -15523,7 +15525,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             // raised it failed (or was superseded), deleting the photograph is
             // the last chance anything takes it down.
             hideBusy();
-            statusText.setText("等待导入");
+            statusText.setText(tr("editor.waiting_for_import"));
             // No frame, no chain: the same state a reset lands in.
             filmStock = null;
             renderEpoch++;
@@ -15587,7 +15589,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         TextView titleView = mixedLabel(title, 8.5f, UI_INK);
         titleView.setLetterSpacing(0.06f);
         head.addView(titleView, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView resetView = label("重置当前页", 8.5f, UI_MUTED, tfHan);
+        TextView resetView = label(tr("editor.reset_this_page"), 8.5f, UI_MUTED, tfHan);
         resetView.setPaintFlags(resetView.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
         resetView.setPadding(dp(8), dp(10), 0, dp(10));
         resetView.setOnClickListener(v -> reset.run());
@@ -15707,12 +15709,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private View buildFilmPanel() {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        final LinearLayout filmHead = sectionHead("FILM & PAPER / 胶片与相纸", this::resetFilmPanel);
+        final LinearLayout filmHead = sectionHead(tr("film.film_paper"), this::resetFilmPanel);
         // **The "As Shot" switch, where the original app puts the same choice.**
         // On: the meter decides the film exposure. Off: the frame keeps the
         // exposure the camera recorded, which is the only way a lamp in a dark
         // room comes back dark instead of being lifted five stops onto Dmax.
-        final TextView meterLabel = label("测光", 8.5f, UI_MUTED, tfHan);
+        final TextView meterLabel = label(tr("film.metering"), 8.5f, UI_MUTED, tfHan);
         meterChip = label("", 8.5f, UI_INK, tfHan);
         meterChip.setGravity(android.view.Gravity.CENTER);
         // **48dp, not 40x20.** The old chip was smaller than the minimum touch
@@ -15765,7 +15767,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         LinearLayout paperRow = new LinearLayout(this);
         paperRow.setOrientation(LinearLayout.HORIZONTAL);
         paperRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        final TextView paperCaption = label("相纸 / 拷贝片", 7.5f, UI_MUTED, tfHan);
+        final TextView paperCaption = label(tr("film.paper_print_film"), 7.5f, UI_MUTED, tfHan);
         paperCaption.setSingleLine(true);
         // The caption is the only way back to the full list, and a 10 dp line of
         // text is not a target: padding makes it 26 dp tall without growing the
@@ -15871,8 +15873,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // mark has to be put back here -- this is the only place a card's text
         // is decided, and it used to put back only the slide mark.
         final String base = shortStockName(filmLabels.get(index));
-        if (index < filmTypes.size() && "positive".equals(filmTypes.get(index))) return base + " · 反转";
-        if (index < filmIds.size() && isMonochromeStock(filmIds.get(index))) return base + " · 黑白";
+        if (index < filmTypes.size() && "positive".equals(filmTypes.get(index))) return base + tr("film.slide");
+        if (index < filmIds.size() && isMonochromeStock(filmIds.get(index))) return base + tr("film.b_w");
         return base;
     }
 
@@ -16029,7 +16031,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // branch returned first and every second-engine card drew a coloured
         // band over a blank pane: a film box with no name on it, which reads
         // as a broken card. Colours belong to brands; the name is just the
-        // caption minus the kind (" · 反转") and minus the brand the band
+        // caption minus the kind (tr("film.slide")) and minus the brand the band
         // already shows.
         String m = caption == null ? "" : caption;
         final int dot = m.indexOf(" · ");
@@ -16356,7 +16358,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         filmCards.clear();
         filmCardImages.clear();
         filmGridRow = null;
-        addFilmCard("original", "原图", -1);
+        addFilmCard("original", tr("film.original"), -1);
         // **One row, both engines.** The first engine's shelf keeps its order --
         // it is the order the app has always had -- and the second engine's own
         // films follow, by brand, with the ones it shares with the first engine
@@ -16924,7 +16926,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             note = said == null ? "fotufilm 介质" : "fotufilm 介质 · " + said;
         } else if (isPositiveStock(filmStock)) {
             // A slide is looked at, not printed: there is nothing to pick.
-            name = "无相纸 · 直接扫描";
+            name = tr("film.no_paper_direct_scan");
             note = "反转片直接看片";
             pickable = false;
         } else if (PAPER_SCAN.equals(printStock)) {
@@ -17422,7 +17424,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         if (isFotuStock(filmStock)) { showFotuMediumPicker(); return; }
         if (printIds.isEmpty()) return;
         if (isPositiveStock(filmStock)) {
-            showInAppToast("反转片直接扫描，没有相纸这一步");
+            showInAppToast(tr("film.slide_film_is_scanned_directly"));
             return;
         }
         // The current paper, by its **label**: this sheet matched the id
@@ -17440,7 +17442,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final int current = ids.indexOf(printStock);
         final boolean filmKnown = filmStock != null;
         final boolean filmMono = isMonochromeStock(filmStock);
-        showChoiceSheet("选择相纸 / 拷贝片", names, notes,
+        showChoiceSheet(tr("film.choose_paper_or_print_film"), names, notes,
                 current >= 0 && current < names.size() ? names.get(current) : null,
                 i -> PAPER_SCAN.equals(ids.get(i))
                         || !filmKnown || paperFitsFilm(ids.get(i), filmMono),
@@ -17612,8 +17614,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     /** The four rows the mask replaces, by the name `knob` registered them under. */
     private static boolean latGateName(String n) {
-        return n.equals("高光保护") || n.equals("暗部保护")
-            || n.equals("曲线柔度") || n.equals("提升上限")
+        return n.equals(tr("print.knob.highlight_protection")) || n.equals(tr("print.knob.shadow_protection"))
+            || n.equals(tr("print.knob.curve_softness")) || n.equals(tr("print.knob.maximum_shadow_lift"))
             || n.equals("高光曲线 · 手动") || n.equals("高光提升阈值")
             || n.equals("高光提升范围") || n.equals("高光提升强度");
     }
@@ -17976,7 +17978,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final LinearLayout panel = new LinearLayout(this);
         viewRoot = panel;
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(sectionHead("OPTICS / 光学调整", this::resetViewPanel),
+        panel.addView(sectionHead(tr("optics.optics"), this::resetViewPanel),
                 new LinearLayout.LayoutParams(-1, dp(38)));
         // **Say why, instead of letting a live page do nothing.**
         //
@@ -18030,7 +18032,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private final CappedScroll[] viewScrolls = new CappedScroll[7];
 
     /** The six sub-pages of 光学, in the strip above the tool bar. */
-    private static final String[] VIEW_PAGE_NAMES = {"亮度", "颜色", "效果", "细节"};
+    private static final String[] VIEW_PAGE_NAMES = {tr("optics.brightness"), tr("optics.color"), tr("optics.effects"), "细节"};
 
     /** Which tool screen is open (4 曲线 / 5 分级 / 6 混色), or -1. */
     private int toolPage = -1;
@@ -18266,9 +18268,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         wbDecodeBox = new LinearLayout(this);
         wbDecodeBox.setOrientation(LinearLayout.VERTICAL);
         page.addView(wbDecodeBox, new LinearLayout.LayoutParams(-1, -2));
-        wbDecodeBox.addView(label("白平衡（解码）/ WHITE BALANCE", 8, UI_INK, tfHan),
+        wbDecodeBox.addView(label(tr("optics.raw_white_balance"), 8, UI_INK, tfHan),
                 new LinearLayout.LayoutParams(-1, dp(22)));
-        final String[] names = {"原照", "日光", "阴天", "阴影", "钨丝", "荧光", "自定义"};
+        final String[] names = {tr("optics.as_shot"), tr("optics.daylight"), tr("optics.cloudy"), tr("optics.shade"), tr("optics.tungsten"), tr("optics.fluorescent"), tr("optics.custom")};
         final LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         final HorizontalScrollView scroll = new HorizontalScrollView(this);
@@ -18292,14 +18294,14 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         wbChips = chips;
         scroll.addView(row, new android.widget.FrameLayout.LayoutParams(-2, -1));
         wbDecodeBox.addView(scroll, new LinearLayout.LayoutParams(-1, dp(36)));
-        wbDecodeNote = label("这一页改的是「拍的时候用的是什么光」：白平衡写在去马赛克里，"
-                + "所以每次都按当前尺寸重新解码一次。", 7.5f, UI_MUTED, tfHan);
+        wbDecodeNote = label(tr("optics.these_controls_set_the_light")
+                + tr("optics.changing_them_decodes_the_image"), 7.5f, UI_MUTED, tfHan);
         wbDecodeNote.setMaxLines(2);
         wbDecodeBox.addView(wbDecodeNote, new LinearLayout.LayoutParams(-1, dp(32)));
-        adjustRow(wbDecodeBox, "解码色温", 2000f, 12000f, () -> wbKelvin, v -> wbKelvin = v, true,
-                "光源的色温。3200K 钨丝、5500K 日光；数值越低画面越暖");
-        adjustRow(wbDecodeBox, "解码色调", -150f, 150f, () -> wbTint, v -> wbTint = v, true,
-                "绿-品红轴。日光灯发绿就往正值拖");
+        adjustRow(wbDecodeBox, tr("optics.raw_temperature"), 2000f, 12000f, () -> wbKelvin, v -> wbKelvin = v, true,
+                tr("optics.light_source_temperature_3200_k"));
+        adjustRow(wbDecodeBox, tr("optics.raw_tint"), -150f, 150f, () -> wbTint, v -> wbTint = v, true,
+                tr("optics.green_magenta_balance_increase_to"));
     }
 
     private void buildTonePage(LinearLayout page) {
@@ -18313,7 +18315,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // 原图提亮.
         final LinearLayout toneGrid = new LinearLayout(this);
         toneGrid.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(toneGrid, "曲线", "打开", tv -> openViewTool(4));
+        choiceCell(toneGrid, tr("optics.curves"), "打开", tv -> openViewTool(4));
 
         // **How the canvas reads the decode, not what the engine gets.**
         // Off: the numbers exactly as LibRaw handed them, through sRGB only.
@@ -18323,7 +18325,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // looked like a black rectangle -- but it also hides the picture's own
         // exposure, and it ran 2.54 EV above Lightroom on the reference DNG.
         final Square levelMark = new Square(this, UI_BLUE, uiToggleOff());
-        toggleCell(toneGrid, "原图提亮", "自动", levelMark, () -> rawAutoBright, on -> {
+        toggleCell(toneGrid, tr("optics.original_brightness"), tr("meter.auto"), levelMark, () -> rawAutoBright, on -> {
             rawAutoBright = on;
             getSharedPreferences("ui", MODE_PRIVATE).edit()
                     .putBoolean("raw_auto_bright", on).apply();
@@ -18342,7 +18344,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // has no slot for (and greys out there). 亮度 is not a Lightroom slider
         // either; it stays at the end, because the engine has it and taking a
         // control away is not an improvement.
-        viewCameraEvBox = adjustRow(page, "相机曝光", -4f, 4f, () -> cameraEv, v -> cameraEv = v, false);
+        viewCameraEvBox = adjustRow(page, tr("optics.camera_exposure"), -4f, 4f, () -> cameraEv, v -> cameraEv = v, false);
         viewCameraEvNote = label("", 7.5f, UI_MUTED, tfHan);
         viewCameraEvNote.setMaxLines(2);
         attachBang(viewCameraEvBox, () -> viewCameraEvNote == null
@@ -18354,13 +18356,13 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         attachBang(expBox, () -> viewExposureNote == null
                 ? "" : viewExposureNote.getText().toString());
         adjustRow(page, "对比度", -100f, 100f, () -> viewContrast, v -> viewContrast = v, false);
-        adjustRow(page, "高光", -100f, 100f, () -> viewHighlights, v -> viewHighlights = v, false);
-        adjustRow(page, "阴影", -100f, 100f, () -> viewShadows, v -> viewShadows = v, false);
+        adjustRow(page, tr("optics.highlights"), -100f, 100f, () -> viewHighlights, v -> viewHighlights = v, false);
+        adjustRow(page, tr("optics.shade"), -100f, 100f, () -> viewShadows, v -> viewShadows = v, false);
         adjustRow(page, "白色色阶", 0f, 50f, () -> viewWhite, v -> viewWhite = v, false,
                 "白点往哪收；和 Lightroom 的白色色阶同一个意思");
         adjustRow(page, "黑色色阶", 0f, 50f, () -> viewBlack, v -> viewBlack = v, false,
                 "黑点往哪收；和 Lightroom 的黑色色阶同一个意思");
-        adjustRow(page, "亮度", -100f, 100f, () -> viewBrightness, v -> viewBrightness = v, false,
+        adjustRow(page, tr("optics.brightness"), -100f, 100f, () -> viewBrightness, v -> viewBrightness = v, false,
                 "Lightroom 没有这一项：它抬的是中间调，两端几乎不动");
     }
 
@@ -18377,24 +18379,24 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final LinearLayout doors = new LinearLayout(this);
         doors.setOrientation(LinearLayout.HORIZONTAL);
         choiceCell(doors, "HSL", HSL_BANDS[hslBand], tv -> openViewTool(6));
-        choiceCell(doors, "分级", "4 个区域", tv -> openViewTool(5));
+        choiceCell(doors, tr("optics.grading"), "4 个区域", tv -> openViewTool(5));
         page.addView(doors, new LinearLayout.LayoutParams(-1, dp(46)));
 
         buildWhiteBalancePage(page);
-        page.addView(label("调色 / TONE", 8, UI_INK, tfHan),
+        page.addView(label(tr("optics.color_2"), 8, UI_INK, tfHan),
                 new LinearLayout.LayoutParams(-1, dp(24)));
         final TextView wbNote = label(
-                "上面两个 = 解码时改（等于换一种光拍，会重新解码）；下面两个 = 冲印后再偏色（立刻生效，"
-                + "亮部会跟着平移）。", 7.5f, UI_MUTED, tfHan);
+                tr("optics.the_controls_above_re_decode")
+                + tr("optics.including_its_highlights"), 7.5f, UI_MUTED, tfHan);
         wbNote.setMaxLines(2);
         page.addView(wbNote, new LinearLayout.LayoutParams(-1, dp(32)));
-        adjustRow(page, "色温", -100f, 100f, () -> viewTemperature, v -> viewTemperature = v, false,
-                "冲印完成后的整体偏暖偏冷。不动解码，改的是这张照片");
-        adjustRow(page, "色调", -100f, 100f, () -> viewTint, v -> viewTint = v, false,
-                "冲印完成后的绿-品红，同上，只影响已经出好的图");
-        adjustRow(page, "自然饱和度", -100f, 100f, () -> viewVibrance, v -> viewVibrance = v, false,
-                "只提暗中带色的部分，已经很艳的不动");
-        adjustRow(page, "饱和度", -100f, 100f, () -> viewSaturation, v -> viewSaturation = v, false);
+        adjustRow(page, tr("optics.temperature"), -100f, 100f, () -> viewTemperature, v -> viewTemperature = v, false,
+                tr("optics.warm_or_cool_the_finished"));
+        adjustRow(page, tr("optics.tint"), -100f, 100f, () -> viewTint, v -> viewTint = v, false,
+                tr("optics.adjust_the_finished_print_s"));
+        adjustRow(page, tr("optics.vibrance"), -100f, 100f, () -> viewVibrance, v -> viewVibrance = v, false,
+                tr("optics.boost_muted_colors_in_darker"));
+        adjustRow(page, tr("optics.saturation"), -100f, 100f, () -> viewSaturation, v -> viewSaturation = v, false);
 }
 
     /**
@@ -18428,13 +18430,13 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     }
 
     private void buildGradingPage(LinearLayout page) {
-        toolHeader(page, "分级");
+        toolHeader(page, tr("optics.grading"));
         // Four zones, one wheel -- Lightroom's shape: pick the tonal range,
         // then drag a dot. Hue is the angle, saturation the distance from grey.
         // **Lightroom's order and Lightroom's words.** 阴影 -> 中间调 -> 高光
-        // -> 全部, which is the order the panel lists them in; "主" was this
+        // -> 全部, which is the order the panel lists them in; tr("optics.global") was this
         // app's own name for the last one.
-        final String[] zones = {"阴影", "中间调", "高光", "全部"};
+        final String[] zones = {tr("optics.shade"), tr("optics.midtones"), tr("optics.highlights"), tr("meter.all")};
         // Chip index -> the colour-balance zone it edits.
         final int[] zoneIds = {1, 2, 3, 0};
         final LinearLayout zoneRow = new LinearLayout(this);
@@ -18467,8 +18469,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         page.addView(cbReadout, new LinearLayout.LayoutParams(-1, dp(20)));
         refreshCbReadout();
 
-        adjustRow(page, "明亮度", -1f, 1f, () -> cbLum[cbZone], v -> cbLum[cbZone] = v, false,
-                "这个明暗区间整体提亮或压暗");
+        adjustRow(page, tr("optics.luminance"), -1f, 1f, () -> cbLum[cbZone], v -> cbLum[cbZone] = v, false,
+                tr("optics.lighten_or_darken_this_tonal"));
     }
 
     private int cbZone = 0;
@@ -18479,7 +18481,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         if (cbReadout == null) return;
         final int hue = Math.round(cbHue[cbZone]);
         cbReadout.setText(String.format(java.util.Locale.US,
-                "色相 %d°   饱和度 %.0f%%", hue, cbSat[cbZone] * 100f));
+                tr("optics.hue_d_saturation_0f"), hue, cbSat[cbZone] * 100f));
     }
 
     /**
@@ -18673,7 +18675,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      * panels own it.
      */
     private void buildEffectsPage(LinearLayout page) {
-        final String[] tabs = {"效果", "发光"};
+        final String[] tabs = {tr("optics.effects"), "发光"};
         final LinearLayout tabRow = new LinearLayout(this);
         tabRow.setOrientation(LinearLayout.HORIZONTAL);
         effectChips = new TextView[tabs.length];
@@ -18769,7 +18771,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 7.5f, UI_MUTED, tfHan), new LinearLayout.LayoutParams(-1, dp(26)));
         adjustRow(page, "色相", -40f, 40f, () -> hslHue[hslBand], v -> hslHue[hslBand] = v, false,
                 "把这一段色相往旁边拧，最多 40 度");
-        adjustRow(page, "饱和度", -100f, 100f, () -> hslSat[hslBand], v -> hslSat[hslBand] = v, false,
+        adjustRow(page, tr("optics.saturation"), -100f, 100f, () -> hslSat[hslBand], v -> hslSat[hslBand] = v, false,
                 "只改这一段色相的浓度；-100 就是把这一段变成灰");
         adjustRow(page, "明度", -100f, 100f, () -> hslLum[hslBand], v -> hslLum[hslBand] = v, false,
                 "只改这一段色相的明暗");
@@ -18778,8 +18780,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     }
 
     private void buildCurvesPage(LinearLayout page) {
-        toolHeader(page, "曲线");
-        final String[] channels = {"RGB", "亮度", "R", "G", "B"};
+        toolHeader(page, tr("optics.curves"));
+        final String[] channels = {"RGB", tr("optics.brightness"), "R", "G", "B"};
         final LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         final TextView[] chips = new TextView[channels.length];
@@ -18801,7 +18803,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         page.addView(row, new LinearLayout.LayoutParams(-1, dp(28)));
         curveView = new CurveView();
         page.addView(curveView, new LinearLayout.LayoutParams(-1, dp(150)));
-        page.addView(label("拖动控制点；空白处点一下加点，最多 8 个", 7.5f, UI_MUTED, tfHan),
+        page.addView(label(tr("optics.drag_the_control_points_or"), 7.5f, UI_MUTED, tfHan),
                 new LinearLayout.LayoutParams(-1, dp(18)));
     }
 
@@ -18832,7 +18834,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final android.app.AlertDialog numberDialog = new android.app.AlertDialog.Builder(this)
                 .setTitle(title)
                 .setView(input)
-                .setPositiveButton("确定", (d, w) -> {
+                .setPositiveButton(tr("optics.ok"), (d, w) -> {
                     try {
                         final Float typed = parseUserNumber(input.getText().toString());
                         if (typed == null) {
@@ -18853,7 +18855,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                         }
                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:18778", ignored); }
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(tr("editor.cancel"), null)
                 .create();
         showThemed(numberDialog);
     }
@@ -18887,10 +18889,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             setEnabledDeepExcept(wbDecodeBox, raw, wbDecodeNote);
             if (wbDecodeNote != null) {
                 wbDecodeNote.setText(raw
-                        ? "这一页改的是「拍的时候用的是什么光」：白平衡写在去马赛克里，"
-                          + "所以每次都按当前尺寸重新解码一次。"
-                        : "JPEG 的白平衡已经烧进文件里，不能重解。要改色温请用下面的「色温」"
-                          + "「色调」——那是冲印后的偏色，立刻生效。");
+                        ? tr("optics.these_controls_set_the_light")
+                          + tr("optics.changing_them_decodes_the_image")
+                        : tr("optics.jpeg_white_balance_is_baked")
+                          + tr("optics.to_grade_the_finished_print"));
             }
         }
     }
@@ -19031,7 +19033,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         if (!isRawFile || rawFilePath == null) {
             // A JPEG has no negative to re-develop. Saying so once is better
             // than a control that silently does nothing.
-            showInAppToast("JPEG 的白平衡已经写在文件里，用下面的「色温」调整");
+            showInAppToast(tr("optics.jpeg_white_balance_is_baked_2"));
             return;
         }
         final SpektraLabEngine.Session current = session;
@@ -19046,7 +19048,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final int edge = importCapPixels > 0 ? IMPORT_LONG_EDGE : 0;
         wbDecoding = true;
         runOnUiThread(() -> {
-            if (statusText != null) statusText.setText("重新解码…");
+            if (statusText != null) statusText.setText(tr("optics.decoding_again"));
         });
         new Thread(() -> {
             float[] mul = null;
@@ -19096,7 +19098,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 wbDecoding = false;
                 runOnUiThread(() -> {
                     if (session == null) session = current;
-                    showErrorDialog("白平衡重解失败", describe(t));
+                    showErrorDialog(tr("optics.could_not_re_decode_with"), describe(t));
                 });
             }
         }).start();
@@ -19415,7 +19417,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // version that was supposed to fix it.
         opticsPanel = panel;
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(sectionHead("PRINT / 胶片冲印参数", this::resetOpticsPanel),
+        panel.addView(sectionHead(tr("print.print_settings"), this::resetOpticsPanel),
                 new LinearLayout.LayoutParams(-1, dp(38)));
 
         // **One page per stage, and the same seven the second engine uses.**
@@ -19430,9 +19432,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // **Log travel.** 0.25 / 1.0 / 4.0 are equal stops, and 1.0 is the
         // neutral: on a linear bar it sat at 20 %, which is the "越右越暗" half
         // only. With a ratio scale the default is the middle of the track.
-        knob("放大曝光 越右越暗", "E",  0.25f, 4.0f,   v -> printExposure = v,   () -> printExposure, false, true);
-        knob("高光保护",   "H",  0.0f,  3.0f,   v -> highlightRoom = v,   () -> highlightRoom, true);
-        knob("暗部保护",   "S",  0.0f,  3.0f,   v -> shadowRoom = v,      () -> shadowRoom, true);
+        knob(tr("print.knob.enlarger_exposure_right_is_darker"), "E",  0.25f, 4.0f,   v -> printExposure = v,   () -> printExposure, false, true);
+        knob(tr("print.knob.highlight_protection"),   "H",  0.0f,  3.0f,   v -> highlightRoom = v,   () -> highlightRoom, true);
+        knob(tr("print.knob.shadow_protection"),   "S",  0.0f,  3.0f,   v -> shadowRoom = v,      () -> shadowRoom, true);
         // **The same shoulder, by hand.** These are not a new curve -- they are
         // the three numbers the fit solves (`latitude_fit`), exposed so a frame
         // the histogram reads badly can be told where the highlights are. The
@@ -19452,41 +19454,41 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 knob("局部 · 位置 Y", "LY", 0.0f, 1.0f, v -> spotY = v, () -> spotY, false);
                 knob("局部 · 大小",   "LR", 0.05f, 0.60f, v -> spotR = v, () -> spotR, false);
                 knob("局部 · 曝光",   "LE", -2.0f, 2.0f, v -> spotEv = v, () -> spotEv, false);
-        knob("颗粒",       "G",  0.0f,  2.0f,   v -> grainAmount = v,     () -> grainAmount, true);
-        knob("光晕",       "○",  0.0f,  4.0f,   v -> halationAmount = v,  () -> halationAmount, true);
-        knob("光晕增强",   "+",  0.0f,  8.0f,   v -> halationBoost = v,   () -> halationBoost, true);
-        knob("乳剂散射",   "~",  0.0f,  1.0f,   v -> halationScatter = v, () -> halationScatter, true);
-        knob("散射半径",   "◍",  0.0f,  1.0f,   v -> scatterRadius = v,  () -> scatterRadius, true);
-        knob("眩光",       "✳",  0.0f,  30.0f,  v -> glareAmount = v,     () -> glareAmount);
-        knob("镜头模糊",   "◌",  0.0f,  200.0f, v -> lensBlur = v,        () -> lensBlur, true);
-        knob("黄滤镜",     "Y",  -1.0f, 1.0f,   v -> yFilter = v,         () -> yFilter);
-        knob("品红滤镜",   "M",  -1.0f, 1.0f,   v -> mFilter = v,         () -> mFilter);
-        knob("滤镜强度",   "C",  1.0f,  60.0f,  v -> filterScale = v,     () -> filterScale);
+        knob(tr("print.knob.grain"),       "G",  0.0f,  2.0f,   v -> grainAmount = v,     () -> grainAmount, true);
+        knob(tr("print.knob.halation"),       "○",  0.0f,  4.0f,   v -> halationAmount = v,  () -> halationAmount, true);
+        knob(tr("print.knob.halation_boost"),   "+",  0.0f,  8.0f,   v -> halationBoost = v,   () -> halationBoost, true);
+        knob(tr("print.knob.emulsion_scatter"),   "~",  0.0f,  1.0f,   v -> halationScatter = v, () -> halationScatter, true);
+        knob(tr("print.knob.scatter_radius"),   "◍",  0.0f,  1.0f,   v -> scatterRadius = v,  () -> scatterRadius, true);
+        knob(tr("print.knob.glare"),       "✳",  0.0f,  30.0f,  v -> glareAmount = v,     () -> glareAmount);
+        knob(tr("print.knob.lens_blur"),   "◌",  0.0f,  200.0f, v -> lensBlur = v,        () -> lensBlur, true);
+        knob(tr("print.knob.yellow_filter"),     "Y",  -1.0f, 1.0f,   v -> yFilter = v,         () -> yFilter);
+        knob(tr("print.knob.magenta_filter"),   "M",  -1.0f, 1.0f,   v -> mFilter = v,         () -> mFilter);
+        knob(tr("print.knob.filter_strength"),   "C",  1.0f,  60.0f,  v -> filterScale = v,     () -> filterScale);
 
-        knob("预闪",       "⚡", 0.0f,  1.0f,   v -> preflash = v,        () -> preflash);
-        knob("曲线柔度",   "∿",  1.0f,  4.0f,   v -> shadowRolloff = v,   () -> shadowRolloff, true);
-        knob("提升上限",   "L",  0.25f, 12.0f,  v -> maxLift = v,         () -> maxLift, true);
+        knob(tr("print.knob.pre_flash"),       "⚡", 0.0f,  1.0f,   v -> preflash = v,        () -> preflash);
+        knob(tr("print.knob.curve_softness"),   "∿",  1.0f,  4.0f,   v -> shadowRolloff = v,   () -> shadowRolloff, true);
+        knob(tr("print.knob.maximum_shadow_lift"),   "L",  0.25f, 12.0f,  v -> maxLift = v,         () -> maxLift, true);
         // The switches, on a 0/1 slider: the panel has one slider by design,
         // and a second kind of control would be a second thing to explain.
-        knob("光晕开关",   "◐",  0.0f,  1.0f,   v -> halationOn = v,       () -> halationOn, true);
-        knob("去抗光晕",   "⊘",  0.0f,  1.0f,   v -> antihalationRemoved = v, () -> antihalationRemoved, true);
-        knob("颗粒开关",   "g",  0.0f,  1.0f,   v -> grainOn = v,          () -> grainOn, true);
-        knob("层间抑制",   "⧉",  0.0f,  2.0f,   v -> couplersOn = v,       () -> couplersOn, true);
-        knob("扫描白",     "W",  0.0f,  1.0f,   v -> scannerWhite = v,     () -> scannerWhite);
-        knob("扫描黑",     "B",  0.0f,  1.0f,   v -> scannerBlack = v,     () -> scannerBlack);
+        knob(tr("print.knob.enable_halation"),   "◐",  0.0f,  1.0f,   v -> halationOn = v,       () -> halationOn, true);
+        knob(tr("print.knob.remove_anti_halation"),   "⊘",  0.0f,  1.0f,   v -> antihalationRemoved = v, () -> antihalationRemoved, true);
+        knob(tr("print.knob.enable_grain"),   "g",  0.0f,  1.0f,   v -> grainOn = v,          () -> grainOn, true);
+        knob(tr("print.knob.interlayer_inhibition"),   "⧉",  0.0f,  2.0f,   v -> couplersOn = v,       () -> couplersOn, true);
+        knob(tr("print.knob.scan_whites"),     "W",  0.0f,  1.0f,   v -> scannerWhite = v,     () -> scannerWhite);
+        knob(tr("print.knob.scan_blacks"),     "B",  0.0f,  1.0f,   v -> scannerBlack = v,     () -> scannerBlack);
         // Six more that the schema has had all along and the panel never
         // showed. Booleans ride a 0..1 knob because the knob is the panel's
         // one control; the readout says "0.00" / "1.00" and the hint says
         // which end is which.
-        knob("眩光开关",   "☀",  0.0f,  1.0f,   v -> glareActive = v,      () -> glareActive);
-        knob("扫描仪模糊", "S",  0.0f, 20.0f,   v -> scannerLensBlur = v,  () -> scannerLensBlur);
-        knob("光晕余量",   "R",  0.0f,  8.0f,   v -> halationHeadroom = v, () -> halationHeadroom, true);
-        knob("浓度曲线",   "γ",  0.2f,  4.0f,   v -> densityGamma = v,     () -> densityGamma, true);
+        knob(tr("print.knob.enable_glare"),   "☀",  0.0f,  1.0f,   v -> glareActive = v,      () -> glareActive);
+        knob(tr("print.knob.scanner_blur"), "S",  0.0f, 20.0f,   v -> scannerLensBlur = v,  () -> scannerLensBlur);
+        knob(tr("print.knob.halation_headroom"),   "R",  0.0f,  8.0f,   v -> halationHeadroom = v, () -> halationHeadroom, true);
+        knob(tr("print.knob.density_curve"),   "γ",  0.2f,  4.0f,   v -> densityGamma = v,     () -> densityGamma, true);
         knob("DI 蓝补偿", "I", 0.0f, 1.0f, v -> diBlueComp = v > 0.5f,
              () -> diBlueComp ? 1f : 0f, true);
-        knob("数字中间片", "I",  0.0f,  1.0f,   v -> digitalIntermediate = v > 0.5f,
+        knob(tr("print.knob.digital_intermediate"), "I",  0.0f,  1.0f,   v -> digitalIntermediate = v > 0.5f,
                                                                     () -> digitalIntermediate ? 1f : 0f);
-        knob("输出编码",   "E",  0.0f,  1.0f,   v -> outputCctf = v > 0.5f,
+        knob(tr("print.knob.output_encoding"),   "E",  0.0f,  1.0f,   v -> outputCctf = v > 0.5f,
                                                                     () -> outputCctf ? 1f : 0f);
 
 
@@ -19569,9 +19571,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 // square boxes, is how Lightroom stacks a page's switches.
                 final LinearLayout toneCells = new LinearLayout(this);
                 toneCells.setOrientation(LinearLayout.HORIZONTAL);
-                choiceCell(toneCells, "配光", "重新配光", tv -> resolvePrinting());
+                choiceCell(toneCells, tr("print.color_timing"), tr("print.rebalance_print"), tv -> resolvePrinting());
                 edrMark = new Square(this, UI_BLUE, uiToggleOff());
-                toggleCell(toneCells, "动态范围", "EDR", edrMark, () -> edrOn > 0.5f, on -> {
+                toggleCell(toneCells, tr("print.dynamic_range"), "EDR", edrMark, () -> edrOn > 0.5f, on -> {
                     edrOn = on ? 1f : 0f;
                     if (uiReady && session != null) {
                         showingOriginal = false;
@@ -19579,9 +19581,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                         renderImage();
                     }
                 });
-                choiceCell(toneCells, "保护基准",
+                choiceCell(toneCells, tr("print.protection_basis"),
                         labelOf(NORM_LABELS, NORM_IDS, sceneNorm), tv ->
-                        showChoiceMapping("高光/暗部保护按什么算", NORM_LABELS, NORM_IDS,
+                        showChoiceMapping(tr("print.basis_for_highlight_and_shadow"), NORM_LABELS, NORM_IDS,
                                 sceneNorm, id -> {
                                     sceneNorm = id;
                                     tv.setText(labelOf(NORM_LABELS, NORM_IDS, id));
@@ -19626,9 +19628,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                                     }
                                 })),
                         new LinearLayout.LayoutParams(-1, -2));
-                printRow("放大曝光 越右越暗");
-                printRow("高光保护");
-                printRow("暗部保护");
+                printRow(tr("print.knob.enlarger_exposure_right_is_darker"));
+                printRow(tr("print.knob.highlight_protection"));
+                printRow(tr("print.knob.shadow_protection"));
                 printRow("高光曲线 · 手动");
                 printRow("高光提升阈值");
                 printRow("高光提升范围");
@@ -19637,10 +19639,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 printRow("局部 · 位置 Y");
                 printRow("局部 · 大小");
                 printRow("局部 · 曝光");
-                printRow("曲线柔度");
-                printRow("提升上限");
-                printRow("浓度曲线");
-                printRow("预闪");
+                printRow(tr("print.knob.curve_softness"));
+                printRow(tr("print.knob.maximum_shadow_lift"));
+                printRow(tr("print.knob.density_curve"));
+                printRow(tr("print.knob.pre_flash"));
                 break;
             case 1:   // 色彩
                 hueOwnMark = new Square(this, UI_BLUE, uiToggleOff());
@@ -19649,11 +19651,11 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                         on -> {
                             if (hueFixUnsupported(filmStock)) {
                                 refreshHueOwnMark();
-                                showActionSheet("这支胶片不支持色相校正",
-                                        "它的光谱反演标定还不准：实测绿色偏差 20 到 30 度，"
-                                        + "强行校正会比保留原色偏得更多。所以这支胶片的色相校正是固定的。"
-                                        + "换一支胶片就能改。",
-                                        new String[]{"知道了"}, which -> { });
+                                showActionSheet(tr("print.hue_correction_unavailable_for_this"),
+                                        tr("print.this_stock_s_spectral_calibration")
+                                        + tr("print.correction_would_shift_the_hues")
+                                        + tr("print.choose_a_different_film_to"),
+                                        new String[]{tr("print.ok")}, which -> { });
                                 return;
                             }
                             hueCorrection = on ? 0f : 1f;
@@ -19663,34 +19665,34 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                                 renderImage();
                             }
                         }));
-                printRow("层间抑制");
+                printRow(tr("print.knob.interlayer_inhibition"));
                 printRow("DI 蓝补偿");
                 break;
             case 2:   // 胶片
-                printRow("数字中间片");
-                printRow("输出编码");
-                printRow("扫描白");
-                printRow("扫描黑");
+                printRow(tr("print.knob.digital_intermediate"));
+                printRow(tr("print.knob.output_encoding"));
+                printRow(tr("print.knob.scan_whites"));
+                printRow(tr("print.knob.scan_blacks"));
                 break;
             case 3:   // 颗粒
-                printRow("颗粒");
-                printRow("颗粒开关");
+                printRow(tr("print.knob.grain"));
+                printRow(tr("print.knob.enable_grain"));
                 break;
             case 4:   // 光晕
-                printRow("光晕");
-                printRow("光晕开关");
-                printRow("光晕增强");
-                printRow("光晕余量");
-                printRow("去抗光晕");
-                printRow("乳剂散射");
-                printRow("散射半径");
+                printRow(tr("print.knob.halation"));
+                printRow(tr("print.knob.enable_halation"));
+                printRow(tr("print.knob.halation_boost"));
+                printRow(tr("print.knob.halation_headroom"));
+                printRow(tr("print.knob.remove_anti_halation"));
+                printRow(tr("print.knob.emulsion_scatter"));
+                printRow(tr("print.knob.scatter_radius"));
                 break;
             case 5:   // 镜头
-                printRow("镜头模糊");
-                printRow("扫描仪模糊");
-                addChoice(printBody, "镜头滤镜",
+                printRow(tr("print.knob.lens_blur"));
+                printRow(tr("print.knob.scanner_blur"));
+                addChoice(printBody, tr("print.lens_filter"),
                         labelOf(FILTER_LABELS, FILTER_IDS, cameraFilter), tv ->
-                        showChoiceMapping("镜头滤镜（Wratten）", FILTER_LABELS, FILTER_IDS,
+                        showChoiceMapping(tr("print.lens_filter_wratten"), FILTER_LABELS, FILTER_IDS,
                                 cameraFilter, id -> {
                                     cameraFilter = id;
                                     tv.setText(labelOf(FILTER_LABELS, FILTER_IDS, id));
@@ -19703,17 +19705,17 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                                 }));
                 break;
             default:  // 相纸
-                printRow("黄滤镜");
-                printRow("品红滤镜");
-                printRow("滤镜强度");
-                printRow("眩光");
-                printRow("眩光开关");
+                printRow(tr("print.knob.yellow_filter"));
+                printRow(tr("print.knob.magenta_filter"));
+                printRow(tr("print.knob.filter_strength"));
+                printRow(tr("print.knob.glare"));
+                printRow(tr("print.knob.enable_glare"));
                 // **What the canvas is drawn in.** Not a look parameter: it never
                 // reaches a file, and two exports of the same frame in different
                 // canvas spaces are the same bytes.
-                addChoice(printBody, "预览色域", previewSpace, tv -> {
+                addChoice(printBody, tr("print.preview_gamut"), previewSpace, tv -> {
                     final java.util.List<String> labels = java.util.Arrays.asList(SPACES);
-                    showChoiceSheet("预览色域（只影响屏幕；导出始终是 sRGB）",
+                    showChoiceSheet(tr("print.preview_gamut_display_only_exports"),
                             labels, previewSpace, picked -> {
                                 final int i = labels.indexOf(picked);
                                 if (i >= 0) previewSpace = SPACES[i];
@@ -19896,7 +19898,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             final boolean next = !isOn.getAsBoolean();
             Probe.log("toggle", title + " " + isOn.getAsBoolean() + " -> " + next);
             mark.setLit(next);
-            if (rendering) statusText.setText("渲染中…（这是胶片层参数，约 1–2 秒）");
+            if (rendering) statusText.setText(tr("print.rendering_film_settings_about_1"));
             // The frame of the cell that just changed, drawn on again.
             traceOne(cell);
             onChange.accept(next);
@@ -19983,12 +19985,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
-        TextView cancel = label("取消", 10, UI_MUTED, tfHan);
+        TextView cancel = label(tr("editor.cancel"), 10, UI_MUTED, tfHan);
         cancel.setGravity(android.view.Gravity.CENTER);
         cancel.setPadding(0, dp(14), 0, dp(14));
         cancel.setOnClickListener(v -> dialog.dismiss());
         actions.addView(cancel, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView ok = label("确定", 10, UI_BLUE, tfHan);
+        TextView ok = label(tr("optics.ok"), 10, UI_BLUE, tfHan);
         ok.setGravity(android.view.Gravity.CENTER);
         ok.setPadding(0, dp(14), 0, dp(14));
         ok.setOnClickListener(v -> {
@@ -20041,10 +20043,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private String previewSpace = "sRGB";
 
     private static final String[] FILTER_IDS = {"", "w8", "w11", "w12", "w15", "w21", "w25", "w47", "w58"};
-    private static final String[] FILTER_LABELS = {"无", "W8 黄", "W11 黄绿", "W12 深黄", "W15 深黄",
-            "W21 橙", "W25 红", "W47 蓝", "W58 绿"};
+    private static final String[] FILTER_LABELS = {tr("meter.none"), tr("meter.w8_yellow"), tr("meter.w11_yellow_green"), tr("meter.w12_deep_yellow"), tr("meter.w15_deep_yellow"),
+            tr("meter.w21_orange"), tr("meter.w25_red"), tr("meter.w47_blue"), tr("meter.w58_green")};
     private static final String[] NORM_IDS = {"power", "y", "max"};
-    private static final String[] NORM_LABELS = {"幂律 power", "亮度 y", "峰值 max"};
+    private static final String[] NORM_LABELS = {tr("meter.power"), tr("meter.luminance_y"), tr("meter.peak_max")};
 
     /** One line per knob, short enough to fit the row. */
     private static String knobHint(String label) {
@@ -20112,13 +20114,13 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private LinearLayout buildComposePanel() {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(sectionHead("COMPOSITION / 构图", this::resetComposePanel),
+        panel.addView(sectionHead(tr("compose.composition"), this::resetComposePanel),
                 new LinearLayout.LayoutParams(-1, dp(38)));
 
         LinearLayout sub = new LinearLayout(this);
         sub.setOrientation(LinearLayout.HORIZONTAL);
-        composeCropTab = composeTabView("裁切", 0);
-        composeRotateTab = composeTabView("旋转", 1);
+        composeCropTab = composeTabView(tr("compose.crop"), 0);
+        composeRotateTab = composeTabView(tr("compose.rotate"), 1);
         sub.addView(composeCropTab, new LinearLayout.LayoutParams(0, dp(32), 1f));
         sub.addView(composeRotateTab, new LinearLayout.LayoutParams(0, dp(32), 1f));
         panel.addView(sub, new LinearLayout.LayoutParams(-1, dp(32)));
@@ -20168,7 +20170,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         }
     }
 
-    /** The frame's own aspect, which is what "原始" means. */
+    /** The frame's own aspect, which is what tr("compose.original") means. */
     private float originalAspect() {
         final int w = importedWidth > 0 ? importedWidth : sourceWidth;
         final int h = importedHeight > 0 ? importedHeight : sourceHeight;
@@ -20202,12 +20204,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             card.addView(new RatioMark(this, ratio, active ? UI_BLUE : UI_INK),
                     new LinearLayout.LayoutParams(-1, dp(44)));
 
-            final TextView caption = label(original ? "原始" : EDGE_RATIO_LABELS[i],
+            final TextView caption = label(original ? tr("compose.original") : EDGE_RATIO_LABELS[i],
                     8.5f, active ? UI_INK : UI_MUTED, tfBody);
             caption.setGravity(android.view.Gravity.CENTER);
             card.addView(caption, new LinearLayout.LayoutParams(-1, -2));
 
-            final TextView gate = label(original ? "整幅" : EDGE_LABELS[i], 6.5f, UI_MUTED, tfHan);
+            final TextView gate = label(original ? tr("compose.full_frame") : EDGE_LABELS[i], 6.5f, UI_MUTED, tfHan);
             gate.setGravity(android.view.Gravity.CENTER);
             card.addView(gate, new LinearLayout.LayoutParams(-1, -2));
 
@@ -20232,7 +20234,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                     active ? UI_INK : UI_MUTED, tfBody);
             caption.setGravity(android.view.Gravity.CENTER);
             card.addView(caption, new LinearLayout.LayoutParams(-1, -2));
-            final TextView gate = label("竖幅", 6.5f, UI_MUTED, tfHan);
+            final TextView gate = label(tr("compose.portrait"), 6.5f, UI_MUTED, tfHan);
             gate.setGravity(android.view.Gravity.CENTER);
             card.addView(gate, new LinearLayout.LayoutParams(-1, -2));
 
@@ -20269,7 +20271,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
         // **Nothing happens to the picture until 应用.** 取消 throws the
         // proposal away; the frame goes back to the whole canvas.
-        final TextView cancel = label("取消", 9, UI_MUTED, tfHan);
+        final TextView cancel = label(tr("editor.cancel"), 9, UI_MUTED, tfHan);
         cancel.setGravity(android.view.Gravity.CENTER);
         cancel.setBackground(cardBorder(false));
         cancel.setOnClickListener(v -> {
@@ -20282,7 +20284,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         cancelLp.rightMargin = dp(6);
         footRow.addView(cancel, cancelLp);
 
-        final TextView apply = label("应用裁切", 9, UI_BLUE, tfHan);
+        final TextView apply = label(tr("compose.apply_crop"), 9, UI_BLUE, tfHan);
         apply.setGravity(android.view.Gravity.CENTER);
         apply.setBackground(cardBorder(true));
         apply.setOnClickListener(v -> commitPendingCrop());
@@ -20331,8 +20333,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     private String cropSummary() {
         if (pendingCropW >= 0.999f && pendingCropH >= 0.999f
-                && pendingCropX <= 0.001f && pendingCropY <= 0.001f) return "整幅 · 未裁切";
-        return String.format(java.util.Locale.US, "保留 %.0f%% × %.0f%%（按对角缩放）",
+                && pendingCropX <= 0.001f && pendingCropY <= 0.001f) return tr("compose.full_frame_uncropped");
+        return String.format(java.util.Locale.US, tr("compose.keep_0f_0f_scaled_by"),
                 pendingCropW * 100, pendingCropH * 100);
     }
 
@@ -20377,7 +20379,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private void commitPendingCrop() {
         if (pendingCropW >= 0.999f && pendingCropH >= 0.999f
                 && pendingCropX <= 0.001f && pendingCropY <= 0.001f) {
-            showInAppToast("还没有裁切");
+            showInAppToast(tr("compose.no_crop_applied"));
             return;
         }
         final float nw = geometryCropW * pendingCropW;
@@ -20434,7 +20436,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         android.widget.FrameLayout arcBox = new android.widget.FrameLayout(this);
         arcBox.addView(arc, new android.widget.FrameLayout.LayoutParams(-1, -1));
         final TextView gridChip = label("", 8f, UI_BLUE, tfHan);
-        final Runnable paintChip = () -> gridChip.setText(rotateGridOn ? "参考线 · 开" : "参考线 · 关");
+        final Runnable paintChip = () -> gridChip.setText(rotateGridOn ? tr("compose.guides_on") : tr("compose.guides_off"));
         paintChip.run();
         gridChip.setPadding(dp(8), dp(4), dp(8), dp(4));
         gridChip.setOnClickListener(v -> {
@@ -20450,7 +20452,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         chipLp.rightMargin = dp(6);
         arcBox.addView(gridChip, chipLp);
         composeBody.addView(arcBox, new LinearLayout.LayoutParams(-1, dp(70)));
-        final TextView tip = label("拖弧尺或画面转动 · 双击画面归零 · 松手吸附水平",
+        final TextView tip = label(tr("compose.drag_the_dial_or_image"),
                 7.5f, UI_MUTED, tfHan);
         tip.setGravity(android.view.Gravity.CENTER);
         composeBody.addView(tip, new LinearLayout.LayoutParams(-1, dp(14)));
@@ -20460,15 +20462,15 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         row.setPadding(0, dp(12), 0, 0);
 
         final LinearLayout.LayoutParams cell = new LinearLayout.LayoutParams(0, -2, 1f);
-        row.addView(circleAction("↺", "向左 90°", () -> turnBy(-1)), cell);
-        row.addView(circleAction("↻", "向右 90°", () -> turnBy(1)),
+        row.addView(circleAction("↺", tr("compose.left_90"), () -> turnBy(-1)), cell);
+        row.addView(circleAction("↻", tr("compose.right_90"), () -> turnBy(1)),
                 new LinearLayout.LayoutParams(0, -2, 1f));
-        row.addView(circleAction("⇆", "水平翻转", () -> {
+        row.addView(circleAction("⇆", tr("compose.flip_horizontally"), () -> {
             geometryFlipH = !geometryFlipH;
             showComposePage(1);
             commitCompose();
         }), new LinearLayout.LayoutParams(0, -2, 1f));
-        row.addView(circleAction("⇅", "垂直翻转", () -> {
+        row.addView(circleAction("⇅", tr("compose.flip_vertically"), () -> {
             geometryFlipV = !geometryFlipV;
             showComposePage(1);
             commitCompose();
@@ -20966,7 +20968,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                     downX = e.getX(); downY = e.getY();
                     sx = nx; sy = ny; sw = nw; sh = nh;
                     // A box that already has a card's shape starts out held;
-                    // a free / "整幅" box starts out not.
+                    // a free / tr("compose.full_frame") box starts out not.
                     ratioHeld = aspect > 0.0001f;
                     final android.view.ViewParent parent = getParent();
                     if (parent != null) parent.requestDisallowInterceptTouchEvent(true);
@@ -21148,7 +21150,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private LinearLayout buildFormatPanel() {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(sectionHead("FRAME & SCALE / 构图尺度", this::resetFormatPanel),
+        panel.addView(sectionHead(tr("border.frame_scale"), this::resetFormatPanel),
                 new LinearLayout.LayoutParams(-1, dp(38)));
         HorizontalScrollView scroll = new HorizontalScrollView(this);
         scroll.setHorizontalScrollBarEnabled(false);
@@ -21163,7 +21165,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         LinearLayout foot = new LinearLayout(this);
         foot.setOrientation(LinearLayout.HORIZONTAL);
         foot.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        formatFootLabel = label("物理尺幅 · 裁切与旋转在「构图」页", 8.5f, UI_MUTED, tfHan);
+        formatFootLabel = label(tr("border.physical_film_size_crop_and"), 8.5f, UI_MUTED, tfHan);
         foot.addView(formatFootLabel, new LinearLayout.LayoutParams(0, -2, 1f));
         formatFootValue = label("36 mm", 9, UI_BLUE, tfBody);
         formatFootValue.setFontFeatureSettings("tnum");   // live number, not typed
@@ -21259,7 +21261,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         glowBars.add(glowSoftnessBar);
 
         // The page's own 重置, since the heading that carried it is gone.
-        addChoice(body, "复位", "发光全部归零", tv -> resetGlowPanel());
+        addChoice(body, tr("optics.reset"), "发光全部归零", tv -> resetGlowPanel());
 
         final TextView note = label("画面上的光晕 · 与胶片参数互不影响 · 每次改动重新渲染一次",
                 7.5f, UI_MUTED, tfHan);
@@ -21505,8 +21507,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      */
     private void refreshFormatFoot() {
         if (formatFootLabel != null) {
-            formatFootLabel.setText(overscanOn ? "物理尺幅 · 由片门决定，点数字换片门"
-                                               : "物理尺幅 · 裁切与旋转在「构图」页");
+            formatFootLabel.setText(overscanOn ? tr("border.physical_film_size_tap_to")
+                                               : tr("border.physical_film_size_crop_and"));
         }
         if (formatFootValue == null) return;
         formatFootValue.setText(String.format(java.util.Locale.US, "%s mm",
@@ -21558,7 +21560,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             valueRow.addView(unit, unitLp);
             top.addView(valueRow);
 
-            TextView kind = label(i == 2 || i >= 8 ? "宽幅" : "常规", 7, UI_MUTED, tfHan);
+            TextView kind = label(i == 2 || i >= 8 ? tr("border.wide") : tr("border.standard"), 7, UI_MUTED, tfHan);
             LinearLayout.LayoutParams kindLp = new LinearLayout.LayoutParams(-2, -2);
             kindLp.topMargin = dp(4);
             top.addView(kind, kindLp);
@@ -21640,16 +21642,16 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // into its own page -- not fifteen controls at once.
         LinearLayout home = new LinearLayout(this);
         home.setOrientation(LinearLayout.VERTICAL);
-        home.addView(sectionHead("FRAME & IMPRINT / 边框", this::resetEdgePanel),
+        home.addView(sectionHead(tr("border.frame_imprint"), this::resetEdgePanel),
                 new LinearLayout.LayoutParams(-1, dp(38)));
 
         HorizontalScrollView cardScroll = new HorizontalScrollView(this);
         cardScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout cardStrip = new LinearLayout(this);
         cardStrip.setOrientation(LinearLayout.HORIZONTAL);
-        cardStrip.addView(bigCard("片边", "REBATE", this::edgeSummary, () -> openEdgePage(0)),
+        cardStrip.addView(bigCard(tr("border.film_border"), "REBATE", this::edgeSummary, () -> openEdgePage(0)),
                 cardLp());
-        cardStrip.addView(bigCard("日期水印", "DATE BACK", this::dateSummary, () -> openEdgePage(1)),
+        cardStrip.addView(bigCard(tr("border.date_stamp"), "DATE BACK", this::dateSummary, () -> openEdgePage(1)),
                 cardLp());
         cardStrip.addView(bigCard("印刷边框", "PRINT FRAME", this::pfSummary, () -> openEdgePage(2)),
                 cardLp());
@@ -21725,15 +21727,15 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     }
 
     private String edgeSummary() {
-        if (!overscanOn) return "未开启 · 点进去设置";
+        if (!overscanOn) return tr("border.off_tap_to_configure");
         final int at = edgeIds.indexOf(overscanFormat);
         final String gate = at >= 0 && at < edgeLabels.size() ? edgeLabels.get(at) : overscanFormat;
-        return gate + " · 雾 " + fmt1(edgeFog) + " · 漏光 " + fmt1(edgeLeaks)
-                + " · 张数 " + (frameNumber < 0.5f ? "自动" : String.valueOf(Math.round(frameNumber)));
+        return gate + tr("border.fog") + fmt1(edgeFog) + tr("border.leak") + fmt1(edgeLeaks)
+                + tr("border.frame") + (frameNumber < 0.5f ? tr("meter.auto") : String.valueOf(Math.round(frameNumber)));
     }
 
     private String dateSummary() {
-        if (!dateOn) return "未开启 · 点进去设置";
+        if (!dateOn) return tr("border.off_tap_to_configure");
         return (dateText == null || dateText.isEmpty() ? imprintDate() : dateText)
                 + " · " + labelOf(STYLE_LABELS, STYLE_IDS, dateStyle)
                 + " " + labelOf(PLACE_LABELS, PLACE_IDS, datePlacement);
@@ -21822,7 +21824,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     }
 
     private String pfSummary() {
-        if (pfKind == null || "none".equals(pfKind)) return "未开启 · 点进去设置";
+        if (pfKind == null || "none".equals(pfKind)) return tr("border.off_tap_to_configure");
         return pfLabel() + (pfNeedsMargin() ? " · 边 " + fmt1(pfMargin) + " mm" : "");
     }
 
@@ -21923,20 +21925,20 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
         edgePage = new LinearLayout(this);
         edgePage.setOrientation(LinearLayout.VERTICAL);
-        edgePage.addView(pageHead("片边 / REBATE"), new LinearLayout.LayoutParams(-1, dp(38)));
+        edgePage.addView(pageHead(tr("border.film_border_2")), new LinearLayout.LayoutParams(-1, dp(38)));
         edgeFotuNote = label("fotufilm：片边和画面一起冲出来 —— 片门阴影、齿孔、厂标、张数、"
                 + "日期都是曝光，过颗粒和相纸", 7.5f, UI_MUTED, tfHan);
         edgeFotuNote.setPadding(dp(2), 0, dp(2), dp(6));
         edgeFotuNote.setVisibility(View.GONE);
         edgePage.addView(edgeFotuNote, new LinearLayout.LayoutParams(-1, -2));
         overscanMark = new Square(this, UI_BLUE, uiToggleOff());
-        overscanRow = toggleRow("开启片边", overscanMark, () -> overscanOn, on -> {
+        overscanRow = toggleRow(tr("border.enable_film_border"), overscanMark, () -> overscanOn, on -> {
             if (on && edgeIds.isEmpty()) {
                 overscanMark.setLit(false);
                 // **Point at the way out.** A 16:9 frame has no gate at all, and
                 // this switch used to answer "does not correspond to any gate"
                 // while the picker that could fix it was dimmed a few rows down.
-                showInAppToast("先选一个片门（会自动把画面裁成它的比例）");
+                showInAppToast(tr("border.choose_a_film_gate_first"));
                 return;
             }
             overscanOn = on;
@@ -21976,7 +21978,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         {
             final int at = edgeIds.indexOf(overscanFormat);
             final String current = at >= 0 && at < edgeLabels.size() ? edgeLabels.get(at) : overscanFormat;
-            choiceCell(gateRow, "片门格式", current, tv -> {
+            choiceCell(gateRow, tr("border.film_gate_format"), current, tv -> {
                 edgeValue = tv;
                 showEdgePicker();
             });
@@ -21986,9 +21988,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // -- so "turn the rebate" can only mean "turn the picture". That is one
         // quarter turn, and `commitCompose` then re-picks the gates for the new
         // shape. The rebate follows; the canvas shows both.
-        choiceCell(gateRow, "片边方向", "旋转 90°", tv -> {
+        choiceCell(gateRow, tr("border.border_orientation"), tr("border.rotate_90"), tv -> {
             turnBy(1);
-            showInAppToast("已转 90° · 片边方向跟着画面");
+            showInAppToast(tr("border.rotated_90_the_border_follows"));
         });
         edgePage.addView(gateRow, new LinearLayout.LayoutParams(-1, dp(46)));
 
@@ -22016,15 +22018,15 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         edgePage.addView(pairRow, new LinearLayout.LayoutParams(-1, dp(52)));
 
         edgeTextMark = new Square(this, UI_BLUE, uiToggleOff());
-        edgeInner.addView(toggleRow("片边文字（厂标 / 张数）", edgeTextMark, () -> edgeTextOn, on -> {
+        edgeInner.addView(toggleRow(tr("border.edge_markings_brand_frame_number"), edgeTextMark, () -> edgeTextOn, on -> {
             edgeTextOn = on;
             redraw.accept(null);
         }), new LinearLayout.LayoutParams(-1, dp(52)));
-        edgeFogBar = rangeRow(edgeInner, "片基雾", "片基本身的灰雾。0 是完全透明，越大越脏",
+        edgeFogBar = rangeRow(edgeInner, tr("border.base_fog"), tr("border.haze_in_the_film_base"),
                 0.0f, 4.0f, edgeFog, 0.1f, v -> edgeFog = v);
-        edgeLeaksBar = rangeRow(edgeInner, "漏光", "卷轴漏进来的光，从片边渗向画面",
+        edgeLeaksBar = rangeRow(edgeInner, tr("border.light_leak"), tr("border.light_leaking_into_the_roll"),
                 0.0f, 4.0f, edgeLeaks, 0.1f, v -> edgeLeaks = v);
-        frameNoBar = rangeRow(edgeInner, "片边张数", "片边上印的张数，整格走动。0 = 按 seed 随机",
+        frameNoBar = rangeRow(edgeInner, tr("border.frame_number"), "片边上印的张数，整格走动。0 = 按 seed 随机",
                 0.0f, 99.0f, frameNumber, 1f, v -> frameNumber = v);
         // **The aperture: a stop list, not a number line.** f/1.2 -> f/1.4 is
         // a hair at the left of a 0..64 dial and half its travel is past any
@@ -22034,8 +22036,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         LinearLayout fNumRow = new LinearLayout(this);
         fNumRow.setOrientation(LinearLayout.HORIZONTAL);
         fNumRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        fNumRow.addView(label("光圈值", 8, UI_INK, tfHan), new LinearLayout.LayoutParams(-2, -2));
-        fNumRow.addView(bangFor(() -> "相机记录的 f 值。决定片门边缘的虚化。0 = 未知（按 f/5.6）"));
+        fNumRow.addView(label(tr("border.aperture"), 8, UI_INK, tfHan), new LinearLayout.LayoutParams(-2, -2));
+        fNumRow.addView(bangFor(() -> tr("border.recorded_f_number_affects_the")));
         fNumRow.addView(new View(this), new LinearLayout.LayoutParams(0, -2, 1f));
         edgeFNumValue = label(fNumLabel(edgeFNumber), 8, UI_BLUE, tfBody);
         edgeFNumValue.setFontFeatureSettings("tnum");    // live number, not typed
@@ -22047,20 +22049,20 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
         edgeShapeRow = new LinearLayout(this);
         edgeShapeRow.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(edgeShapeRow, "片边模式", labelOf(MODE_LABELS, MODE_IDS, edgeMode), tv ->
-                showChoiceMapping("片边模式", MODE_LABELS, MODE_IDS, edgeMode, id -> {
+        choiceCell(edgeShapeRow, tr("border.border_style"), labelOf(MODE_LABELS, MODE_IDS, edgeMode), tv ->
+                showChoiceMapping(tr("border.border_style"), MODE_LABELS, MODE_IDS, edgeMode, id -> {
                     edgeMode = id;
                     tv.setText(labelOf(MODE_LABELS, MODE_IDS, id));
                     redraw.accept(null);
                 }));
-        choiceCell(edgeShapeRow, "片门形状", labelOf(GATE_LABELS, GATE_IDS, edgeGate), tv ->
-                showChoiceMapping("片门形状", GATE_LABELS, GATE_IDS, edgeGate, id -> {
+        choiceCell(edgeShapeRow, tr("border.gate_shape"), labelOf(GATE_LABELS, GATE_IDS, edgeGate), tv ->
+                showChoiceMapping(tr("border.gate_shape"), GATE_LABELS, GATE_IDS, edgeGate, id -> {
                     edgeGate = id;
                     tv.setText(labelOf(GATE_LABELS, GATE_IDS, id));
                     redraw.accept(null);
                 }));
-        choiceCell(edgeShapeRow, "齿孔", labelOf(HOLES_LABELS, HOLES_IDS, edgeHoles), tv ->
-                showChoiceMapping("齿孔里看到什么", HOLES_LABELS, HOLES_IDS, edgeHoles, id -> {
+        choiceCell(edgeShapeRow, tr("border.sprocket_holes"), labelOf(HOLES_LABELS, HOLES_IDS, edgeHoles), tv ->
+                showChoiceMapping(tr("border.what_appears_through_the_sprocket"), HOLES_LABELS, HOLES_IDS, edgeHoles, id -> {
                     edgeHoles = id;
                     tv.setText(labelOf(HOLES_LABELS, HOLES_IDS, id));
                     redraw.accept(null);
@@ -22069,20 +22071,20 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
         LinearLayout edgeSeedRow = new LinearLayout(this);
         edgeSeedRow.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(edgeSeedRow, "片夹", labelOf(CARRIER_LABELS, CARRIER_IDS, edgeCarrier), tv ->
-                showChoiceMapping("胶片两侧露出什么", CARRIER_LABELS, CARRIER_IDS, edgeCarrier, id -> {
+        choiceCell(edgeSeedRow, tr("border.film_holder"), labelOf(CARRIER_LABELS, CARRIER_IDS, edgeCarrier), tv ->
+                showChoiceMapping(tr("border.what_appears_alongside_the_film"), CARRIER_LABELS, CARRIER_IDS, edgeCarrier, id -> {
                     edgeCarrier = id;
                     tv.setText(labelOf(CARRIER_LABELS, CARRIER_IDS, id));
                     redraw.accept(null);
                 }));
-        choiceCell(edgeSeedRow, "片边种子", String.valueOf(cameraSeed), tv ->
-                askText("片边随机种子（0 – 2147483647）", String.valueOf(cameraSeed), true, v -> {
+        choiceCell(edgeSeedRow, tr("border.border_seed"), String.valueOf(cameraSeed), tv ->
+                askText(tr("border.random_seed_for_the_film"), String.valueOf(cameraSeed), true, v -> {
                     try { cameraSeed = Math.max(0, Integer.parseInt(v)); } catch (Exception ignored) { return; }
                     tv.setText(String.valueOf(cameraSeed));
                     redraw.accept(null);
                 }));
-        choiceCell(edgeSeedRow, "帧种子", String.valueOf(frameSeed), tv ->
-                askText("帧随机种子（0 – 2147483647）", String.valueOf(frameSeed), true, v -> {
+        choiceCell(edgeSeedRow, tr("border.frame_seed"), String.valueOf(frameSeed), tv ->
+                askText(tr("border.random_seed_for_the_frame"), String.valueOf(frameSeed), true, v -> {
                     try { frameSeed = Math.max(0, Integer.parseInt(v)); } catch (Exception ignored) { return; }
                     tv.setText(String.valueOf(frameSeed));
                     redraw.accept(null);
@@ -22127,9 +22129,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
         datePage = new LinearLayout(this);
         datePage.setOrientation(LinearLayout.VERTICAL);
-        datePage.addView(pageHead("日期水印 / DATE BACK"), new LinearLayout.LayoutParams(-1, dp(38)));
+        datePage.addView(pageHead(tr("border.date_stamp_2")), new LinearLayout.LayoutParams(-1, dp(38)));
         dateMark = new Square(this, UI_BLUE, uiToggleOff());
-        dateRow = toggleRow("开启日期水印", dateMark, () -> dateOn, on -> {
+        dateRow = toggleRow(tr("border.enable_date_stamp"), dateMark, () -> dateOn, on -> {
             dateOn = on;
             if (dateOn && dateText == null) dateText = imprintDate();
             refreshEdgeGroups();
@@ -22140,35 +22142,35 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         dateInner.setOrientation(LinearLayout.VERTICAL);
         // 0..200 mm: 30 was the schema's old cap and it stopped the date a
         // third of the way along a 6x12 / 6x17 rebate.
-        dateInsetXBar = rangeRow(dateInner, "左右内边距", "字到片门左右边的距离，毫米（可直接在画布上拖）",
+        dateInsetXBar = rangeRow(dateInner, tr("border.horizontal_inset"), tr("border.distance_from_the_sides_of"),
                 0.0f, 200.0f, dateInsetX, v -> dateInsetX = v);
-        dateInsetYBar = rangeRow(dateInner, "上下内边距", "字到片门上下边的距离，毫米（可直接在画布上拖）",
+        dateInsetYBar = rangeRow(dateInner, tr("border.vertical_inset"), tr("border.distance_from_the_top_or"),
                 0.0f, 200.0f, dateInsetY, v -> dateInsetY = v);
         // 8.0: the engine clamps at 8 now, because "make the date bigger" was
         // the one adjustment the old 3.0 ceiling refused.
-        dateSizeBar = rangeRow(dateInner, "日期大小", "相对该样式的字高（1.0 是标准，可放大到 8 倍）",
+        dateSizeBar = rangeRow(dateInner, tr("border.date_size"), tr("border.relative_character_height_1_0"),
                 0.4f, 8.0f, dateSize, v -> dateSize = v);
-        dateEvBar = rangeRow(dateInner, "日期亮度", "红光在 18% 灰之上的曝光，单位挡",
+        dateEvBar = rangeRow(dateInner, tr("border.date_brightness"), tr("border.red_light_exposure_above_18"),
                 -2.0f, 8.0f, dateEv, v -> dateEv = v);
         LinearLayout dateGrid1 = new LinearLayout(this);
         dateGrid1.setOrientation(LinearLayout.HORIZONTAL);
         // The one field the app used to decide for the user: it read the date
         // out of EXIF and gave no way to write a different one.
-        choiceCell(dateGrid1, "日期文字", dateText == null || dateText.isEmpty() ? imprintDate() : dateText,
-                tv -> askText("印在画面上的日期（可以自己写）",
+        choiceCell(dateGrid1, tr("border.date_text"), dateText == null || dateText.isEmpty() ? imprintDate() : dateText,
+                tv -> askText(tr("border.text_stamped_on_the_image"),
                         dateText == null || dateText.isEmpty() ? imprintDate() : dateText, v -> {
                             dateText = v.isEmpty() ? null : v;
                             tv.setText(dateText == null ? imprintDate() : dateText);
                             redraw.accept(null);
                         }));
-        choiceCell(dateGrid1, "日期位置", labelOf(PLACE_LABELS, PLACE_IDS, datePlacement), tv ->
-                showChoiceMapping("日期打在哪里", PLACE_LABELS, PLACE_IDS, datePlacement, id -> {
+        choiceCell(dateGrid1, tr("border.date_placement"), labelOf(PLACE_LABELS, PLACE_IDS, datePlacement), tv ->
+                showChoiceMapping(tr("border.where_to_place_the_date"), PLACE_LABELS, PLACE_IDS, datePlacement, id -> {
                     datePlacement = id;
                     tv.setText(labelOf(PLACE_LABELS, PLACE_IDS, id));
                     redraw.accept(null);
                 }));
-        choiceCell(dateGrid1, "日期角位", labelOf(CORNER_LABELS, CORNER_IDS, dateCorner), tv ->
-                showChoiceMapping("画面内的哪个角", CORNER_LABELS, CORNER_IDS, dateCorner, id -> {
+        choiceCell(dateGrid1, tr("border.date_corner"), labelOf(CORNER_LABELS, CORNER_IDS, dateCorner), tv ->
+                showChoiceMapping(tr("border.which_corner_to_stamp"), CORNER_LABELS, CORNER_IDS, dateCorner, id -> {
                     dateCorner = id;
                     tv.setText(labelOf(CORNER_LABELS, CORNER_IDS, id));
                     redraw.accept(null);
@@ -22177,22 +22179,22 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
         LinearLayout dateGrid2 = new LinearLayout(this);
         dateGrid2.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(dateGrid2, "日期样式", labelOf(STYLE_LABELS, STYLE_IDS, dateStyle), tv ->
-                showChoiceMapping("日期用哪种字", STYLE_LABELS, STYLE_IDS, dateStyle, id -> {
+        choiceCell(dateGrid2, tr("border.date_style"), labelOf(STYLE_LABELS, STYLE_IDS, dateStyle), tv ->
+                showChoiceMapping(tr("border.type_of_lettering_for_the"), STYLE_LABELS, STYLE_IDS, dateStyle, id -> {
                     dateStyle = id;
                     tv.setText(labelOf(STYLE_LABELS, STYLE_IDS, id));
                     redraw.accept(null);
                 }));
-        choiceCell(dateGrid2, "拍摄数据", dataText.isEmpty() ? "（空）" : dataText, tv ->
-                askText("拍摄数据（和日期一起印在片边）", dataText, v -> {
+        choiceCell(dateGrid2, tr("border.shooting_data"), dataText.isEmpty() ? tr("border.empty") : dataText, tv ->
+                askText(tr("border.shooting_data_to_print_alongside"), dataText, v -> {
                     dataText = v;
-                    tv.setText(v.isEmpty() ? "（空）" : v);
+                    tv.setText(v.isEmpty() ? tr("border.empty") : v);
                     redraw.accept(null);
                 }));
-        choiceCell(dateGrid2, "第二帧日期", dateTextB.isEmpty() ? "（空）" : dateTextB, tv ->
-                askText("半格对的第二帧日期（用不到就留空）", dateTextB, v -> {
+        choiceCell(dateGrid2, tr("border.second_frame_date"), dateTextB.isEmpty() ? tr("border.empty") : dateTextB, tv ->
+                askText(tr("border.date_for_the_second_frame"), dateTextB, v -> {
                     dateTextB = v;
-                    tv.setText(v.isEmpty() ? "（空）" : v);
+                    tv.setText(v.isEmpty() ? tr("border.empty") : v);
                     redraw.accept(null);
                 }));
         LinearLayout.LayoutParams dateGrid2Lp = new LinearLayout.LayoutParams(-1, dp(46));
@@ -22200,7 +22202,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         dateInner.addView(dateGrid2, dateGrid2Lp);
 
         TextView dateTip = label(
-                "日期位置：画面内时可选中角位，也可以直接在画布上拖；片边模式的位置由片边条决定，用上面两个内边距微调",
+                tr("border.for_an_in_image_stamp"),
                 7.5f, UI_MUTED, tfHan);
         dateTip.setLineSpacing(dp(1), 1f);
         dateInner.addView(dateTip, new LinearLayout.LayoutParams(-1, -2));
@@ -22266,7 +22268,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        TextView back = label("‹ 返回", 10f, UI_BLUE, tfHan);
+        TextView back = label(tr("border.back"), 10f, UI_BLUE, tfHan);
         back.setPadding(0, dp(8), dp(16), dp(8));
         back.setOnClickListener(v -> openEdgePage(-1));
         head.addView(back);
@@ -22514,7 +22516,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             if (edgeValue != null) edgeValue.setText(gateLabelsFallback(overscanFormat));
             refreshFormatFoot();
             Probe.log("gate", "refused " + id + " aspect=" + originalAspect() + " fits=" + edgeIds);
-            showInAppToast("这张照片裁不成 " + EDGE_LABELS[at] + " 的比例，片门仍是 "
+            showInAppToast(tr("border.can_t_crop_this_photo") + EDGE_LABELS[at] + tr("border.the_film_gate_is_still")
                     + gateLabelsFallback(overscanFormat));
         } else {
             // **A print-frame gauge is drawn by the print frame, not by the
@@ -22529,8 +22531,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 refreshEdgeCards();
             }
             if (isFotuStock(filmStock)) renderFotu(); else onEdgeChanged();
-            showInAppToast((cropped ? "画面已裁成 " + gateRatioLabel(at) + " · " : "")
-                    + "片门 → " + EDGE_LABELS[at]);
+            showInAppToast((cropped ? tr("border.cropped_to") + gateRatioLabel(at) + " · " : "")
+                    + tr("border.film_gate") + EDGE_LABELS[at]);
         }
         Probe.log("gate", "picked " + id + " cropped=" + cropped
                 + " aspect=" + originalAspect() + " fits=" + edgeIds);
@@ -22556,10 +22558,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             notes.add(isPrintFrameGauge(EDGE_IDS[i])
                     ? "电影片 / 页片的画框（印刷边框），不是片边；会裁成 "
                       + gateRatioLabel(i)
-                    : (fits ? null : "选它会居中裁成 " + gateRatioLabel(i) + "，片边就能印了"));
+                    : (fits ? null : tr("border.centers_and_crops_to") + gateRatioLabel(i) + tr("border.to_fit_the_film_border")));
             if (EDGE_IDS[i].equals(overscanFormat)) selectedLabel = EDGE_LABELS[i];
         }
-        showChoiceSheet("选择片门格式", labels, notes, selectedLabel, null,
+        showChoiceSheet(tr("border.choose_a_film_gate"), labels, notes, selectedLabel, null,
                 picked -> {
                     final int i = labels.indexOf(picked);
                     if (i < 0) {
@@ -22620,7 +22622,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // **Six pages, and 辉光 is not one of them.** Lightroom files the glow
         // under 效果 (发光); a tool that is one page of another tool does not
         // get its own slot in the bar.
-        final String[] names = {"胶片", "冲印", "光学", "尺度", "构图", "边框"};
+        final String[] names = {tr("navigation.film"), tr("navigation.print"), tr("navigation.optics"), tr("navigation.scale"), tr("navigation.compose"), tr("navigation.border")};
         for (int i = 0; i < names.length; ++i) {
             final int index = i;
             android.widget.FrameLayout cell = new android.widget.FrameLayout(this);
@@ -22838,7 +22840,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             // page you are on has nowhere to fold to.
             if (landscapeMode) return;
             setPanelCollapsed(!panelCollapsed);
-            showInAppToast(panelCollapsed ? "参数面板已收起，再点当前页签展开" : "参数面板已展开");
+            showInAppToast(panelCollapsed ? tr("navigation.panel_hidden_tap_this_tab") : tr("navigation.panel_shown"));
         } else {
             activeTabIndex = index;
             setTab(index);
@@ -23133,15 +23135,15 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         head.setPadding(dp(16), 0, dp(16), 0);
-        head.addView(label("预设 / PRESETS", 12, UI_INK, tfHan),
+        head.addView(label(tr("preset.presets"), 12, UI_INK, tfHan),
                 new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label("关闭", 9, UI_MUTED, tfHan);
+        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
         close.setPadding(dp(12), dp(14), 0, dp(14));
         close.setOnClickListener(v -> dialog.dismiss());
         head.addView(close);
         sheet.addView(head, new LinearLayout.LayoutParams(-1, dp(54)));
 
-        TextView note = label("一套参数（胶片、曝光、光学、构图、片边、日期）。分享出去是一段文本，对方粘贴导入即可。",
+        TextView note = label(tr("preset.presets_store_film_exposure_optics"),
                 8.5f, UI_MUTED, tfHan);
         note.setPadding(dp(16), 0, dp(16), dp(10));
         sheet.addView(note);
@@ -23149,7 +23151,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         LinearLayout rows = new LinearLayout(this);
         rows.setOrientation(LinearLayout.VERTICAL);
         if (list.length() == 0) {
-            TextView empty = label("还没有预设。调好一张照片，点下面的「保存当前参数」。", 9, UI_MUTED, tfHan);
+            TextView empty = label(tr("preset.no_presets_yet_edit_a"), 9, UI_MUTED, tfHan);
             empty.setPadding(dp(16), dp(12), dp(16), dp(12));
             rows.addView(empty);
         }
@@ -23163,7 +23165,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         builtinText.addView(label("电脑版基准", 10, UI_INK, tfHan));
         builtinText.addView(label("EDR 关 · 高光保护 0 · 色相校正 关", 8, UI_MUTED, tfHan));
         builtin.addView(builtinText, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView builtinApply = label("应用", 8.5f, UI_BLUE, tfHan);
+        TextView builtinApply = label(tr("preset.apply"), 8.5f, UI_BLUE, tfHan);
         builtinApply.setPadding(dp(12), dp(12), dp(8), dp(12));
         builtinApply.setOnClickListener(v -> {
             dialog.dismiss();
@@ -23183,12 +23185,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(android.view.Gravity.CENTER_VERTICAL);
             row.setPadding(dp(16), 0, dp(10), 0);
-            TextView name = label(p.optString("name", "预设"), 10, UI_INK, tfHan);
+            TextView name = label(p.optString("name", tr("preset.preset")), 10, UI_INK, tfHan);
             name.setSingleLine(true);
             name.setEllipsize(android.text.TextUtils.TruncateAt.END);
             row.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
 
-            TextView apply = label("应用", 8.5f, UI_BLUE, tfHan);
+            TextView apply = label(tr("preset.apply"), 8.5f, UI_BLUE, tfHan);
             apply.setPadding(dp(8), dp(12), dp(8), dp(12));
             apply.setOnClickListener(v -> {
                 dialog.dismiss();
@@ -23196,12 +23198,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             });
             row.addView(apply);
 
-            TextView share = label("分享", 8.5f, UI_MUTED, tfHan);
+            TextView share = label(tr("editor.share"), 8.5f, UI_MUTED, tfHan);
             share.setPadding(dp(8), dp(12), dp(8), dp(12));
             share.setOnClickListener(v -> sharePreset(p));
             row.addView(share);
 
-            TextView del = label("删除", 8.5f, UI_MUTED, tfHan);
+            TextView del = label(tr("preset.delete"), 8.5f, UI_MUTED, tfHan);
             del.setPadding(dp(8), dp(12), dp(4), dp(12));
             del.setOnClickListener(v -> {
                 final org.json.JSONArray next = new org.json.JSONArray();
@@ -23222,21 +23224,21 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         LinearLayout foot = new LinearLayout(this);
         foot.setOrientation(LinearLayout.HORIZONTAL);
         foot.setPadding(dp(10), dp(6), dp(10), dp(10));
-        TextView save = label("保存当前参数", 8.5f, UI_BLUE, tfHan);
+        TextView save = label(tr("preset.save_current_settings"), 8.5f, UI_BLUE, tfHan);
         save.setGravity(android.view.Gravity.CENTER);
         save.setOnClickListener(v -> {
             dialog.dismiss();
             saveCurrentPreset();
         });
         foot.addView(save, new LinearLayout.LayoutParams(0, dp(34), 1f));
-        TextView pull = label("从剪贴板导入", 8.5f, UI_INK, tfHan);
+        TextView pull = label(tr("preset.import_from_clipboard"), 8.5f, UI_INK, tfHan);
         pull.setGravity(android.view.Gravity.CENTER);
         pull.setOnClickListener(v -> {
             dialog.dismiss();
             importPresetFromClipboard();
         });
         foot.addView(pull, new LinearLayout.LayoutParams(0, dp(34), 1f));
-        TextView push = label("分享当前", 8.5f, UI_INK, tfHan);
+        TextView push = label(tr("preset.share_current_settings"), 8.5f, UI_INK, tfHan);
         push.setGravity(android.view.Gravity.CENTER);
         push.setOnClickListener(v -> {
             dialog.dismiss();
@@ -23260,14 +23262,14 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     private void saveCurrentPreset() {
         if (frames.isEmpty() || filmStock == null) {
-            showInAppToast("先导入一张照片、选一支胶片");
+            showInAppToast(tr("preset.import_a_photo_and_choose"));
             return;
         }
         saveLookIntoFrames();
         final String fallback = stockDisplay(filmStock)
                 + (printStock == null || printStock.isEmpty() ? "" : " · " + stockDisplay(printStock));
-        askText("预设名字", fallback, name -> {
-            final String n = (name == null || name.trim().isEmpty()) ? "未命名预设" : name.trim();
+        askText(tr("preset.preset_name"), fallback, name -> {
+            final String n = (name == null || name.trim().isEmpty()) ? tr("preset.untitled_preset") : name.trim();
             try {
                 final org.json.JSONArray list = presetList();
                 final org.json.JSONObject p = new org.json.JSONObject();
@@ -23276,9 +23278,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 p.put("look", lookToJson(captureLook()));
                 list.put(p);
                 storePresetList(list);
-                showInAppToast("已保存预设「" + n + "」");
+                showInAppToast(tr("preset.saved_preset") + n + "」");
             } catch (Throwable t) {
-                showInAppToast("保存失败：" + t.getMessage());
+                showInAppToast(tr("preset.could_not_save") + t.getMessage());
             }
         });
     }
@@ -23314,18 +23316,18 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private void applyPreset(org.json.JSONObject p) {
         final org.json.JSONObject look = p == null ? null : p.optJSONObject("look");
         if (look == null) {
-            showInAppToast("这个预设是空的");
+            showInAppToast(tr("preset.this_preset_is_empty"));
             return;
         }
         final Look l = lookFromJson(look);
         if (l == null) {
-            showInAppToast("预设格式不认识");
+            showInAppToast(tr("preset.unrecognized_preset_format"));
             return;
         }
         // **Nothing is applied before the question is answered.** The gate a
         // preset carries may need a crop this photograph does not want, and
         // `applyForeignLook` is what asks.
-        applyForeignLook(l, "已应用预设「" + p.optString("name", "") + "」");
+        applyForeignLook(l, tr("preset.applied_preset") + p.optString("name", "") + "」");
     }
 
     private void sharePreset(org.json.JSONObject p) {
@@ -23334,18 +23336,18 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             final org.json.JSONObject out = new org.json.JSONObject();
             out.put("app", "SpektraLab Android");
             out.put("version", UpdateCheck.versionCode(this));
-            out.put("name", p.optString("name", "SpektraLab 参数"));
+            out.put("name", p.optString("name", tr("preset.spektralab_settings")));
             final org.json.JSONObject raw = p.optJSONObject("look");
             out.put("look", raw == null ? null : lookCompact(lookFromJson(raw)));
             shareLookJson(out);
         } catch (Throwable t) {
-            showInAppToast("分享失败：" + t.getMessage());
+            showInAppToast(tr("preset.could_not_share") + t.getMessage());
         }
     }
 
     private void shareCurrentLook() {
         if (frames.isEmpty() || filmStock == null) {
-            showInAppToast("先导入一张照片、选一支胶片");
+            showInAppToast(tr("preset.import_a_photo_and_choose"));
             return;
         }
         saveLookIntoFrames();
@@ -23357,7 +23359,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             out.put("look", lookCompact(captureLook()));
             shareLookJson(out);
         } catch (Throwable t) {
-            showInAppToast("分享失败：" + t.getMessage());
+            showInAppToast(tr("preset.could_not_share") + t.getMessage());
         }
     }
 
@@ -23365,12 +23367,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         try {
             final android.content.Intent send = new android.content.Intent(android.content.Intent.ACTION_SEND);
             send.setType("text/plain");
-            send.putExtra(android.content.Intent.EXTRA_SUBJECT, payload.optString("name", "SpektraLab 参数"));
+            send.putExtra(android.content.Intent.EXTRA_SUBJECT, payload.optString("name", tr("preset.spektralab_settings")));
             send.putExtra(android.content.Intent.EXTRA_TEXT,
                     "SpektraLab 参数（复制整段，在应用里「从剪贴板导入」）\n" + payload.toString());
-            startActivity(android.content.Intent.createChooser(send, "分享参数"));
+            startActivity(android.content.Intent.createChooser(send, tr("preset.share_settings")));
         } catch (Throwable t) {
-            showInAppToast("分享失败：" + (t.getMessage() == null ? "参数序列化失败" : t.getMessage()));
+            showInAppToast(tr("preset.could_not_share") + (t.getMessage() == null ? tr("preset.could_not_encode_the_settings") : t.getMessage()));
         }
     }
 
@@ -23380,7 +23382,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                     getSystemService(android.content.Context.CLIPBOARD_SERVICE);
             if (cm == null || !cm.hasPrimaryClip() || cm.getPrimaryClip() == null
                     || cm.getPrimaryClip().getItemCount() == 0) {
-                showInAppToast("剪贴板里没有文本");
+                showInAppToast(tr("preset.no_text_on_the_clipboard"));
                 return;
             }
             final android.content.ClipData.Item item = cm.getPrimaryClip().getItemAt(0);
@@ -23388,19 +23390,19 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             final String text = cs == null ? "" : cs.toString();
             final int a = text.indexOf('{'), b = text.lastIndexOf('}');
             if (a < 0 || b <= a) {
-                showInAppToast("剪贴板里没有参数 JSON");
+                showInAppToast(tr("preset.no_preset_json_found_on"));
                 return;
             }
             final org.json.JSONObject o = new org.json.JSONObject(text.substring(a, b + 1));
             final org.json.JSONObject look = o.optJSONObject("look") != null ? o.optJSONObject("look") : o;
             final Look l = lookFromJson(look);
             if (l == null) {
-                showInAppToast("这段 JSON 不是参数");
+                showInAppToast(tr("preset.this_json_does_not_contain"));
                 return;
             }
-            applyForeignLook(l, "已导入并应用");
+            applyForeignLook(l, tr("preset.imported_and_applied"));
         } catch (Throwable t) {
-            showInAppToast("导入失败：" + (t.getMessage() == null ? "格式不对" : t.getMessage()));
+            showInAppToast(tr("preset.could_not_import") + (t.getMessage() == null ? tr("preset.invalid_format") : t.getMessage()));
         }
     }
 
@@ -23423,26 +23425,26 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      */
     private void showBatchDeleteSheet() {
         if (batchExportRunning) {
-            showInAppToast("批量导出中，等它跑完再改动照片栏");
+            showInAppToast(tr("editor.wait_for_batch_export_to_2"));
             return;
         }
         if (frames.size() < 2) {
-            showInAppToast("只有这一张照片");
+            showInAppToast(tr("preset.there_is_only_one_photo"));
             return;
         }
         final String[] labels = new String[frames.size()];
         for (int i = 0; i < frames.size(); ++i) {
             final Frame f = frames.get(i);
-            labels[i] = (f.name == null || f.name.isEmpty() ? "照片 " + (i + 1) : f.name);
+            labels[i] = (f.name == null || f.name.isEmpty() ? tr("preset.photo") + (i + 1) : f.name);
         }
-        showMultiChoiceSheet("删掉哪些照片",
-                "只从这条栏里移除，文件本身不动；这些照片的调色记录会一起删掉。",
+        showMultiChoiceSheet(tr("preset.remove_which_photos"),
+                tr("preset.removes_photos_and_their_edits"),
                 labels, picked -> {
                     final java.util.ArrayList<Integer> indices =
                             new java.util.ArrayList<>(picked);
                     java.util.Collections.sort(indices, (a, b) -> b - a);
                     for (int i = 0; i < indices.size(); ++i) removeFrame(indices.get(i));
-                    showInAppToast("已移除 " + indices.size() + " 张照片");
+                    showInAppToast(tr("preset.removed") + indices.size() + tr("preset.photos"));
                 });
     }
 
@@ -23453,25 +23455,25 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             if (i != sourceIndex) targets.add(i);
         }
         if (targets.isEmpty()) {
-            showInAppToast("只有这一张照片，没有可应用的对象");
+            showInAppToast(tr("preset.there_are_no_other_photos"));
             return;
         }
         final String[] labels = new String[targets.size()];
         for (int i = 0; i < targets.size(); ++i) {
             final int index = targets.get(i);
             final Frame f = frames.get(index);
-            labels[i] = (f.name == null || f.name.isEmpty() ? "照片 " + (index + 1) : f.name);
+            labels[i] = (f.name == null || f.name.isEmpty() ? tr("preset.photo") + (index + 1) : f.name);
         }
         final String srcName = frames.get(sourceIndex).name == null
-                ? "这张" : frames.get(sourceIndex).name;
-        showMultiChoiceSheet("把这张的参数应用到", 
-                "选中的照片会换成这张的胶片、曝光、光学、构图、片边和日期。"
-                        + "只改这条栏里的设置，文件不动；点开时才按新参数渲染。",
+                ? tr("preset.current_photo") : frames.get(sourceIndex).name;
+        showMultiChoiceSheet(tr("preset.apply_these_settings_to"), 
+                tr("preset.copies_the_current_film_exposure")
+                        + tr("preset.original_files_are_not_changed"),
                 labels, picked -> {
                     saveLookIntoFrames();
                     final Look src = copyLook(frames.get(sourceIndex).look);
                     if (src == null) {
-                        showInAppToast("这张还没有可复制的参数");
+                        showInAppToast(tr("preset.this_photo_has_no_settings"));
                         return;
                     }
                     int n = 0;
@@ -23490,7 +23492,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                     }
                     saveSessionState();
                     rebuildFrameChips();
-                    showInAppToast("已应用到 " + n + " 张照片（点开时生效）");
+                    showInAppToast(tr("preset.applied_to") + n + tr("preset.photos_changes_appear_when_opened"));
                 });
     }
 
@@ -23510,7 +23512,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         head.setPadding(dp(16), 0, dp(16), 0);
         head.addView(label(title, 12, UI_INK, tfHan), new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label("关闭", 9, UI_MUTED, tfHan);
+        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
         close.setPadding(dp(12), dp(14), 0, dp(14));
         close.setOnClickListener(v -> dialog.dismiss());
         head.addView(close);
@@ -23551,25 +23553,25 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         LinearLayout foot = new LinearLayout(this);
         foot.setOrientation(LinearLayout.HORIZONTAL);
         foot.setPadding(dp(10), dp(6), dp(10), dp(10));
-        final TextView all = label("全选", 9, UI_MUTED, tfHan);
+        final TextView all = label(tr("preset.select_all"), 9, UI_MUTED, tfHan);
         all.setGravity(android.view.Gravity.CENTER);
         all.setOnClickListener(v -> {
             final boolean want = !all.isSelected();
             all.setSelected(want);
-            all.setText(want ? "全不选" : "全选");
+            all.setText(want ? tr("preset.deselect_all") : tr("preset.select_all"));
             for (int i = 0; i < picked.length; ++i) {
                 picked[i] = want;
                 if (marks[i] != null) marks[i].setLit(want);
             }
         });
         foot.addView(all, new LinearLayout.LayoutParams(0, dp(34), 1f));
-        TextView apply = label("应用", 9, UI_BLUE, tfHan);
+        TextView apply = label(tr("preset.apply"), 9, UI_BLUE, tfHan);
         apply.setGravity(android.view.Gravity.CENTER);
         apply.setOnClickListener(v -> {
             final java.util.ArrayList<Integer> out = new java.util.ArrayList<>();
             for (int i = 0; i < picked.length; ++i) if (picked[i]) out.add(i);
             if (out.isEmpty()) {
-                showInAppToast("先勾选要应用的照片");
+                showInAppToast(tr("preset.select_at_least_one_photo"));
                 return;
             }
             dialog.dismiss();
@@ -23649,7 +23651,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             });
         }
         head.addView(titleView, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label("关闭", 9, UI_MUTED, tfHan);
+        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
         close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
         close.setPadding(dp(12), dp(14), 0, dp(14));
         close.setOnClickListener(v -> dialog.dismiss());
@@ -23786,9 +23788,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         head.setPadding(dp(16), 0, dp(16), 0);
-        head.addView(mixedLabel("FEEDBACK / 反馈与交流", 8, UI_BLUE),
+        head.addView(mixedLabel(tr("feedback.feedback_community"), 8, UI_BLUE),
                 new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label("关闭", 9, UI_MUTED, tfHan);
+        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
         close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
         close.setPadding(dp(12), dp(14), 0, dp(14));
         close.setOnClickListener(v -> dialog.dismiss());
@@ -23798,10 +23800,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
         body.setPadding(dp(16), 0, dp(16), 4);
-        TextView title = label("遇到问题，或者想聊冲印？", 17, UI_INK, tfHan);
+        TextView title = label(tr("feedback.need_help_or_want_to"), 17, UI_INK, tfHan);
         body.addView(title);
-        TextView copyText = label("渲染报错、导出异常、想要某支胶片，直接发在群里。"
-                + "问题能复现的话，把「复制错误信息」的内容一起贴上。", 10, UI_MUTED, tfHan);
+        TextView copyText = label(tr("feedback.use_the_group_to_report")
+                + tr("feedback.if_you_can_reproduce_the"), 10, UI_MUTED, tfHan);
         copyText.setLineSpacing(dp(4), 1f);
         LinearLayout.LayoutParams copyTextLp = new LinearLayout.LayoutParams(-1, -2);
         copyTextLp.topMargin = dp(9);
@@ -23814,7 +23816,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         groupLp.topMargin = dp(16);
         body.addView(groupRow(
                 getResources().getIdentifier("wechat_qr", "drawable", getPackageName()),
-                "微信群", "微信扫码加入", "二维码会过期，失效就用下面的 QQ 群"), groupLp);
+                tr("feedback.wechat_group"), tr("feedback.scan_with_wechat_to_join"), tr("feedback.if_the_qr_code_has")), groupLp);
 
         // **维修二群.** The first room filled up, so the invite that still works
         // has to be the second one, and the card has to say so -- otherwise a
@@ -23854,7 +23856,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(dp(16), dp(16), dp(16), dp(16));
 
-        TextView open = label("打开 QQ", 10, UI_BLUE, tfHan);
+        TextView open = label(tr("feedback.open_qq"), 10, UI_BLUE, tfHan);
         open.setGravity(android.view.Gravity.CENTER);
         android.graphics.drawable.GradientDrawable openBg = new android.graphics.drawable.GradientDrawable();
         openBg.setColor(UI_PAPER);
@@ -23865,35 +23867,35 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         openLp.rightMargin = dp(8);
         actions.addView(open, openLp);
 
-        TextView copy = label("复制群号", 10, UI_PAPER, tfHan);
+        TextView copy = label(tr("feedback.copy_group_id"), 10, UI_PAPER, tfHan);
         copy.setGravity(android.view.Gravity.CENTER);
         android.graphics.drawable.GradientDrawable copyBg = new android.graphics.drawable.GradientDrawable();
         copyBg.setColor(UI_BLUE);
         copy.setBackground(copyBg);
         copy.setOnClickListener(v -> {
-            if (copyToClipboard("SpektraLab 反馈群", QQ_GROUP)) {
-                copy.setText("已复制");
+            if (copyToClipboard(tr("feedback.spektralab_feedback_group"), QQ_GROUP)) {
+                copy.setText(tr("feedback.copied"));
             } else {
-                copy.setText("复制失败 · 请长按");
+                copy.setText(tr("feedback.could_not_copy_press_and"));
             }
         });
         copy.setLongClickable(true);
         copy.setOnLongClickListener(v -> {
-            copyToClipboard("SpektraLab 反馈群", QQ_GROUP);
+            copyToClipboard(tr("feedback.spektralab_feedback_group"), QQ_GROUP);
             return true;
         });
         actions.addView(copy, new LinearLayout.LayoutParams(0, dp(42), 1.45f));
         card.addView(actions, new LinearLayout.LayoutParams(-1, -2));
 
         if (auto) {
-            TextView mute = label("不再自动弹出", 8.5f, UI_MUTED, tfHan);
+            TextView mute = label(tr("feedback.don_t_show_automatically"), 8.5f, UI_MUTED, tfHan);
             mute.setGravity(android.view.Gravity.CENTER);
             mute.setPaintFlags(mute.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             mute.setPadding(0, 0, 0, dp(14));
             mute.setOnClickListener(v -> {
                 p.edit().putBoolean(PROMO_MUTED, true).apply();
                 dialog.dismiss();
-                showInAppToast("已关闭，仍可在「关于」里找到反馈群");
+                showInAppToast(tr("feedback.automatic_prompts_are_off_the"));
             });
             card.addView(mute, new LinearLayout.LayoutParams(-1, dp(30)));
         }
@@ -23939,8 +23941,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 return;
             } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:23864", ignored); }
         }
-        copyToClipboard("SpektraLab 反馈群", QQ_GROUP);
-        showInAppToast("群号已复制，请在 QQ 里搜索加入");
+        copyToClipboard(tr("feedback.spektralab_feedback_group"), QQ_GROUP);
+        showInAppToast(tr("feedback.group_id_copied_search_for"));
     }
 
     /** A paper bottom sheet in the same visual language as the cards. */
@@ -23954,7 +23956,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      * refused.
      *
      * <p>The paper list needs both: a paper's character is what the choice is
-     * actually about ("中性 · 人像常用" against "偏青 · 富士色调"), and a silver
+     * actually about ("中性 · 人像常用" against tr("film.cyan_bias_fuji_tones")), and a silver
      * paper cannot print a colour negative any more than a colour paper can
      * print a silver one. A row that cannot be picked says so by fading, not
      * by disappearing -- the user should see that the option exists and why it
@@ -23977,7 +23979,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         head.setPadding(dp(16), 0, dp(16), 0);
         head.addView(label(title, 12, UI_INK, tfHan), new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label("关闭", 9, UI_MUTED, tfHan);
+        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
         close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
         close.setPadding(dp(12), dp(14), 0, dp(14));
         close.setOnClickListener(v -> dialog.dismiss());
@@ -24066,7 +24068,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     }
 
     private static String meterName(String id) {
-        if (id == null || id.isEmpty()) return "关闭";
+        if (id == null || id.isEmpty()) return tr("crash.close");
         for (int i = 0; i < METER_IDS.length; ++i) if (METER_IDS[i].equals(id)) return METER_NAMES[i];
         return id;
     }
@@ -24081,7 +24083,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             notes.add(METER_NOTES[i]);
             if (METER_IDS[i].equals(meterMethod == null ? "" : meterMethod)) at = i;
         }
-        showChoiceSheet("测光方式（决定整幅的曝光）", labels, notes, labels.get(at), null,
+        showChoiceSheet(tr("film.metering_mode_sets_overall_exposure"), labels, notes, labels.get(at), null,
                 picked -> {
                     final int index = labels.indexOf(picked);
                     if (index >= 0) setMeterMethod(METER_IDS[index]);
@@ -24129,7 +24131,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         //
         // **The reset has to move the canvas itself.** This used to clear
         // `filmStock` and call `onStockChanged`, and that method returns early
-        // when there is no film ("选择一张胶片开始渲染") -- so the last render
+        // when there is no film (tr("render.choose_a_film_to_start")) -- so the last render
         // stayed on the screen and 重置 looked like a dead button. The state a
         // reset means is exactly the state an import lands in: the frame
         // itself on the canvas, no stock chosen, nothing for `toggleOriginal`
@@ -24157,7 +24159,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         if (emptyState != null && beforeBitmap != null) emptyState.setVisibility(View.GONE);
         if (rawState != null) if (rawState != null) rawState.setVisibility(View.GONE);
         if (statusText != null && beforeBitmap != null) {
-            statusText.setText("ORIGINAL · RAW 原始数据（未调色，选胶片后才成片）");
+            statusText.setText(tr("film.original_ungraded_raw_preview_choose"));
         }
         if (histogram != null) histogram.setBitmap(null);
         setOriginalVisual(true);
@@ -24237,7 +24239,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         head.setPadding(dp(16), 0, dp(16), 0);
         head.addView(label("光圈值 / APERTURE", 10, UI_INK, tfHan),
                 new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label("关闭", 9, UI_MUTED, tfHan);
+        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
         close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
         close.setPadding(dp(12), dp(14), 0, dp(14));
         close.setOnClickListener(v -> dialog.dismiss());
@@ -24434,7 +24436,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     private void toggleOriginal() {
         if (beforeBitmap == null) {
-            showInAppToast("先导入一张照片");
+            showInAppToast(tr("film.import_a_photo_first"));
             return;
         }
         // An unrendered import is already the original: pressing this must not
@@ -24442,7 +24444,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // a frame reopened on 原图 carries its look but no bitmap, and it has to
         // be able to come back to the developed side.
         if (showingOriginal && lastRenderedBitmap == null && filmStock == null) {
-            showInAppToast("选一张胶片后才会渲染");
+            showInAppToast(tr("film.choose_a_film_to_render"));
             return;
         }
         showingOriginal = !showingOriginal;
@@ -24462,7 +24464,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             // the time it shows you the frame; here the film and the paper are
             // what develop it. (Calling it a negative would be wrong twice
             // over: it is positive, and it is not film.)
-            statusText.setText("ORIGINAL · RAW 原始数据（未调色，选胶片后才成片）");
+            statusText.setText(tr("film.original_ungraded_raw_preview_choose"));
             setOriginalVisual(true);
             updateFilmSelection();
             // **The original is not the render.** Every slider on 光学 / 冲印
@@ -24545,7 +24547,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     private static String gateLabel(String id) {
         final int i = gateIndex(id);
-        return i < 0 ? "片门" : EDGE_LABELS[i];
+        return i < 0 ? tr("editor.film_gate") : EDGE_LABELS[i];
     }
 
     /** "16:9" for the shapes people name, two decimals for the rest. */
@@ -24606,12 +24608,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final int cw = cutWide ? (int) Math.round(h * want) : w;
         final int ch = cutWide ? h : (int) Math.round(w / want);
         final int loss = (int) Math.round(100.0 * (1.0 - (cutWide ? (double) cw / w : (double) ch / h)));
-        showActionSheet("预设用的是 " + name + " 片边",
-                "这张照片是 " + ratioText(have) + "，" + name + " 的片门是 " + ratioText(want) + "。\n\n"
-                + "裁成片门能还原他的片边，但要" + (cutWide ? "从左右" : "从上下") + "裁掉 " + loss
+        showActionSheet(tr("editor.this_preset_uses_a") + name + tr("editor.film_border"),
+                tr("editor.photo_ratio") + ratioText(have) + "，" + name + tr("editor.gate_ratio") + ratioText(want) + "。\n\n"
+                + tr("editor.matching_the_preset_border_requires") + (cutWide ? tr("editor.horizontal") : tr("editor.vertical")) + tr("editor.cropping_of") + loss
                 + "%（" + w + "×" + h + " → " + cw + "×" + ch + "）。\n"
-                + "不裁就只套颜色和参数，片边关闭。",
-                new String[]{"裁成 " + name, "只套参数（片边关闭）", "取消"},
+                + tr("editor.without_cropping_only_the_settings"),
+                new String[]{tr("editor.crop_to") + name, tr("editor.apply_settings_without_border"), tr("editor.cancel")},
                 which -> {
                     if (which == 0) {
                         applyLook(l);
@@ -24622,7 +24624,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                         applyLook(l);
                         finishForeignLook(l, done, true);
                     } else {
-                        showInAppToast("没有套用");
+                        showInAppToast(tr("editor.settings_not_applied"));
                     }
                 });
     }
@@ -24636,7 +24638,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             setOriginalVisual(false);
             renderImage();
         }
-        showInAppToast(dropped || rebateClosed ? done + " · 片边已关闭" : done);
+        showInAppToast(dropped || rebateClosed ? done + tr("editor.film_border_off") : done);
     }
 
     /**
@@ -24711,8 +24713,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         } else {
             overscanOn = false;
             if (overscanMark != null) overscanMark.setLit(false);
-            if (edgeValue != null) edgeValue.setText("无可用片门");
-            showInAppToast("这张照片的比例与任何片门都不符，片边已关闭");
+            if (edgeValue != null) edgeValue.setText(tr("editor.no_compatible_film_gate"));
+            showInAppToast(tr("editor.no_film_gate_matches_this"));
         }
         refreshEdgeGroups();
         // One ledger for every repair in the process, so "did this session fix
@@ -24784,7 +24786,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 // The page's controls dim with the switch; without this the
                 // rows stay lit while the feature they govern is off.
                 refreshEdgeGroups();
-                if (!quiet) showInAppToast("这张照片的比例与任何片门都不符，片边已关闭");
+                if (!quiet) showInAppToast(tr("editor.no_film_gate_matches_this"));
             }
         }
         // The gate is settled: if it is one the rebate can print, a film print
@@ -24792,7 +24794,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         retireFilmPrintFrame();
         if (edgeValue != null) {
             final int selected = edgeIds.indexOf(overscanFormat);
-            edgeValue.setText(selected >= 0 ? edgeLabels.get(selected) : "无可用片门");
+            edgeValue.setText(selected >= 0 ? edgeLabels.get(selected) : tr("editor.no_compatible_film_gate"));
         }
         try {
             DebugSink.text("overscan", "aspect=" + aspect + " gates=" + edgeIds
@@ -25699,7 +25701,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             // over, each time allocating a fresh set of planes. Ten taps of that
             // is what put the launcher out of memory.
             if (rendering) {
-                statusText.setText("渲染中…（这是胶片层参数，约 1–2 秒）");
+                statusText.setText(tr("print.rendering_film_settings_about_1"));
             }
             onChange.accept(next);
         });
@@ -26320,7 +26322,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      */
     private void showImportMenu() {
         if (batchExportRunning) {
-            showInAppToast("批量导出中，等它跑完再导入");
+            showInAppToast(tr("file.wait_for_batch_export_to"));
             return;
         }
         // **Two pickers, and only one of them returns the file on disk.**
@@ -26332,11 +26334,11 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // action with `*/*` plus an EXTRA_MIME_TYPES list goes to the document
         // browser, which returns the original bytes. So the file entry is the
         // one that keeps the capture fields, and it has to say so.
-        showActionSheet("导入照片",
-                "要保留拍摄参数（EXIF），请选第二项：文件管理器读的是磁盘上的原文件。"
-                        + "系统相册选择器会先复制一份，部分机型的副本会丢掉这些信息。", new String[]{
-                "从相册选择（快 · 可能丢拍摄参数）",
-                "RAW / JPEG / HEIC · 任意文件（保留 EXIF）"
+        showActionSheet(tr("file.import_photos"),
+                tr("file.to_keep_shooting_metadata_exif")
+                        + tr("file.the_system_photo_picker_may"), new String[]{
+                tr("file.photo_library_fast_may_lose"),
+                tr("file.file_browser_raw_jpeg_heic")
         }, which -> {
             // A deliberate pick is a *new* photograph, not a chip coming back.
             suppressBudgetDialog = false;
@@ -26355,7 +26357,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      */
     private void shareLastExport() {
         if (lastExportUri == null) {
-            showInAppToast("还没有导出过文件");
+            showInAppToast(tr("file.no_files_have_been_exported"));
             return;
         }
         try {
@@ -26363,9 +26365,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             send.setType(lastExportMime == null ? "image/*" : lastExportMime);
             send.putExtra(Intent.EXTRA_STREAM, lastExportUri);
             send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(Intent.createChooser(send, "发送到"));
+            startActivity(Intent.createChooser(send, tr("file.share_to")));
         } catch (Throwable t) {
-            showErrorDialog("无法发送", describe(t));
+            showErrorDialog(tr("file.could_not_share"), describe(t));
         }
     }
 
@@ -26374,22 +26376,22 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         if (batchExportRunning) {
             // **The only cancel.** A batch can run for ten minutes; without a
             // way out the user's choice is to kill the app.
-            showActionSheet("批量导出中", "正在一张张导出。停止会保留已经写好的那些。",
-                    new String[]{"停止批量导出", "继续"}, which -> {
+            showActionSheet(tr("file.batch_export_in_progress"), tr("file.photos_are_exported_one_at"),
+                    new String[]{tr("file.stop_batch_export"), tr("file.continue")}, which -> {
                         if (which == 0) batchExportAbort = true;
                     });
             return;
         }
         if (session == null) {
-            showInAppToast("先导入一张照片");
+            showInAppToast(tr("film.import_a_photo_first"));
             return;
         }
         final String full = (sourceWidth > 0 && sourceHeight > 0)
-                ? "全尺寸 " + sourceWidth + "×" + sourceHeight : "全尺寸";
+                ? tr("file.full_size") + sourceWidth + "×" + sourceHeight : tr("file.full_size_2");
         // No ceiling to warn about: the export renders the frame that was
         // imported, and that may be the file's own size. What is worth saying
         // is that it takes time, not that it will be refused.
-        final String fullNote = "（原图 · 大尺寸会慢）";
+        final String fullNote = tr("file.original_dimensions_large_images_are");
         // What the driver says it can take, as opposed to what this build
         // currently lets through. The two were only ever visible as one number,
         // and it was always the smaller -- so a phone reporting 2 GiB of
@@ -26400,10 +26402,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             final double driverMp = probe.maxStorageBufferRange / 12.0 * 0.80 / 1e6;
             final double budgetMp = maxImportPixels() / 1e6;
             driverLine = String.format(java.util.Locale.US,
-                    "驱动单缓冲 %.0f MiB（分块后不再限制单帧）；本机按可用内存建议 %.1f MP",
+                    tr("file.driver_buffer_limit_0f_mib"),
                     probe.maxStorageBufferRange / 1048576.0, budgetMp);
         } else {
-            driverLine = probe.valid ? "驱动未报单缓冲上限" : "设备信息读取失败";
+            driverLine = probe.valid ? tr("file.the_driver_did_not_report") : tr("file.could_not_read_device_information");
         };
         // One sheet, six rows. It was two -- format, then size -- and the first
         // thing that did was hide "全尺寸（原图）" behind a tap that nobody
@@ -26447,7 +26449,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // format in a suffix, and TIFF / DNG are one tap away behind 「更多格式」.
         final java.util.ArrayList<String> keys = new java.util.ArrayList<>();
         if (batchable) {
-            rows.add("批量 · 全部 " + frames.size() + " 张（JPEG · 全尺寸）");
+            rows.add(tr("file.export_all") + frames.size() + tr("file.photos_full_size_jpeg"));
             keys.add("batch");
         }
         rows.add("预览画质 · 长边 3400（JPEG）");     keys.add("spk|jpeg|preview");
@@ -26489,7 +26491,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             }
         }
         rows.add("更多格式：TIFF 16 位 / DNG…");     keys.add("more");
-        showActionSheet("导出照片", note, rows.toArray(new String[0]), which0 -> {
+        showActionSheet(tr("file.export_photo"), note, rows.toArray(new String[0]), which0 -> {
             if (which0 < 0 || which0 >= keys.size()) return;
             final String[] key = keys.get(which0).split("\\|");
             if ("batch".equals(key[0])) { startBatchExport("jpeg", "full"); return; }
@@ -26517,9 +26519,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             rows.add("TIFF 16 位 · 线性 · 全尺寸（给 LR 调色）"); keys.add("fotu|tifflin|full");
         } else {
             rows.add("TIFF 16 位 · 预览画质 3400");            keys.add("spk|tiff|preview");
-            rows.add("TIFF 16 位 · 全尺寸（原图）");           keys.add("spk|tiff|full");
+            rows.add(tr("file.16_bit_tiff_full_size"));           keys.add("spk|tiff|full");
             rows.add("TIFF 16 位 · 线性 · 全尺寸（给 LR 拉高光）"); keys.add("spk|tifflin|full");
-            rows.add("DNG · 全尺寸（电脑用 · 手机版打不开）");  keys.add("spk|dng|full");
+            rows.add(tr("file.dng_full_size_desktop_only"));  keys.add("spk|dng|full");
         }
         showActionSheet("更多导出格式",
                 "这四个都是给电脑用的：手机相册多半不显示 16 位 TIFF，"
@@ -26567,7 +26569,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     /** "JPEG · 预览画质 3400" -- the words the sheet and the toast share. */
     private static String exportLabel(String format, String tier) {
         final String size = "preview".equals(tier) ? "预览画质 3400"
-                : "live".equals(tier) ? "实时画质" : "全尺寸";
+                : "live".equals(tier) ? "实时画质" : tr("file.full_size_2");
         final String kind = "dng".equals(format) ? "DNG"
                 : "tifflin".equals(format) ? "16 位 TIFF 线性"
                 : "tiff".equals(format) ? "16 位 TIFF"
@@ -27410,18 +27412,18 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // used to say "memory may run out and the app will disappear" without
         // ever saying how much; on a 50 MP file that is 600 MB of float and the
         // answer decides whether the tap is a coin flip.
-        final String budgetMessage = "原图 " + w + "×" + h + "（" + megapixels(w, h) + " MP）。"
+        final String budgetMessage = tr("import.original") + w + "×" + h + "（" + megapixels(w, h) + " MP）。"
                 + "\n\n按原图：渲染约 " + Math.max(5, (int) Math.round((double) w * h / 1e6 * 1.4))
-                + " 秒；交给 GPU 需要约 " + nativeMb + " MB 连续内存，本机现在可用 "
+                + tr("import.s_the_gpu_needs_about") + nativeMb + tr("import.mb_of_contiguous_memory_available")
                 + availMb + " MB。"
                 + (nativeMb * 10L > availMb * 8L
                         ? "\n按原图很可能被系统回收（应用直接消失，不报错）。" : "")
                 + "\n\n缩到 " + sw + "×" + sh + "：更快更稳，细节会少一些。"
                 + "\n\n本机按可用内存建议约 "
                 + String.format(java.util.Locale.US, "%.1f", capPixels / 1e6) + " MP"
-                + (overscanOn ? "（已按片边预留画布）" : "") + "。";
-        showActionSheet("按多大的尺寸导入", budgetMessage, new String[]{
-                "按原图 " + w + "×" + h, "缩到 " + sw + "×" + sh, "取消"
+                + (overscanOn ? tr("import.includes_space_for_the_film") : "") + "。";
+        showActionSheet(tr("import.choose_import_size"), budgetMessage, new String[]{
+                tr("import.full_size") + w + "×" + h, tr("import.resize_to_2") + sw + "×" + sh, tr("editor.cancel")
         }, which -> {
             if (which == 0) {
                 importAtNativeSize = true;
@@ -27451,17 +27453,17 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // are what the decision actually turns on.
         final long needBytes = (long) w * (long) h * 100L;
         final long availBytes = availableMemoryBytes();
-        final String message = "这张 RAW 是 " + w + "×" + h + "（" + megapixels(w, h) + " MP）。"
+        final String message = tr("import.raw_size") + w + "×" + h + "（" + megapixels(w, h) + " MP）。"
                 + "\n\n按原图：需要约 " + String.format(java.util.Locale.US, "%.1f", needBytes / 1e9)
-                + " GB 内存（解码 + 显存），本机当前可用 "
+                + tr("import.gb_for_decoding_and_rendering")
                 + String.format(java.util.Locale.US, "%.1f", availBytes / 1e9) + " GB；"
-                + "不够时会直接闪退，渲染约 " + seconds + " 秒。"
+                + tr("import.the_app_may_close_if") + seconds + tr("import.s")
                 + "\n缩到 " + sw + "×" + sh + "：更快更稳，细节会少一些。"
                 + "\n\n本机按可用内存建议约 "
                 + String.format(java.util.Locale.US, "%.1f", capPixels / 1e6) + " MP"
-                + (overscanOn ? "（已按片边预留画布）" : "") + "。";
-        showActionSheet("按多大的尺寸导入", message, new String[]{
-                "按原图 " + w + "×" + h, "缩到 " + sw + "×" + sh, "取消"
+                + (overscanOn ? tr("import.includes_space_for_the_film") : "") + "。";
+        showActionSheet(tr("import.choose_import_size"), message, new String[]{
+                tr("import.full_size") + w + "×" + h, tr("import.resize_to_2") + sw + "×" + sh, tr("editor.cancel")
         }, which -> {
             if (which == 0) {
                 importAtNativeSize = true;
@@ -27507,8 +27509,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final long area = (long) w * (long) h;
         final long suggest = maxImportPixels();
         if (area <= suggest) return "";
-        return " · " + megapixels(w, h) + " MP（建议 "
-                + String.format(java.util.Locale.US, "%.1f", suggest / 1e6) + " MP，渲染会慢）";
+        return " · " + megapixels(w, h) + tr("import.mp_recommended")
+                + String.format(java.util.Locale.US, "%.1f", suggest / 1e6) + tr("import.mp_rendering_will_be_slower");
     }
 
     static String megapixels(int w, int h) {
@@ -27539,7 +27541,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      * `ensureEngine()` reads it exactly once, immediately after the engine is
      * created -- and `engine` is assigned first, so a throw in that one call
      * leaves `probe` at `parse("{}")` for the life of the process while every
-     * render works perfectly. The device then reads as "设备信息读取失败" and,
+     * render works perfectly. The device then reads as tr("file.could_not_read_device_information") and,
      * worse, `maxImportPixels()` loses the one number it is derived from.
      */
     /**
@@ -27668,18 +27670,18 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final int currentBand = debugBandCap();
         final java.util.List<String> labels = new java.util.ArrayList<>();
         for (int v : caps)
-            labels.add((v == currentCap ? "· " : "") + (v == 0 ? "像素上限：按设备自动" : "像素上限：" + v + " MP"));
+            labels.add((v == currentCap ? "· " : "") + (v == 0 ? tr("import.pixel_cap_automatic") : tr("import.pixel_cap") + v + " MP"));
         for (int v : sims)
-            labels.add((v == currentSim ? "· " : "") + (v == 0 ? "模拟驱动绑定：关闭" : "模拟驱动绑定：" + v + " MiB"));
+            labels.add((v == currentSim ? "· " : "") + (v == 0 ? tr("import.simulated_driver_buffer_limit_off") : tr("import.simulated_driver_buffer_limit") + v + " MiB"));
         for (int v : bands)
-            labels.add((v == currentBand ? "· " : "") + (v == 0 ? "分带上限：引擎默认（2M 元素）"
-                    : (v >= 100000000 ? "分带上限：关闭（一条带 = 整幅）" : "分带上限：" + (v / 1000000) + "M 元素")));
+            labels.add((v == currentBand ? "· " : "") + (v == 0 ? tr("import.band_limit_engine_default_2m")
+                    : (v >= 100000000 ? tr("import.band_limit_off_one_band") : tr("import.band_limit") + (v / 1000000) + tr("import.m_elements"))));
         final long memoryCap = DeviceProbe.maxPixelsByMemory(availableMemoryBytes());
-        final String note = "像素上限只改「按绑定范围算」的那一道；内存上限（这台机器约 "
+        final String note = tr("import.the_pixel_cap_only_affects")
                 + String.format(java.util.Locale.US, "%.0f", memoryCap / 1e6)
-                + " MP）和硬上限 42 MP 仍然有效。模拟驱动绑定让引擎按小绑定分带渲染，"
-                + "改完要重启应用才生效。两者一起开 = 假装自己是 128 MiB 的机型，但允许导入更大的帧。";
-        showActionSheet("调试：像素上限 / 驱动绑定", note, labels.toArray(new String[0]), which -> {
+                + tr("import.mp_and_the_hard_cap")
+                + tr("import.restart_the_app_to_apply");
+        showActionSheet(tr("settings.debug_pixel_cap_and_buffer"), note, labels.toArray(new String[0]), which -> {
             if (which < caps.length) setDebugPixelCapMp(caps[which]);
             else if (which < caps.length + sims.length) setDebugStorageLimitMib(sims[which - caps.length]);
             else setDebugBandCap(bands[which - caps.length - sims.length]);
@@ -27771,7 +27773,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         back.setOnClickListener(v -> { if (settingsSection == null) closeSettings(); else showSettings(null); });
         head.addView(back, new LinearLayout.LayoutParams(dp(44), dp(48)));
 
-        settingsTitle = mixedLabel("设置", 13f, UI_INK);
+        settingsTitle = mixedLabel(tr("editor.settings"), 13f, UI_INK);
         head.addView(settingsTitle, new LinearLayout.LayoutParams(0, -2, 1f));
 
         settingsDone = label("完成", 9.5f, UI_BLUE, tfHan);
@@ -27808,10 +27810,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final boolean moved = !String.valueOf(settingsSection).equals(settingsFilledSection);
         final int keepY = settingsScroll == null ? 0 : settingsScroll.getScrollY();
         settingsFilledSection = String.valueOf(settingsSection);
-        settingsTitle.setText(mixedText(root ? "设置"
+        settingsTitle.setText(mixedText(root ? tr("editor.settings")
                 : "theme".equals(settingsSection) ? "外观与主题"
                 : "about".equals(settingsSection) ? "关于与诊断"
-                : "licence".equals(settingsSection) ? "开源许可" : "设置"));
+                : "licence".equals(settingsSection) ? "开源许可" : tr("editor.settings")));
         settingsDone.setVisibility(root ? View.VISIBLE : View.GONE);
         settingsBody.removeAllViews();
 
@@ -27841,10 +27843,29 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         }
     }
 
+    /** Pick the editor language; a restart reloads every translated label. */
+    private void showLanguageSheet() {
+        final java.util.List<AppLanguage.Language> languages = AppLanguage.available();
+        final java.util.List<String> labels = new java.util.ArrayList<>();
+        for (AppLanguage.Language language : languages) labels.add(language.name);
+        showChoiceSheet("语言 / Language", labels, AppLanguage.current().name, picked -> {
+            for (AppLanguage.Language language : languages) {
+                if (language.name.equals(picked)) {
+                    AppLanguage.select(this, language);
+                    recreate();
+                    return;
+                }
+            }
+        });
+    }
+
     private void fillSettingsRoot() {
         settingsGroup("外观 \u00b7 APPEARANCE");
         settingsAdd(settingsRow("主题", null, themeValue(), true,
                 () -> showSettings("theme")));
+        settingsRule();
+        settingsAdd(settingsRow("语言 / Language", null,
+                AppLanguage.current().name, true, this::showLanguageSheet));
         settingsRule();
         settingsAdd(settingsRow("屏幕方向", "横屏时画布在左、参数在右", orientationValue(), true,
                 this::showOrientationSheet));
@@ -27853,7 +27874,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 this::setArrivalAnim));
 
         settingsGroup("预览 \u00b7 PREVIEW");
-        settingsAdd(settingsSwitch("直方图", "叠在画面左上角的分布", histogramOn, on -> {
+        settingsAdd(settingsSwitch(tr("optics.histogram"), "叠在画面左上角的分布", histogramOn, on -> {
             histogramOn = on;
             getSharedPreferences("ui", MODE_PRIVATE).edit()
                     .putBoolean("histogram", on).apply();
@@ -27863,7 +27884,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         settingsAdd(settingsRow("HDR 屏幕预览", hdrDetailLine(), null, true,
                 this::showHdrSheet));
         settingsRule();
-        settingsAdd(settingsSwitch("原图提亮", "看原图时抬亮暗部；关掉更接近解码本身",
+        settingsAdd(settingsSwitch(tr("optics.original_brightness"), "看原图时抬亮暗部；关掉更接近解码本身",
                 rawAutoBright, on -> {
                     rawAutoBright = on;
                     getSharedPreferences("ui", MODE_PRIVATE).edit()
@@ -27872,7 +27893,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 }));
 
         settingsGroup("工作区 \u00b7 WORKSPACE");
-        settingsAdd(settingsRow("预设", presetCountLine(), null, true, this::showPresetsPanel));
+        settingsAdd(settingsRow(tr("preset.preset"), presetCountLine(), null, true, this::showPresetsPanel));
         settingsRule();
         settingsAdd(settingsRow("重新扫描相册", "在系统相册里删完照片后，重新读一遍", null, true, () -> {
             loadAlbum();
@@ -27884,7 +27905,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 UpdateCheck.versionName(this) + "\uff08" + UpdateCheck.versionCode(this) + "\uff09",
                 true, () -> showSettings("about")));
         settingsRule();
-        settingsAdd(settingsRow("检查更新", null, null, true,
+        settingsAdd(settingsRow(tr("settings.check_for_updates"), null, null, true,
                 () -> UpdateCheck.check(this, true)));
         settingsRule();
         settingsAdd(settingsSwitch("驱动报告", deviceReportLine(), DeviceReport.enabled(this),
@@ -28298,11 +28319,11 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 + "steps=" + DebugSink.ringSize() + "\n";
         new Thread(() -> {
             final boolean ok = DebugSink.report("steps", head,
-                    ring.isEmpty() ? "(这次还没有记录)" : ring);
+                    ring.isEmpty() ? tr("settings.no_activity_logged_yet") : ring);
             runOnUiThread(() -> showTextDialog(
-                    ok ? "已上传最近的步骤" : "上传失败",
-                    "记录号 " + DebugSink.REF + "\n\n"
-                    + (ring.isEmpty() ? "(这次还没有记录)" : ring)
+                    ok ? tr("settings.recent_activity_uploaded") : tr("settings.upload_failed"),
+                    tr("settings.report_id") + DebugSink.REF + "\n\n"
+                    + (ring.isEmpty() ? tr("settings.no_activity_logged_yet") : ring)
                     + (ok ? "\n已经上传，不用再发给我了。"
                           : "\n网络没通，请把这段复制发给我。"),
                     false));
@@ -28421,14 +28442,14 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             StringBuilder label = new StringBuilder(name);
             String type = o.optString("type", "");
             String use = o.optString("use", "");
-            if ("positive".equals(type)) label.append(" · 反转");
+            if ("positive".equals(type)) label.append(tr("film.slide"));
             // A silver stock is a `negative` in this catalogue like any other,
             // so without this the four black-and-white films wear "· 负片"
             // and nothing says which ones they are. "Black and white" is the
             // only label a user looks for them by.
-            else if (isMonochromeStock(id)) label.append(" · 黑白");
-            else if ("negative".equals(type)) label.append(" · 负片");
-            if ("cine".equals(use)) label.append(" · 电影");
+            else if (isMonochromeStock(id)) label.append(tr("film.b_w"));
+            else if ("negative".equals(type)) label.append(tr("import.negative"));
+            if ("cine".equals(use)) label.append(tr("import.cinema"));
             ids.add(id);
             labels.add(label.toString());
             if (types != null) types.add(type);
@@ -28474,7 +28495,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         chain.add(new Intent(Intent.ACTION_GET_CONTENT)
                 .addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"));
         if (!launchFirstResolvable(chain, 1)) {
-            showInAppToast("本机没有相册选择器；请改用「RAW / JPEG / HEIC」那一项");
+            showInAppToast(tr("import.no_system_photo_picker_found"));
         }
     }
 
@@ -28490,7 +28511,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 // has not declared it in `<queries>`, and `resolveActivity`
                 // then answers null for the system picker that
                 // `startActivityForResult` would have opened. That is
-                // "本机没有相册选择器" / "本机没有可用的文件选择器" on a phone whose
+                // "本机没有相册选择器" / tr("import.no_file_picker_is_available") on a phone whose
                 // gallery and file manager are both fine. Launch it; an
                 // ActivityNotFoundException falls through to the next
                 // candidate, and everything else is caught below.
@@ -28559,7 +28580,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         content.putExtra(Intent.EXTRA_MIME_TYPES, types);
         chain.add(content);
         if (!launchFirstResolvable(chain, 1)) {
-            showInAppToast("本机没有可用的文件选择器");
+            showInAppToast(tr("import.no_file_picker_is_available"));
         }
     }
 
@@ -28589,7 +28610,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         }
         if (picked.isEmpty()) {
             try { DebugSink.text("picker", "RESULT_OK with no data"); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28515", ignored); }
-            showInAppToast("没有拿到图片（选择器返回空）。请点「导入」→「从文件管理器选择」再试一次");
+            showInAppToast(tr("import.the_picker_did_not_return"));
             return;
         }
         if (picked.size() == 1) {
@@ -28616,7 +28637,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         // **A re-pick repairs a chip, it does not import a photograph.**
         // Without this the frame the user chose to re-link was still removed by
         // `loadImage`'s dead-grant branch, and every one of the seventy-four
-        // "照片已不可访问" reports ended with the picture -- and its look --
+        // tr("import.photo_access_expired") reports ended with the picture -- and its look --
         // gone for good.
         final int repair = repickFrame;
         if (repair >= 0) {
@@ -28637,12 +28658,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         }
         if (persisted) { loadImage(uri); return; }
 
-        showInAppToast("正在把照片复制到应用目录…");
+        showInAppToast(tr("import.copying_photos_into_app_storage"));
         new Thread(() -> {
             final Uri copy = privateCopy(uri);
             runOnUiThread(() -> {
                 if (copy == null) {
-                    showErrorDialog("导入失败", "读取或复制这个文件失败了。请换「从相册选择」再试一次。");
+                    showErrorDialog(tr("import.import_failed"), tr("import.could_not_read_or_copy"));
                     return;
                 }
                 loadImage(copy);
@@ -28683,12 +28704,12 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      * keeps its position, its name and its look.
      */
     private void repairFrame(Uri uri, int index) {
-        showInAppToast("正在把照片复制到应用目录…");
+        showInAppToast(tr("import.copying_photos_into_app_storage"));
         new Thread(() -> {
             final Uri copy = privateCopy(uri);
             runOnUiThread(() -> {
                 if (copy == null) {
-                    showErrorDialog("导入失败", "读取或复制这个文件失败了。请换「从相册选择」再试一次。");
+                    showErrorDialog(tr("import.import_failed"), tr("import.could_not_read_or_copy"));
                     return;
                 }
                 if (index < 0 || index >= frames.size()) return;
@@ -29022,7 +29043,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      * <p>Two things are done to it here and nowhere else: the sRGB encoding a
      * display expects (the frame itself is linear working space -- correct for
      * a file, black on a screen), and `ev` stops of lift, which is the exposure
-     * the meter is about to give the film. Without the second the "原图" side of
+     * the meter is about to give the film. Without the second the tr("film.original") side of
      * every comparison sits three stops under the developed side and reads as a
      * failure rather than as a starting point.
      */
@@ -29187,8 +29208,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             catch (Throwable ignored) { Diagnostics.ignored("MainActivity:30007", ignored); }
             return;
         }
-        final String shownTitle = (title == null || title.isEmpty()) ? "错误" : title;
-        final String shownBody = (body == null || body.isEmpty()) ? "[E-0000] 未知错误" : body;
+        final String shownTitle = (title == null || title.isEmpty()) ? tr("import.error") : title;
+        final String shownBody = (body == null || body.isEmpty()) ? tr("import.e_0000_unknown_error") : body;
         // **One row per failure.** The ring is already in memory; sending it
         // here is what makes an error report readable without the user having
         // to copy anything, and it costs one write instead of sixty-four.
@@ -29206,10 +29227,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             head.setOrientation(LinearLayout.HORIZONTAL);
             head.setGravity(android.view.Gravity.CENTER_VERTICAL);
             head.setPadding(dp(16), 0, dp(16), 0);
-            TextView kicker = mixedLabel("ERROR / 错误详情", 8, UI_BLUE);
+            TextView kicker = mixedLabel(tr("import.error_details"), 8, UI_BLUE);
             kicker.setLetterSpacing(0.08f);
             head.addView(kicker, new LinearLayout.LayoutParams(0, -2, 1f));
-            TextView close = label("关闭", 9, UI_MUTED, tfHan);
+            TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
             close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             close.setPadding(dp(12), dp(14), 0, dp(14));
             close.setOnClickListener(v -> dialog.dismiss());
@@ -29223,7 +29244,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             TextView titleView = label(shownTitle, 18, UI_INK, tfHan);
             titleView.setLetterSpacing(-0.02f);
             bodyBox.addView(titleView);
-            TextView advice = label("请复制下面的完整信息，方便定位问题。记录号 " + DebugSink.REF, 10, UI_MUTED, tfHan);
+            TextView advice = label(tr("import.copy_the_full_details_below") + DebugSink.REF, 10, UI_MUTED, tfHan);
             LinearLayout.LayoutParams adviceLp = new LinearLayout.LayoutParams(-1, -2);
             adviceLp.topMargin = dp(8);
             bodyBox.addView(advice, adviceLp);
@@ -29244,7 +29265,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             LinearLayout actions = new LinearLayout(this);
             actions.setOrientation(LinearLayout.HORIZONTAL);
             actions.setPadding(dp(16), dp(14), dp(16), dp(16));
-            TextView closeAction = label("关闭", 10, UI_BLUE, tfHan);
+            TextView closeAction = label(tr("crash.close"), 10, UI_BLUE, tfHan);
             closeAction.setGravity(android.view.Gravity.CENTER);
             android.graphics.drawable.GradientDrawable closeBg = new android.graphics.drawable.GradientDrawable();
             closeBg.setColor(UI_PAPER);
@@ -29254,7 +29275,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(0, dp(42), 1f);
             closeLp.rightMargin = dp(8);
             actions.addView(closeAction, closeLp);
-            TextView copy = label("复制错误信息", 10, UI_PAPER, tfHan);
+            TextView copy = label(tr("import.copy_error_details"), 10, UI_PAPER, tfHan);
             copy.setGravity(android.view.Gravity.CENTER);
             android.graphics.drawable.GradientDrawable copyBg = new android.graphics.drawable.GradientDrawable();
             copyBg.setColor(UI_BLUE);
@@ -29265,16 +29286,16 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                     // back to the D1 rows; a screenshot of the dialog is not
                     // always possible, and a pasted body without it is a
                     // report with no address.
-                    final String text = "记录号 " + DebugSink.REF
+                    final String text = tr("settings.report_id") + DebugSink.REF
                             + "\n\n" + shownTitle + "\n\n" + shownBody
                             + "\n\nbuild=SpektraLab Android " + UpdateCheck.versionName(this)
                             + "\n" + probe.describe();
                     android.content.ClipboardManager cm =
                             (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
                     cm.setPrimaryClip(android.content.ClipData.newPlainText("SpektraLab", text));
-                    copy.setText("已复制");
+                    copy.setText(tr("feedback.copied"));
                 } catch (Throwable t) {
-                    copy.setText("复制失败 · 请长按详情");
+                    copy.setText(tr("import.could_not_copy_press_and"));
                 }
             });
             actions.addView(copy, new LinearLayout.LayoutParams(0, dp(42), 1.45f));
@@ -29689,8 +29710,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             // 576 MB import buffer was refused by a ledger, not by the device.
             // What is worth saying is which way out exists and that the file
             // itself is wanted if it keeps happening.
-            return "[E-1003] 这张图解码时内存不够了。先关掉其它应用再试一次；"
-                    + "如果反复出现，把这张图的原始文件发给我，我看能不能在解码这一步省下内存";
+            return tr("render.e_1003_not_enough_memory")
+                    + tr("render.if_it_keeps_happening_send");
         }
         return SpkError.format(describe(t));
     }
@@ -29747,7 +29768,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         if (filmStock == null) {
             // No film yet: the frame stays the import's own, and the sheet's
             // choice is remembered for the first render.
-            showInAppToast("选择一张胶片开始渲染");
+            showInAppToast(tr("render.choose_a_film_to_start"));
             return;
         }
         // No `applySessionParams()` here any more: it wrote the engine from the
@@ -29929,7 +29950,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private void undoStep() {
         undoHandler.removeCallbacks(undoPush);
         if (undoStack.size() <= 1) {
-            showInAppToast("已经回到最初的编辑");
+            showInAppToast(tr("render.restored_the_initial_edits"));
             return;
         }
         undoStack.pop();
@@ -31946,7 +31967,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
      * The export.
      *
      * <p>0 asks for the photograph's own size -- the same promise the first
-     * engine's "全尺寸" makes, and the reason there is no shrink-to-fit here.
+     * engine's tr("file.full_size_2") makes, and the reason there is no shrink-to-fit here.
      * The chain writes a JPEG; the album write is the app's own, so a provider
      * that refuses the row is reported the way every other export reports it.
      */
@@ -32267,8 +32288,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 runOnUiThread(() -> {
                     fotuRendering = false;
                     hideBusy();
-                    statusText.setText("导出失败");
-                    showErrorDialog("导出失败", why);
+                    statusText.setText(tr("export.export_failed_2"));
+                    showErrorDialog(tr("export.export_failed_2"), why);
                     if (onDone != null) onDone.run();
                 });
                 return;
@@ -32291,8 +32312,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                     fotuRendering = false;
                     hideBusy();
                     final String what = tiff ? "TIFF 16 位 · 线性" : "JPEG";
-                    final String hint = tiff ? "（TIFF：点导出旁边的「分享」发给手机版 Lightroom 即可使用）" : "";
-                    statusText.setText("已导出 " + what + " · fotufilm · " + (ms / 1000) + " 秒"
+                    final String hint = tiff ? tr("export.tiff_use_share_next_to") : "";
+                    statusText.setText(tr("export.exported") + what + " · fotufilm · " + (ms / 1000) + " 秒"
                             + (edge > 0 ? "（按本机内存，长边 " + edge + " px）" : "") + hint);
                     final String liveNote = liveDone[0] ? " · 实况（含动图）"
                             : (liveClipPath != null ? " · 动图未写入" : "");
@@ -32307,8 +32328,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 runOnUiThread(() -> {
                     fotuRendering = false;
                     hideBusy();
-                    statusText.setText("导出失败");
-                    showErrorDialog("相册写入失败",
+                    statusText.setText(tr("export.export_failed_2"));
+                    showErrorDialog(tr("error.album_write_short"),
                             "渲染完成，但系统相册没有接受这个文件：\n\n" + t);
                     if (onDone != null) onDone.run();
                 });
@@ -32739,7 +32760,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     /** The 冲印 page, for the second engine. */
     /** The seven pages the second engine's print panel is read in. */
     private static final String[] FOTU_GROUPS = {
-            "影调", "色彩", "胶片", "颗粒", "光晕", "镜头", "相纸",
+            "影调", "色彩", tr("navigation.film"), tr("print.knob.grain"), tr("print.knob.halation"), "镜头", "相纸",
     };
     private int fotuGroup = 0;
     /** Which group's body is on screen; -1 until the panel is first built. */
@@ -32974,7 +32995,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     /** 影调: what the print's tone curve does, including the region switch. */
     private void buildFotuToneGroup() {
-        fotuRow(fotuBody, "曝光", -2f, 2f, () -> fotuEv, v -> fotuEv = v,
+        fotuRow(fotuBody, tr("optics.exposure"), -2f, 2f, () -> fotuEv, v -> fotuEv = v,
                 "fotufilm 的曝光在这里：改的是底片的受光量，密度和色彩都跟着变。"
                 + "光学页的「曝光」是冲印之后的推拉，拉不回已经到白的高光");
         // **Only the screen medium has one.** The styles are how a
@@ -32988,8 +33009,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                     new String[]{"自动定标（默认）", "分级打印", "固定校准曝光"},
                     () -> fotuDigitalRef == null ? "" : fotuDigitalRef, v -> fotuDigitalRef = v);
         }
-        fotuRow(fotuBody, "高光", -1f, 1f, () -> fotuHighlights, v -> fotuHighlights = v, "往右收高光");
-        fotuRow(fotuBody, "阴影", -1f, 1f, () -> fotuShadows, v -> fotuShadows = v, "往右提阴影");
+        fotuRow(fotuBody, tr("optics.highlights"), -1f, 1f, () -> fotuHighlights, v -> fotuHighlights = v, "往右收高光");
+        fotuRow(fotuBody, tr("optics.shade"), -1f, 1f, () -> fotuShadows, v -> fotuShadows = v, "往右提阴影");
         // It is the *region* switch for the two sliders below it: with
         // both at zero the host never reads it, which is why it sat at
         // the top of the panel doing nothing.
@@ -33017,11 +33038,11 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     /** 色彩: saturation and the grade, on top of what the film and paper did. */
     private void buildFotuColourGroup() {
-        fotuRow(fotuBody, "饱和度", 0f, 2f, () -> fotuSaturation, v -> fotuSaturation = v, "1 是原样");
+        fotuRow(fotuBody, tr("optics.saturation"), 0f, 2f, () -> fotuSaturation, v -> fotuSaturation = v, "1 是原样");
         fotuRow(fotuBody, "鲜艳度", -1f, 1f, () -> fotuVibrance, v -> fotuVibrance = v, "只动低饱和的地方");
-        fotuRow(fotuBody, "色温", -1f, 1f, () -> fotuWarmth, v -> fotuWarmth = v, "往右暖，往左冷");
-        fotuRow(fotuBody, "色调", -1f, 1f, () -> fotuTint, v -> fotuTint = v, "往右品红，往左绿");
-        fotuRow(fotuBody, "层间抑制", 0f, 2f, () -> fotuCouplers, v -> fotuCouplers = v,
+        fotuRow(fotuBody, tr("optics.temperature"), -1f, 1f, () -> fotuWarmth, v -> fotuWarmth = v, "往右暖，往左冷");
+        fotuRow(fotuBody, tr("optics.tint"), -1f, 1f, () -> fotuTint, v -> fotuTint = v, "往右品红，往左绿");
+        fotuRow(fotuBody, tr("print.knob.interlayer_inhibition"), 0f, 2f, () -> fotuCouplers, v -> fotuCouplers = v,
                 "染料层之间的相互抑制，1 是原样；往上颜色变浓、暗部更紧");
         fotuRow(fotuBody, "分级 · 提升", -1f, 1f, () -> fotuGradeLift, v -> fotuGradeLift = v, null);
         fotuRow(fotuBody, "分级 · 增益", -1f, 1f, () -> fotuGradeGain, v -> fotuGradeGain = v, null);
@@ -33088,7 +33109,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     /** 光晕: light that came back off the base, and the layers' cross-talk. */
     private void buildFotuHalationGroup() {
-        fotuRow(fotuBody, "光晕", 0f, 4f, () -> fotuHalation, v -> fotuHalation = v,
+        fotuRow(fotuBody, tr("print.knob.halation"), 0f, 4f, () -> fotuHalation, v -> fotuHalation = v,
                 "胶片背后的光晕半径 × 这个数，1 是原样；0.5 收一半，2 放开");
         fotuRow(fotuBody, "光晕颜色", 0f, 1f, () -> fotuHalationColour, v -> fotuHalationColour = v,
                 "把三层的光晕往回光最亮的那层拉平；0 是胶片自己的颜色，1 是单色光晕");
@@ -33104,7 +33125,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     /** 镜头: what happened in front of the film. */
     private void buildFotuLensGroup() {
-        fotuRow(fotuBody, "眩光", 0f, 1f, () -> fotuFlare, v -> fotuFlare = v, "镜头里那层雾");
+        fotuRow(fotuBody, tr("print.knob.glare"), 0f, 1f, () -> fotuFlare, v -> fotuFlare = v, "镜头里那层雾");
         fotuRow(fotuBody, "色边", 0f, 1f, () -> fotuFringe, v -> fotuFringe = v,
                 "高反差边缘的色散强度；0 关掉，1 最强");
         fotuRow(fotuBody, "色边半径", 20f, 300f, () -> fotuFringeRadius, v -> fotuFringeRadius = v,
@@ -33121,7 +33142,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final LinearLayout paperCells = new LinearLayout(this);
         paperCells.setOrientation(LinearLayout.HORIZONTAL);
         fotuRebateMark = new Square(this, UI_BLUE, uiToggleOff());
-        toggleCell(paperCells, "片边", "胶片边缘", fotuRebateMark, () -> overscanOn, on -> {
+        toggleCell(paperCells, tr("border.film_border"), "胶片边缘", fotuRebateMark, () -> overscanOn, on -> {
             overscanOn = on;
             if (overscanMark != null) overscanMark.setLit(on);
             // **The picture takes the gate's shape.** The host lays the frame in
@@ -33140,7 +33161,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 "印片机灯泡的色温；3200 K 是默认，低一点更黄");
         fotuRow(fotuBody, "洋红滤镜", 0f, 1.2f, () -> fotuPrinterM, v -> fotuPrinterM = v,
                 "二向色滤镜的 M 档，0.40 是默认；加洋红让画面偏绿");
-        fotuRow(fotuBody, "黄滤镜", 0f, 1.2f, () -> fotuPrinterY, v -> fotuPrinterY = v,
+        fotuRow(fotuBody, tr("print.knob.yellow_filter"), 0f, 1.2f, () -> fotuPrinterY, v -> fotuPrinterY = v,
                 "二向色滤镜的 Y 档，0.50 是默认；加黄让画面偏蓝");
         fotuRow(fotuBody, "印片曝光", -6f, 6f, () -> fotuPrinterEv, v -> fotuPrinterEv = v,
                 "整张相纸的整体曝光，单位档；0 是默认");
@@ -33178,10 +33199,10 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         target = (long) (target * 0.75);
         target = Math.max(1_000_000L, Math.min(target, 100_000_000L));
         final long picking = target;
-        runOnUiThread(() -> showActionSheet("这张图超出本机的单缓冲上限",
-                "按约 " + String.format(java.util.Locale.US, "%.1f", picking / 1e6)
-                        + " MP 重新导入并渲染？画面会小一些，但能出图。",
-                new String[]{"重试", "取消"}, which -> {
+        runOnUiThread(() -> showActionSheet(tr("render.the_image_exceeds_this_device"),
+                tr("render.import_and_render_again_at") + String.format(java.util.Locale.US, "%.1f", picking / 1e6)
+                        + tr("render.mp_the_image_will_be"),
+                new String[]{tr("render.retry"), tr("editor.cancel")}, which -> {
                     if (which == 0) {
                         pendingCapPixels = (int) picking;
                         loadImage(sourceUri, currentFrame);
@@ -34572,7 +34593,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
 
     Uri writeExportFile(java.io.File tmp, String baseName, String ext, String mime)
             throws java.io.IOException {
-        // **The file, before the album.** Every "相册写入失败" that turned out to
+        // **The file, before the album.** Every tr("error.album_write_short") that turned out to
         // be something else started here: `copyInto` opened a path that no
         // longer existed and the FileNotFoundException was reported as the
         // gallery's fault. Saying so first costs one `stat`.
@@ -34697,11 +34718,11 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     private void resolvePrinting() {
         final SpektraLabEngine.Session s = session;
         if (s == null || filmStock == null) {
-            showActionSheet("还没有可配光的照片", "先导入一张照片并选一支胶片。",
-                    new String[]{"知道了"}, which -> { });
+            showActionSheet(tr("print.no_photo_to_rebalance"), tr("print.import_a_photo_and_choose"),
+                    new String[]{tr("print.ok")}, which -> { });
             return;
         }
-        statusText.setText("配光中…");
+        statusText.setText(tr("print.rebalancing_print"));
         new Thread(() -> {
             String json = null;
             String failure = null;
@@ -34716,8 +34737,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
             final String out = json, err = failure;
             runOnUiThread(() -> {
                 if (err != null) {
-                    statusText.setText("配光失败");
-                    showErrorDialog("配光失败", err);
+                    statusText.setText(tr("print.could_not_rebalance_the_print"));
+                    showErrorDialog(tr("print.could_not_rebalance_the_print"), err);
                     return;
                 }
                 String balanced = "?", ch = "?", mg = "?", ye = "?";
@@ -34733,13 +34754,13 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                         ye = String.format(java.util.Locale.US, "%.1f", sp.optDouble("y_filter_neutral", 0.0));
                     }
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:36025", ignored); }
-                statusText.setText("配光完成 " + balanced);
-                showActionSheet("配光结果",
-                        "测光 " + balanced + "\n\n中性滤镜（引擎按胶片与光源查表）\n"
-                                + "青 " + ch + " · 品红 " + mg + " · 黄 " + ye
+                statusText.setText(tr("print.print_rebalanced") + balanced);
+                showActionSheet(tr("print.color_timing_results"),
+                        tr("print.metering") + balanced + "\n\n中性滤镜（引擎按胶片与光源查表）\n"
+                                + tr("print.cyan") + ch + tr("print.magenta") + mg + tr("print.yellow") + ye
                                 + "\n\n「恢复放大机」会把亮度、黄、品红、预闪归零，"
-                                + "让画面回到配光算出的中性。",
-                        new String[]{"恢复放大机", "关闭"}, which -> {
+                                + tr("print.to_restore_the_neutral_balance"),
+                        new String[]{tr("print.reset_enlarger"), tr("crash.close")}, which -> {
                             if (which != 0) return;
                             printExposure = 1.0f;
                             mFilter = 0f;
@@ -35157,9 +35178,9 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final java.util.regex.Matcher r = java.util.regex.Pattern
                 .compile("Lrow=(\\d+)@(-?\\d+) n(\\d+) g(\\d+) Y=(\\S+)").matcher(line);
         if (r.find() && Integer.parseInt(r.group(1)) >= 30 && Integer.parseInt(r.group(3)) >= 10) {
-            return "左侧短杠 peak=" + r.group(1) + " y=" + r.group(2)
-                    + " 行数=" + r.group(3) + " 间距=" + r.group(4)
-                    + " 组=" + r.group(5) + " · " + line;
+            return tr("export.left_edge_short_marks_peak") + r.group(1) + " y=" + r.group(2)
+                    + tr("export.rows") + r.group(3) + tr("export.spacing") + r.group(4)
+                    + tr("export.groups") + r.group(5) + " · " + line;
         }
         // The same measurement on a band eight times wider (w/8, capped at 256).
         // "Left side" on a 3400-wide frame is not the first 53 columns, and a
@@ -35169,8 +35190,8 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final java.util.regex.Matcher w = java.util.regex.Pattern
                 .compile("Wrow=(\\d+)@(-?\\d+) n(\\d+)").matcher(line);
         if (w.find() && Integer.parseInt(w.group(1)) >= 20 && Integer.parseInt(w.group(3)) >= 10) {
-            return "左侧宽带 peak=" + w.group(1) + " y=" + w.group(2)
-                    + " 行数=" + w.group(3) + " · " + line;
+            return tr("export.left_edge_wide_band_peak") + w.group(1) + " y=" + w.group(2)
+                    + tr("export.rows") + w.group(3) + " · " + line;
         }
         // **Eight, not five.** `Vmax` used to be reported in 16-bit units while
         // this threshold was chosen on 8-bit numbers, so every clean export
@@ -35181,7 +35202,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         final java.util.regex.Matcher v = java.util.regex.Pattern
                 .compile("Vmax=(\\d+)@(\\d+)").matcher(line);
         if (v.find() && Integer.parseInt(v.group(1)) >= 8) {
-            return "竖线 x=" + v.group(2) + " Δ=" + v.group(1) + " · " + line;
+            return tr("export.vertical_line_x") + v.group(2) + " Δ=" + v.group(1) + " · " + line;
         }
         final java.util.regex.Matcher m = java.util.regex.Pattern
                 .compile(" ([LRTB])=(\\d+)@(-?\\d+) p(\\d+)").matcher(line);
@@ -35426,7 +35447,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                     lastExportMime = "image/jpeg";
                     showInAppToast("已保存原图 " + fw + "x" + fh + " · " + sizeLabel + rawNote);
                     statusText.setText("已导出原图 " + fw + "x" + fh + " · " + sizeLabel
-                            + "（" + secs + " 秒）" + rawNote);
+                            + "（" + secs + tr("export.s_rendering") + rawNote);
                     hideBusy();
                     setStep(2);
                 });
