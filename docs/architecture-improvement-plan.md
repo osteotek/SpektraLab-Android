@@ -75,8 +75,12 @@ release APK, which carries all 48 Vulkan shaders). `device-golden.ps1 -Bands
   by delegating to `MainActivity`, keeping the Activity as lifecycle + wiring.
 - The page builders followed: `ui/panels/ViewPages` (9 methods),
   `ComposePages` (3), `FotuGroups` (8) and `PrintEdge` (4), each with its own
-  narrow host and root-package delegating implementation. Together these remove
-  ~1,400 lines from `MainActivity` (now ~32,650).
+  narrow host and root-package delegating implementation.
+- Dialog/sheet groups were extracted the same way: `AppDialogs` (feedback +
+  text dialogs), `SettingsDialogs` (settings/about screens and sheets),
+  `PickerSheets` (meter/paper/HDR/aperture/Fotu/edge pickers) and
+  `PresetDialogs` (presets panel, batch delete, apply look). Together these
+  remove ~2,300 lines from `MainActivity` (now ~31,680).
 - The package checker also rejects fully-qualified `MainActivity` references in
   `ui/` (with a small allow-list of still-shared nested view types).
 - Emulator smoke: Film, Optics, Scale, Compose and Border panels all open with
