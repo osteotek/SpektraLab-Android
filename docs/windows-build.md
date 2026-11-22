@@ -151,3 +151,19 @@ The version arguments are checked against `version.json` through
 `app/build/check-version.py --identity` before anything is written, so a typo
 cannot publish an `update.json` that disagrees with the built APK. The script
 never stores the token in the repository.
+
+## CI release signing
+
+`.github/workflows/verify.yml` has a `release` job that builds the app from
+source and uploads `SpektraLab-release-signed.apk` on every push (and on
+same-repository PRs). It needs these repository secrets:
+
+| Secret | Purpose |
+|---|---|
+| `RELEASE_KEYSTORE_BASE64` | base64 of the release JKS (`[Convert]::ToBase64String([IO.File]::ReadAllBytes($ks))`) |
+| `RELEASE_STOREPASS` | keystore / key password |
+| `RELEASE_KEYALIAS` | key alias inside the keystore |
+| `EXPECTED_SIGNER_SHA256` | SHA-256 digest from `apksigner verify --print-certs`; the build fails if the signer differs |
+
+Fork PRs skip the job because GitHub does not expose secrets to them. The
+offline verification job is independent and still runs on every trigger.
