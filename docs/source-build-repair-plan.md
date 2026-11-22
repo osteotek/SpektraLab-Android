@@ -81,6 +81,22 @@ check-patch: the published source tree cannot build the JNI:
     spk_suspend_session, spk_trim_pool without a declaration              (10)
 ```
 
+### Build-validation finding (2026-11-22)
+
+`check-patch.py` now passes (56 patched files, 31 JNI `spk_*` calls declared),
+and `engine.cpp`/`pipeline.cpp`/`vulkan_gpu.cpp` compile with the NDK toolchain.
+A full `spektrafilm_engine` build still fails on a **different** gap that the
+checker does not cover: the JNI units use private `spk::io` APIs that the patched
+engine tree does not declare — `spk::io::write_dng`,
+`spk::io::RawDecodeCache`, `spk::io::read_dng_display_profile`, and
+`RawMetadata` fields `capture_datetime`, `shutter`, `aperture`, `iso` and
+`focal_mm`.
+
+Phase 2 therefore has a second tranche: either implement these in
+`engine/src/io`, or change the JNI to avoid them (which changes DNG export and
+RAW EXIF behaviour). The checker should also be extended to scan C++ namespace
+calls, not just `spk_*` C ABI calls, so this class of gap is visible offline.
+
 ## 3. Triage of the ten missing APIs
 
 | API | JNI use | Class | Plan |
