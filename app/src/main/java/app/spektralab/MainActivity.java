@@ -37,6 +37,7 @@ import app.spektralab.engine.SpektraLabEngine;
 import app.spektralab.engine.FotuFilm;
 import app.spektralab.engine.JpegExif;
 import app.spektralab.engine.TiffExif;
+import app.spektralab.ui.SheetDialogs;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +47,7 @@ import java.nio.ByteOrder;
 public class MainActivity extends Activity implements
         BatchImportHost, BatchExportHost,
         ImportWorkerHost, RawImportWorkerHost,
-        ExportWorkerHost, RenderWorkerHost {
+        ExportWorkerHost, RenderWorkerHost, SheetDialogs.Host {
     SpektraLabEngine engine;
     /** This GPU's limits, read once per engine. Drives the import cap and the export tiers. */
     DeviceProbe probe = DeviceProbe.parse("{}");
@@ -3423,7 +3424,7 @@ public class MainActivity extends Activity implements
      */
     static long nowMs() { return android.os.SystemClock.elapsedRealtime(); }
 
-    int dp(float v) {
+    @Override public int dp(float v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
     }
 
@@ -3650,7 +3651,7 @@ public class MainActivity extends Activity implements
      * build carries no R class: every surface here is drawn in code, so its
      * motion has to be as well.
      */
-    private void showBottomSheet(android.app.Dialog dialog, View sheet) {
+    @Override public void showBottomSheet(android.app.Dialog dialog, View sheet) {
         // **The travel is the point.** 640 dp over 360 ms on a curve that has
         // covered 89 % of it by the time the sheet is visibly in place; it also
         // rises out of 60 % alpha, so the last frames are the only fully solid
@@ -23304,14 +23305,7 @@ public class MainActivity extends Activity implements
         dialog.setContentView(sheet);
         dialog.setCanceledOnTouchOutside(true);
         showBottomSheet(dialog, sheet);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().setGravity(android.view.Gravity.BOTTOM);
-            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            dialog.getWindow().setDimAmount(0.35f);
-        }
+        SheetDialogs.presentBottom(dialog, sheet, this);
     }
 
     private void saveCurrentPreset() {
@@ -23554,23 +23548,9 @@ public class MainActivity extends Activity implements
     private void showMultiChoiceSheet(String title, String note, String[] labels,
                                       final java.util.function.Consumer<java.util.List<Integer>> onDone) {
         final android.app.Dialog dialog = new android.app.Dialog(this);
-        LinearLayout sheet = new LinearLayout(this);
-        sheet.setOrientation(LinearLayout.VERTICAL);
-        sheet.setBackgroundColor(UI_PAPER);
-        View cap = new View(this);
-        cap.setBackgroundColor(UI_BLUE);
-        sheet.addView(cap, new LinearLayout.LayoutParams(-1, dp(3)));
-
-        LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.HORIZONTAL);
-        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.setPadding(dp(16), 0, dp(16), 0);
-        head.addView(label(title, 12, UI_INK, tfHan), new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
-        close.setPadding(dp(12), dp(14), 0, dp(14));
-        close.setOnClickListener(v -> dialog.dismiss());
-        head.addView(close);
-        sheet.addView(head, new LinearLayout.LayoutParams(-1, dp(54)));
+        final LinearLayout sheet = SheetDialogs.sheetRoot(this, this);
+        sheet.addView(SheetDialogs.header(this, dialog, title, false, null),
+                new LinearLayout.LayoutParams(-1, dp(54)));
         if (note != null && !note.isEmpty()) {
             TextView noteView = label(note, 8.5f, UI_MUTED, tfHan);
             noteView.setPadding(dp(16), 0, dp(16), dp(10));
@@ -23637,14 +23617,7 @@ public class MainActivity extends Activity implements
         dialog.setContentView(sheet);
         dialog.setCanceledOnTouchOutside(true);
         showBottomSheet(dialog, sheet);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().setGravity(android.view.Gravity.BOTTOM);
-            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            dialog.getWindow().setDimAmount(0.35f);
-        }
+        SheetDialogs.presentBottom(dialog, sheet, this);
     }
 
     /** Import and export use the same paper sheet as the style pickers. */
@@ -23685,70 +23658,11 @@ public class MainActivity extends Activity implements
                                java.util.function.IntConsumer onPick, final Runnable onTitleLongPress,
                                String pinned) {
         final android.app.Dialog dialog = new android.app.Dialog(this);
-        LinearLayout sheet = new LinearLayout(this);
-        sheet.setOrientation(LinearLayout.VERTICAL);
-        sheet.setBackgroundColor(UI_PAPER);
-        View cap = new View(this);
-        cap.setBackgroundColor(UI_BLUE);
-        sheet.addView(cap, new LinearLayout.LayoutParams(-1, dp(3)));
-
-        LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.HORIZONTAL);
-        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.setPadding(dp(16), 0, dp(16), 0);
-        final TextView titleView = label(title, 12, UI_INK, tfHan);
-        if (onTitleLongPress != null) {
-            titleView.setOnLongClickListener(v -> {
-                dialog.dismiss();
-                onTitleLongPress.run();
-                return true;
-            });
-        }
-        head.addView(titleView, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
-        close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-        close.setPadding(dp(12), dp(14), 0, dp(14));
-        close.setOnClickListener(v -> dialog.dismiss());
-        head.addView(close);
-        sheet.addView(head, new LinearLayout.LayoutParams(-1, dp(54)));
-
-        final int pinHeight;
-        if (pinned != null && !pinned.isEmpty()) {
-            final TextView pinView = label(pinned, 9f, UI_BLUE, tfHan);
-            pinView.setTextIsSelectable(true);
-            pinView.setPadding(dp(16), 0, dp(16), dp(10));
-            sheet.addView(pinView);
-            pinHeight = dp(34);
-        } else {
-            pinHeight = 0;
-        }
-        if (note != null && !note.isEmpty()) {
-            TextView noteView = label(note, 8.5f, UI_MUTED, tfHan);
-            noteView.setPadding(dp(16), 0, dp(16), dp(12));
-            // **A long note has to scroll.** The sheet is `WRAP_CONTENT`, so a
-            // full changelog (seventy lines) pushed the title and the action
-            // rows off the screen -- and the update dialog's first action is
-            // 「去更新」, so the announcement became a dead end. Capped at 46% of
-            // the window, and only for notes long enough to need it, so every
-            // short sheet looks exactly as it did.
-            final int lines = note.split("\n", -1).length;
-            // **The action rows keep their space.** A fixed cap was still a
-            // guess: on a 640 dp screen the note took what was left and pushed
-            // 「去更新」 off the window, so the announcement had no way out.
-            // The room is what the screen gives after the title and the items,
-            // and the note scrolls inside exactly that.
-            final int screenH = getResources().getDisplayMetrics().heightPixels;
-            final int reserved = dp(54) + pinHeight + items.length * dp(50) + dp(28);
-            final int room = Math.max(dp(96), screenH - reserved);
-            if (lines > 8 && room < lines * dp(16)) {
-                ScrollView noteScroll = new ScrollView(this);
-                noteScroll.setVerticalScrollBarEnabled(false);
-                noteScroll.addView(noteView, new android.widget.FrameLayout.LayoutParams(-1, -2));
-                sheet.addView(noteScroll, new LinearLayout.LayoutParams(-1, Math.min(room, dp(420))));
-            } else {
-                sheet.addView(noteView);
-            }
-        }
+        final LinearLayout sheet = SheetDialogs.sheetRoot(this, this);
+        sheet.addView(SheetDialogs.header(this, dialog, title, true, onTitleLongPress),
+                new LinearLayout.LayoutParams(-1, dp(54)));
+        final int pinHeight = SheetDialogs.pinnedNote(this, sheet, pinned);
+        SheetDialogs.note(this, dialog, sheet, note, pinHeight, items.length);
         for (int i = 0; i < items.length; ++i) {
             final int index = i;
             TextView row = label(items[i], 11, UI_INK, tfHan);
@@ -23762,15 +23676,7 @@ public class MainActivity extends Activity implements
         }
         dialog.setContentView(sheet);
         dialog.setCanceledOnTouchOutside(true);
-        showBottomSheet(dialog, sheet);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().setGravity(android.view.Gravity.BOTTOM);
-            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            dialog.getWindow().setDimAmount(0.35f);
-        }
+        SheetDialogs.presentBottom(dialog, sheet, this);
     }
 
     /** The feedback group, in the app's own card rather than a system dialog.
@@ -24101,14 +24007,7 @@ public class MainActivity extends Activity implements
         dialog.setContentView(sheet);
         dialog.setCanceledOnTouchOutside(true);
         showBottomSheet(dialog, sheet);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().setGravity(android.view.Gravity.BOTTOM);
-            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            dialog.getWindow().setDimAmount(0.35f);
-        }
+        SheetDialogs.presentBottom(dialog, sheet, this);
     }
 
     /** Anything that is not one of the seven names -- or off -- is not a meter.
@@ -24347,14 +24246,7 @@ public class MainActivity extends Activity implements
         dialog.setContentView(sheet);
         dialog.setCanceledOnTouchOutside(true);
         showBottomSheet(dialog, sheet);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().setGravity(android.view.Gravity.BOTTOM);
-            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            dialog.getWindow().setDimAmount(0.35f);
-        }
+        SheetDialogs.presentBottom(dialog, sheet, this);
     }
 
     /**
@@ -36138,5 +36030,17 @@ public class MainActivity extends Activity implements
     public void uploadVkLogHostCall() { uploadVkLog(); }
     public java.io.File vkLogFileHostCall() { return vkLogFile(); }
     public android.net.Uri writeExportFileHostCall(java.io.File a0, java.lang.String a1, java.lang.String a2, java.lang.String a3) throws java.io.IOException { return writeExportFile(a0, a1, a2, a3); }
+
+    // ---- Phase 4: SheetDialogs.Host ----
+    @Override public android.widget.TextView sheetLabel(String text, float sp, int color,
+                                                        android.graphics.Typeface font) {
+        return label(text, sp, color, font);
+    }
+    @Override public android.graphics.Typeface hanFont() { return tfHan; }
+    @Override public int paperColor() { return UI_PAPER; }
+    @Override public int blueColor() { return UI_BLUE; }
+    @Override public int inkColor() { return UI_INK; }
+    @Override public int mutedColor() { return UI_MUTED; }
+    @Override public int screenHeightPx() { return getResources().getDisplayMetrics().heightPixels; }
 
 }
