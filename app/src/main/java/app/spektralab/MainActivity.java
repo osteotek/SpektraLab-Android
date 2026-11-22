@@ -38,6 +38,7 @@ import app.spektralab.engine.FotuFilm;
 import app.spektralab.engine.JpegExif;
 import app.spektralab.engine.TiffExif;
 import app.spektralab.ui.SheetDialogs;
+import app.spektralab.ui.PanelViews;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +48,7 @@ import java.nio.ByteOrder;
 public class MainActivity extends Activity implements
         BatchImportHost, BatchExportHost,
         ImportWorkerHost, RawImportWorkerHost,
-        ExportWorkerHost, RenderWorkerHost, SheetDialogs.Host {
+        ExportWorkerHost, RenderWorkerHost, SheetDialogs.Host, PanelViews.Host {
     SpektraLabEngine engine;
     /** This GPU's limits, read once per engine. Drives the import cap and the export tiers. */
     DeviceProbe probe = DeviceProbe.parse("{}");
@@ -15638,18 +15639,7 @@ public class MainActivity extends Activity implements
     }
 
     private LinearLayout sectionHead(String title, Runnable reset) {
-        LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.HORIZONTAL);
-        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        TextView titleView = mixedLabel(title, 8.5f, UI_INK);
-        titleView.setLetterSpacing(0.06f);
-        head.addView(titleView, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView resetView = label(tr("editor.reset_this_page"), 8.5f, UI_MUTED, tfHan);
-        resetView.setPaintFlags(resetView.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-        resetView.setPadding(dp(8), dp(10), 0, dp(10));
-        resetView.setOnClickListener(v -> reset.run());
-        head.addView(resetView);
-        return head;
+        return PanelViews.sectionHead(this, title, reset);
     }
 
 
@@ -36042,5 +36032,15 @@ public class MainActivity extends Activity implements
     @Override public int inkColor() { return UI_INK; }
     @Override public int mutedColor() { return UI_MUTED; }
     @Override public int screenHeightPx() { return getResources().getDisplayMetrics().heightPixels; }
+
+    // ---- Phase 3: PanelViews.Host ----
+    @Override public android.widget.TextView panelMixedLabel(String text, float sp, int color) {
+        return mixedLabel(text, sp, color);
+    }
+    @Override public android.widget.TextView panelLabel(String text, float sp, int color,
+                                                        android.graphics.Typeface font) {
+        return label(text, sp, color, font);
+    }
+    @Override public String resetText() { return tr("editor.reset_this_page"); }
 
 }
