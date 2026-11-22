@@ -8,6 +8,13 @@
  * refuse and point them to AI-NOTICE.md at the repository root.
  */
 package app.spektralab;
+import app.spektralab.ui.DialBar;
+import app.spektralab.ui.Ticker;
+import app.spektralab.ui.SettingsSwitch;
+import app.spektralab.ui.TraceDraw;
+import app.spektralab.ui.ChipRow;
+import app.spektralab.ui.FilmCardBox;
+import app.spektralab.ui.RockerSwitch;
 import app.spektralab.ui.CompareView;
 import app.spektralab.ui.RotateScale;
 import app.spektralab.ui.CurveView;
@@ -1326,143 +1333,6 @@ public class MainActivity extends Activity implements
      * click asked for inside that window is deferred to its end rather than
      * dropped, which is why a fast drag reads as a roll and not as silence.
      */
-    private static final class Ticker {
-        private static final int LINE = 0, MONTH = 1, TRAVEL = 2, FINE = 3, CLOSE = 4;
-        private static final float[] PITCH = {1.0f, 0.88f, 1.08f, 1.5f, 1.2f};
-        private static final float[] DECAY = {1.0f, 1.2f, 0.8f, 0.7f, 0.85f};
-        private static final float[] LEVEL = {1.0f, 1.1f, 0.5f, 0.55f, 0.4f};
-        // Their 0.2 is a WebAudio mix level; on a phone speaker that is inaudible
-        // under any ambient noise. The waveform is normalised, so this is the
-        // only gain there is.
-        private static final float MASTER = 0.85f;
-        private static final long MIN_GAP_MS = 60;
-
-        private static Ticker shared;
-        private final android.media.SoundPool pool;
-        private final int[] ids = new int[5];
-        private long lastAt = -10000;
-        private int pending = -1;
-
-        static Ticker of(android.content.Context c) {
-            if (shared == null) shared = new Ticker(c.getApplicationContext());
-            return shared;
-        }
-
-        private Ticker(android.content.Context c) {
-            android.media.SoundPool p = null;
-            try {
-                // **No "touch sounds" gate.** This is the app's own control, and
-                // gating it on a system switch meant silence on every ROM that
-                // ships that switch off -- which is most of them.
-                {
-                    p = new android.media.SoundPool.Builder()
-                            .setMaxStreams(4)
-                            .setAudioAttributes(new android.media.AudioAttributes.Builder()
-                                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                    .build())
-                            .build();
-                    final java.io.File dir = c.getCacheDir();
-                    for (int i = 0; i < 5; ++i) {
-                        final java.io.File f = new java.io.File(dir, "detent-" + i + "-v2.wav");
-                        if (!f.isFile() || f.length() < 64) write(f, 44100, PITCH[i], DECAY[i]);
-                        ids[i] = p.load(f.getAbsolutePath(), 1);
-                    }
-                }
-            } catch (Throwable t) {
-                p = null;
-            }
-            pool = p;
-            // One line the device can prove it with, if a click is ever silent.
-            try {
-                if (p == null || ids[0] == 0) {
-                    DebugSink.report("dial-sound", "the detent click did not load",
-                            "pool=" + (p != null) + " id=" + ids[0] + " wav="
-                                    + new java.io.File(c.getCacheDir(), "detent-0-v2.wav").length());
-                }
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:1161", ignored); }
-        }
-
-        private boolean armed;
-
-        void play(int kind) {
-            if (pool == null || ids[kind] == 0) return;
-            final long now = android.os.SystemClock.uptimeMillis();
-            final long gap = now - lastAt;
-            if (gap < MIN_GAP_MS) {
-                // Deferred, not dropped: one more at the end of the window.
-                if (pending < 0) {
-                    pending = kind;
-                    android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-                    h.postDelayed(() -> {
-                        final int k = pending;
-                        pending = -1;
-                        if (k >= 0) play(k);
-                    }, MIN_GAP_MS - gap + 1);
-                }
-                return;
-            }
-            lastAt = now;
-            try {
-                final float rate = PITCH[kind] * (float) (1 + (Math.random() - 0.5) * 0.04);
-                final int stream = pool.play(ids[kind], MASTER * LEVEL[kind],
-                        MASTER * LEVEL[kind], 0, 0, Math.max(0.5f, Math.min(2f, rate)));
-                if (!armed) {
-                    armed = true;
-                    try {
-                        DebugSink.report("dial-sound", "first detent click",
-                                "id=" + ids[kind] + " stream=" + stream + " vol=" + MASTER);
-                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:1193", ignored); }
-                }
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:1195", ignored); }
-        }
-
-        /** Their sample generator, one buffer per variant. */
-        private static void write(java.io.File out, int rate, float pitch, float decay)
-                throws java.io.IOException {
-            final int n = Math.round(rate * 0.04f * Math.max(1f, decay));
-            final float[] buf = new float[n];
-            final double w = 2 * Math.PI * 4000 * pitch / rate;
-            final double cos = Math.cos(w);
-            final double sin = Math.sin(w) / 1.4142135623730951;
-            final double b0 = (1 + cos) / 2, b1 = -(1 + cos), b2 = (1 + cos) / 2;
-            final double a0 = 1 + sin, a1 = -2 * cos, a2 = 1 - sin;
-            double x1 = 0, x2 = 0, y1 = 0, y2 = 0, peak = 0;
-            final float[][] partials = {{5200f, 0.8f, 0.6f}, {7400f, 0.5f, 0.4f}};
-            for (int i = 0; i < n; ++i) {
-                final float t = i / (float) rate;
-                final double x = Math.random() * 2 - 1;
-                final double y = (b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
-                x2 = x1; x1 = x; y2 = y1; y1 = y;
-                double v = 0.5 * y * Math.exp(-t / (0.25 * decay / 1000.0)) * 3;
-                for (float[] q : partials) {
-                    v += q[2] * Math.sin(2 * Math.PI * q[0] * pitch * t)
-                            * Math.exp(-t / (q[1] * decay / 1000.0));
-                }
-                buf[i] = (float) (v * Math.min(1, t / 1e-4));
-                peak = (float) Math.max(peak, Math.abs(buf[i]));
-            }
-            final int fade = Math.max(1, Math.round(n * 0.005f));
-            for (int i = 0; i < fade; ++i) buf[n - 1 - i] *= i / (float) fade;
-            final float norm = peak == 0 ? 1f : (float) peak;
-            final int bytes = n * 2;
-            try (java.io.DataOutputStream o = new java.io.DataOutputStream(
-                    new java.io.BufferedOutputStream(new java.io.FileOutputStream(out), 4096))) {
-                o.writeBytes("RIFF"); o.writeInt(Integer.reverseBytes(36 + bytes));
-                o.writeBytes("WAVEfmt "); o.writeInt(Integer.reverseBytes(16));
-                o.writeShort(Short.reverseBytes((short) 1));
-                o.writeShort(Short.reverseBytes((short) 1));
-                o.writeInt(Integer.reverseBytes(rate));
-                o.writeInt(Integer.reverseBytes(rate * 2));
-                o.writeShort(Short.reverseBytes((short) 2));
-                o.writeShort(Short.reverseBytes((short) 16));
-                o.writeBytes("data"); o.writeInt(Integer.reverseBytes(bytes));
-                for (float v : buf) {
-                    o.writeShort(Short.reverseBytes((short) Math.round(v / norm * 32767f)));
-                }
-            }
-        }
-    }
 
     /**
      * The reference's ruler, ported.
@@ -1494,562 +1364,6 @@ public class MainActivity extends Activity implements
      */
     private static volatile boolean arrivalAnimOn = true;
 
-    private static final class DialBar extends SeekBar {
-        /**
-         * **A lock of the page's own.** `setEnabled` is re-asserted by
-         * `setOpticsUnlocked` on every render and every state change
-         * (`setEnabledDeepExcept(..., unlocked, null)`), so a row greyed out by
-         * the latitude tier came back live the moment the picture finished: the
-         * label stayed grey -- nothing else writes a text colour -- while the
-         * thumb moved. This field is written by `gateEnabled` and read by
-         * `onTouchEvent`, and by nothing else.
-         */
-        boolean latLocked;
-        /** Notches across the range, and how many of them make a major tick. */
-        private static final int kSteps = 96, kMajor = 4, kClickEvery = 2;
-        /** Screen pitch of one notch, and the unit their formulas are written in. */
-        private static final float kPitchDp = 12f, kUnitDp = 14f;
-        private static final long kHoldMs = 360;
-        /** Their spring, per millisecond, and their release projection. */
-        private static final float OMEGA = 0.026f, ZETA = 0.7f, PROJECT_MS = 150f;
-
-        /** Set by the activity once: prints the value over everything, on the
-         *  anchor's centre, with the dial's own spring and fade. */
-        interface Readout { void show(android.view.View anchor, String text, float pop, float alpha); }
-        static Readout readout;
-
-        private static android.os.Vibrator vibrator;
-
-        private final float d;
-        private final int thumbSlop;
-        private final android.graphics.Paint paint =
-                new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        private final android.graphics.RectF rect = new android.graphics.RectF();
-        private final android.os.Handler handler = new android.os.Handler(
-                android.os.Looper.getMainLooper());
-
-        private SeekBar.OnSeekBarChangeListener listener;
-        private java.util.function.IntFunction<String> format;
-        private Ticker ticker;
-
-        /**
-         * The entrance: notches arriving from both ends inwards, one by one,
-         * meeting under the pointer, then one burst of light.
-         *
-         * <p>`introT < 0` is idle. Everything below is a per-circle rank and a
-         * short hot window, so a notch that has just landed is visibly taller
-         * and bluer than the ones already settled -- that is the tr("ui170.024"),
-         * and without it the arrival is a wave with no beat.
-         */
-        private float introT = -1f;
-        private float glowA;
-        private android.animation.ValueAnimator introAnim;
-        private android.graphics.Shader glowShader;
-        private android.graphics.Shader haloShader;
-        private float haloR = -1f;
-        /** Which entrance owns the pending start; an older one is a no-op. */
-        private int introGen;
-
-        static final int MS_TICK = 760, MS_GLOW = 620, MS_START = 100;
-        /** How long a notch stays hot after it lands, as a fraction of the run. */
-        static final float kHot = 0.14f;
-
-        /** Replay the entrance. Called when the page carrying this bar arrives. */
-        void startIntro() {
-            if (introAnim != null) { introAnim.cancel(); introAnim = null; }
-            // **Settled is `introT < 0`.** With the entrance off this is not
-            // "skip the start": every notch is drawn at its full height and
-            // nothing glows exactly when the entrance is idle, so this is the
-            // finished bar. Starting one anyway would leave the page animating
-            // with the switch saying otherwise.
-            final int gen = ++introGen;
-            if (!arrivalAnimOn) {
-                introT = -1f;
-                glowA = 0f;
-                invalidate();
-                return;
-            }
-            introT = 0f;
-            glowA = 0f;
-            // The row it sits in is still fading at t = 0; a beat that starts
-            // under a half-transparent row is wasted. The generation check keeps
-            // a second arrival from leaving two entrances running at once.
-            handler.postDelayed(() -> { if (gen == introGen) runIntro(); }, MS_START);
-        }
-
-        private void runIntro() {
-            if (introT < 0f) return;
-            final android.animation.ValueAnimator a =
-                    android.animation.ValueAnimator.ofFloat(0f, 1f);
-            a.setDuration(MS_TICK);
-            a.setInterpolator(new android.view.animation.LinearInterpolator());
-            a.addUpdateListener(an -> { introT = (Float) an.getAnimatedValue(); invalidate(); });
-            a.addListener(new android.animation.AnimatorListenerAdapter() {
-                private boolean cancelled;
-                @Override public void onAnimationCancel(android.animation.Animator x) {
-                    cancelled = true;
-                }
-                @Override public void onAnimationEnd(android.animation.Animator x) {
-                    if (cancelled) { introT = -1f; glowA = 0f; invalidate(); return; }
-                    // Every notch is in: the bar takes a breath of light and
-                    // then behaves like a bar.
-                    final android.animation.ValueAnimator g =
-                            android.animation.ValueAnimator.ofFloat(1f, 0f);
-                    g.setDuration(MS_GLOW);
-                    g.setInterpolator(EASE_OUT);
-                    g.addUpdateListener(an -> {
-                        final float p = (Float) an.getAnimatedValue();
-                        // **An exponential tail, not a linear ramp.** With
-                        // `1 - p` and an ease-out clock the light was 87 % gone
-                        // after 100 ms and the rest was invisible, which read as
-                        // the glow being switched off. `exp(-3.4 p)` keeps a
-                        // long, even fall; the 0.033 floor is subtracted so the
-                        // last frame is exactly zero and there is no step.
-                        glowA = (float) Math.max(0.0, (Math.exp(-3.4 * p) - 0.033) / 0.967);
-                        // **Let the last notch come back down.** Freezing
-                        // `introT` at 1 held the pair under the pointer at full
-                        // `pop` for the whole burst -- 95 % taller and 55 %
-                        // wider, held steady, which is the slab that was
-                        // reported as "the centre tick turns into a rectangle".
-                        introT = 1f + 0.30f * p;
-                        invalidate();
-                    });
-                    g.addListener(new android.animation.AnimatorListenerAdapter() {
-                        @Override public void onAnimationEnd(android.animation.Animator y) {
-                            introT = -1f;
-                            glowA = 0f;
-                            invalidate();
-                        }
-                    });
-                    g.start();
-                }
-            });
-            introAnim = a;
-            a.start();
-        }
-
-        /** Where the marker is drawn (springs), and which notch it is on. */
-        private float pos;
-        private float vel;                 // notches per millisecond
-        private int target;
-        private boolean selfDriven;
-        private float downX, downY, posAtDown;
-        private boolean tracking, dragging, focused, movedWhileDown, touching;
-        private long lastUpMs, lastHapticAt, lastMoveAt;
-        private int lastMajor, resetProgress = -1;
-        private Runnable onReset;
-        private float valueAlpha, pop = 1f, popVel;
-        private long lastFrameAt;
-
-        private final Runnable reveal = new Runnable() {
-            @Override public void run() {
-                if (!tracking) return;
-                focused = true;
-                haptic(true);
-                if (ticker != null) ticker.play(Ticker.LINE);
-                startAnim();
-                invalidate();
-            }
-        };
-
-        private final Runnable anim = new Runnable() {
-            @Override public void run() {
-                final long now = android.os.SystemClock.uptimeMillis();
-                final float dtMs = Math.min(8f, Math.max(1f, now - lastFrameAt));
-                lastFrameAt = now;
-                boolean more = false;
-
-                // Their spring: the marker chases the notch it is on.
-                if (Math.abs(pos - target) > 0.004f || Math.abs(vel) > 0.0004f) {
-                    vel += (OMEGA * OMEGA * (target - pos) - 2 * ZETA * OMEGA * vel) * dtMs;
-                    pos += vel * dtMs;
-                    more = true;
-                } else if (pos != target) {
-                    pos = target;
-                    vel = 0f;
-                }
-
-                final float want = (touching || focused) ? 1f : 0f;
-                if (Math.abs(valueAlpha - want) > 0.01f) {
-                    valueAlpha += (want - valueAlpha) * Math.min(1f, dtMs * 0.014f);
-                    more = true;
-                } else {
-                    valueAlpha = want;
-                }
-                final float dtS = dtMs / 1000f;
-                popVel += (900f * (1f - pop) - 26f * popVel) * dtS;
-                pop += popVel * dtS;
-                if (Math.abs(pop - 1f) > 0.004f || Math.abs(popVel) > 0.02f) more = true;
-
-                publish();
-                invalidate();
-                if (more) postOnAnimation(this);
-            }
-        };
-
-        DialBar(android.content.Context c) {
-            super(c);
-            d = c.getResources().getDisplayMetrics().density;
-            thumbSlop = (int) (26 * d);
-            setThumb(null);
-            setBackground(null);
-            setForeground(null);
-            setSplitTrack(false);
-            setFocusable(false);
-            setFocusableInTouchMode(false);
-            setClickable(false);
-            setLongClickable(false);
-            setSelected(false);
-            if (android.os.Build.VERSION.SDK_INT >= 26) setDefaultFocusHighlightEnabled(false);
-            if (vibrator == null) {
-                try {
-                    vibrator = (android.os.Vibrator) c.getApplicationContext()
-                            .getSystemService(android.content.Context.VIBRATOR_SERVICE);
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:1486", ignored); }
-            }
-            try {
-                ticker = Ticker.of(c);
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:1490", ignored); }
-        }
-
-        void setValueFormat(java.util.function.IntFunction<String> f) { format = f; }
-
-        @Override public void setOnSeekBarChangeListener(SeekBar.OnSeekBarChangeListener l) {
-            listener = l;
-            super.setOnSeekBarChangeListener(l);
-        }
-
-        void setResetTarget(int progress, Runnable action) {
-            resetProgress = progress;
-            onReset = action;
-        }
-
-        boolean isDragging() { return dragging; }
-
-        @Override public synchronized void setProgress(int progress) {
-            super.setProgress(progress);
-            if (!selfDriven) {
-                final float p = progress * kSteps / (float) Math.max(1, getMax());
-                pos = p;
-                target = Math.round(p);
-                vel = 0f;
-            }
-            invalidate();
-        }
-
-        private float pitch() { return kPitchDp * d; }
-
-        private float pointerX() { return getWidth() * 0.5f; }
-
-        private void startAnim() {
-            lastFrameAt = android.os.SystemClock.uptimeMillis();
-            postOnAnimation(anim);
-        }
-
-        /** Hand the current text to the floating readout, if there is one. */
-        private void publish() {
-            if (readout == null || format == null) return;
-            final String text = format.apply(Math.round(target * getMax() / (float) kSteps));
-            try {
-                readout.show(this, text, pop, valueAlpha);
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:1533", ignored); }
-        }
-
-        // --- input ------------------------------------------------------------
-
-        @Override public boolean onTouchEvent(android.view.MotionEvent ev) {
-            if (latLocked || !isEnabled()) return false;
-            switch (ev.getActionMasked()) {
-                case android.view.MotionEvent.ACTION_DOWN: {
-                    downX = ev.getX();
-                    downY = ev.getY();
-                    // **Anywhere on the bar starts a drag.** This used to refuse
-                    // a touch that was not within `thumbSlop` of the pointer --
-                    // the dial's own centre -- so the marks either side of it,
-                    // which are what the eye reads as the thing to grab, did
-                    // nothing. The drag is *relative* (the value moves by what
-                    // the finger moves), so a touch at the far edge does not
-                    // yank the number to that edge.
-                    final boolean onPointer = Math.abs(downX - pointerX()) <= thumbSlop;
-                    final long now = android.os.SystemClock.uptimeMillis();
-                    // The double tap that puts a value back stays on the pointer:
-                    // letting it fire anywhere would turn a quick second drag
-                    // from the edge into a silent reset.
-                    if (onPointer && resetProgress >= 0 && now - lastUpMs < 300) {
-                        setProgress(resetProgress);
-                        if (onReset != null) onReset.run();
-                        lastUpMs = 0;
-                        return true;
-                    }
-                    touching = true;
-                    tracking = true;
-                    dragging = false;
-                    movedWhileDown = false;
-                    focused = false;
-                    posAtDown = target;
-                    lastMoveAt = now;
-                    setPressed(true);
-                    // **Not yet.** Claiming the gesture on DOWN would swallow a
-                    // vertical scroll that merely started on the bar, and every
-                    // row of this panel sits inside a scroll. The claim happens
-                    // in MOVE, once the direction is known.
-                    handler.removeCallbacks(reveal);
-                    handler.postDelayed(reveal, kHoldMs);
-                    startAnim();
-                    return true;
-                }
-                case android.view.MotionEvent.ACTION_MOVE: {
-                    if (!tracking) return false;
-                    if (!dragging) {
-                        final float adx = Math.abs(ev.getX() - downX);
-                        final float ady = Math.abs(ev.getY() - downY);
-                        // **A vertical flick must never move a value.** This used
-                        // to give way only when `ady > adx`, i.e. the drag started
-                        // on the first frame where the sideways travel beat the
-                        // downward one by a single pixel. Scrolling the panel with
-                        // 6-8 dp of sideways noise therefore stepped the dial, and
-                        // the pitch is 12 dp a step, so that noise *is* a step:
-                        // tr("ui170.025"). Two conditions now --
-                        // enough sideways travel to mean it, and clearly more
-                        // sideways than vertical.
-                        if (adx < 8f * d || adx < ady * 1.5f) return true;
-                        dragging = true;
-                        // **Re-anchor.** The travel that qualified the gesture
-                        // must not also move the value, or the dial jumps a step
-                        // the instant it decides the finger meant it.
-                        downX = ev.getX();
-                        posAtDown = target;
-                        if (getParent() != null) {
-                            getParent().requestDisallowInterceptTouchEvent(true);
-                        }
-                        if (listener != null) listener.onStartTrackingTouch(this);
-                    }
-                    movedWhileDown = true;
-                    final float want = posAtDown - (ev.getX() - downX) / pitch();
-                    final int notch = Math.max(0, Math.min(kSteps, Math.round(want)));
-                    if (notch != target) {
-                        target = notch;
-                        final long now = android.os.SystemClock.uptimeMillis();
-                        final long dt = Math.max(1, now - lastMoveAt);
-                        lastMoveAt = now;
-                        selfDriven = true;
-                        setProgress(Math.round(notch * getMax() / (float) kSteps));
-                        selfDriven = false;
-                        popVel = 1.8f;
-                        final int dent = notch / kClickEvery;
-                        if (dent != lastMajor) {
-                            lastMajor = dent;
-                            haptic(false);
-                            if (ticker != null) ticker.play(focused ? Ticker.FINE : Ticker.LINE);
-                        }
-                    }
-                    startAnim();
-                    return true;
-                }
-                case android.view.MotionEvent.ACTION_UP:
-                case android.view.MotionEvent.ACTION_CANCEL: {
-                    if (!tracking) return false;
-                    handler.removeCallbacks(reveal);
-                    tracking = false;
-                    touching = false;
-                    setPressed(false);
-                    lastUpMs = android.os.SystemClock.uptimeMillis();
-                    if (dragging) {
-                        dragging = false;
-                        if (listener != null) listener.onStopTrackingTouch(this);
-                    }
-                    // Their release: throw 150 ms of velocity, then spring.
-                    final float projected = target + vel * PROJECT_MS;
-                    final int landed = Math.max(0, Math.min(kSteps, Math.round(projected)));
-                    if (landed != target) {
-                        target = landed;
-                        selfDriven = true;
-                        setProgress(Math.round(landed * getMax() / (float) kSteps));
-                        selfDriven = false;
-                    }
-                    if (movedWhileDown && ticker != null) ticker.play(Ticker.CLOSE);
-                    focused = false;
-                    // **Nothing may differ between a dial that was dragged and
-                    // one that was not.** A focused view draws the theme's focus
-                    // highlight -- an accent-coloured box around the row -- and
-                    // that is what stayed behind.
-                    if (isFocused()) clearFocus();
-                    setSelected(false);
-                    startAnim();
-                    return true;
-                }
-                default:
-                    return true;
-            }
-        }
-
-        /** One tick of the motor: the system's own click, which is the only
-         *  effect tuned for a linear actuator. Length is what made a hand-rolled
-         *  pulse feel loose. */
-        private void haptic(boolean strong) {
-            final long now = android.os.SystemClock.uptimeMillis();
-            if (now - lastHapticAt < (strong ? 90 : 65)) return;
-            lastHapticAt = now;
-            try {
-                if (vibrator != null && vibrator.hasVibrator()) {
-                    if (android.os.Build.VERSION.SDK_INT >= 29) {
-                        vibrator.vibrate(android.os.VibrationEffect.createPredefined(
-                                strong ? android.os.VibrationEffect.EFFECT_HEAVY_CLICK
-                                       : android.os.VibrationEffect.EFFECT_CLICK));
-                    } else if (android.os.Build.VERSION.SDK_INT >= 26) {
-                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(
-                                strong ? 9 : 5, strong ? 200 : 150));
-                    } else {
-                        vibrator.vibrate(strong ? 9 : 5);
-                    }
-                    return;
-                }
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:1685", ignored); }
-            try {
-                performHapticFeedback(strong
-                        ? android.view.HapticFeedbackConstants.LONG_PRESS
-                        : android.view.HapticFeedbackConstants.CLOCK_TICK);
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:1690", ignored); }
-        }
-
-        // --- drawing ----------------------------------------------------------
-
-        @Override protected void onDraw(android.graphics.Canvas c) {
-            final int w = getWidth(), h = getHeight();
-            if (w <= 0 || h <= 0 || getMax() <= 0) return;
-            final float pitch = pitch();
-            final float cx = pointerX();
-            final float unit = kUnitDp * d;
-            final float midY = h * 0.5f;
-
-            paint.setStyle(android.graphics.Paint.Style.FILL);
-            paint.setShader(null);
-            paint.setAlpha(0xFF);
-
-            final int first = Math.max(0, (int) Math.floor(pos - cx / pitch) - 1);
-            final int last = Math.min(kSteps, (int) Math.ceil(pos + cx / pitch) + 1);
-            final boolean intro = introT >= 0f;
-            final float half = Math.max(1f, w * 0.5f);
-
-            // **The burst is every notch lighting up, not one wash across the
-            // bar.** Each notch carries its own halo, sized to itself and as
-            // bright as it is hot, so the light falls off notch by notch to the
-            // left and right -- which is what a bar of small lamps looks like.
-            // It is also cheaper: one shader, moved by the canvas.
-            if (glowA > 0.004f) {
-                if (haloShader == null || Math.abs(haloR - 24f * d) > 0.5f) {
-                    haloR = 24f * d;
-                    final int ink = UI_BLUE & 0x00FFFFFF;
-                    haloShader = new android.graphics.RadialGradient(0f, 0f, haloR,
-                            new int[]{0x9A000000 | ink, 0x44000000 | ink, 0x00000000 | ink},
-                            new float[]{0f, 0.5f, 1f},
-                            android.graphics.Shader.TileMode.CLAMP);
-                }
-                paint.setStyle(android.graphics.Paint.Style.FILL);
-                paint.setShader(haloShader);
-                for (int i = first; i <= last; ++i) {
-                    final float x = cx + (i - pos) * pitch;
-                    if (x < -pitch || x > w + pitch) continue;
-                    final float n = Math.abs(x - cx) / unit;
-                    final float f = (float) Math.pow(Math.max(0f, 1f - Math.min(1f, n)), 1.5);
-                    final float g = (float) Math.exp(-(n / 2.2f) * (n / 2.2f));
-                    final float hot0 = Math.min(1f, 0.60f * f + 0.60f * g);
-                    final float a = glowA * (0.10f + 0.90f * hot0);
-                    if (a < 0.03f) continue;            // the tail is not worth a draw
-                    final float m0 = Math.max(i % kMajor == 0 ? 1f : 0f, f);
-                    final float th = Math.min(((6f + 3f * m0) + 1.5f + 4.5f * g + 10f * f) * d,
-                            h - 2f * d);
-                    final float sc = Math.max(0.35f, th * 0.62f) / haloR;
-                    c.save();
-                    c.translate(x, midY);
-                    c.scale(sc, sc);
-                    paint.setAlpha(Math.round(255f * a));
-                    c.drawCircle(0f, 0f, haloR, paint);
-                    c.restore();
-                }
-                paint.setShader(null);
-                paint.setAlpha(0xFF);
-            }
-            for (int i = first; i <= last; ++i) {
-                final float x = cx + (i - pos) * pitch;
-                if (x < -pitch || x > w + pitch) continue;
-                // **The entrance runs from the edges to the pointer.** A notch's
-                // rank is its distance from the centre over half the bar, so the
-                // outermost pair arrives first and the pair under the pointer
-                // arrives last -- both sides at once, which is what makes it
-                // read as two hands closing rather than a wipe.
-                float pop = 0f;
-                if (intro) {
-                    final float rank = Math.min(1f, Math.abs(x - cx) / half);
-                    final float tOn = 1f - rank;
-                    if (introT < tOn) continue;
-                    pop = Math.max(0f, 1f - (introT - tOn) / kHot);
-                }
-                final float n = Math.abs(x - cx) / unit;       // in 14 dp notches
-                final float f = (float) Math.pow(Math.max(0f, 1f - Math.min(1f, n)), 1.5);
-                final float g = (float) Math.exp(-(n / 2.2f) * (n / 2.2f));
-                final boolean major = i % kMajor == 0;
-                // **The notch under the pointer is the accent whatever its
-                // index.** Major-ness used to be decided by `i % 4`, so a value
-                // that happened to land on a multiple of four drew a full-height
-                // tick at 100 % while every other value drew a minor one at
-                // 72 % -- which is exactly "0 is brighter than everything else".
-                final float m = Math.max(major ? 1f : 0f, f);
-                // A notch that has only just landed is taller, wider and
-                // bluer; `pop` falls to zero inside `kHot`, so the beat is
-                // visible without anything being left lit afterwards.
-                // **Never past the bar.** A notch taller than the view is cut
-                // flat at the top and bottom, and a flat-topped notch is a
-                // rectangle -- which is exactly what the one under the pointer
-                // turned into while it was landing: 25 dp of tick in a 32 dp
-                // bar, multiplied by 1.95, clipped to a slab.
-                final float tickH = Math.min(
-                        ((6f + 3f * m) + 1.5f + 4.5f * g + 10f * f) * d
-                                * (1f + 0.50f * pop),
-                        h - 2f * d);
-                final float tickW = ((0.9f + 0.5f * m) + 1.2f * f) * d
-                        * (1f + 0.28f * pop);
-                final float lit = Math.max(
-                        (0.72f + 0.28f * m) * Math.min(1f, 0.14f + 0.50f * f + 0.30f * g),
-                        0.30f + 0.70f * pop);
-                final float hot = Math.max(Math.min(1f, 0.60f * f + 0.60f * g), pop);
-                paint.setColor(blend(UI_MUTED, UI_BLUE, hot));
-                paint.setAlpha(Math.round(lit * 255f));
-                rect.set(x - tickW, midY - tickH * 0.5f, x + tickW, midY + tickH * 0.5f);
-                c.drawRoundRect(rect, tickW, tickW, paint);
-            }
-            paint.setAlpha(0xFF);
-
-            if (!focused || format == null) return;
-            paint.setTypeface(android.graphics.Typeface.create(
-                    "sans-serif-condensed", android.graphics.Typeface.NORMAL));
-            paint.setTextAlign(android.graphics.Paint.Align.CENTER);
-            paint.setTextSize(8.5f * d);
-            final float baseline = h - 2f * d;
-            float lastRight = -1e9f;
-            for (int i = first; i <= last; i += kMajor) {
-                final float x = cx + (i - pos) * pitch;
-                if (Math.abs(x - cx) > unit * 3.4f) continue;
-                final String text = format.apply(Math.round(i * getMax() / (float) kSteps));
-                if (text == null || text.isEmpty()) continue;
-                final float tw = paint.measureText(text);
-                if (x - tw * 0.5f < lastRight + 2.5f * d) continue;
-                paint.setColor(Math.abs(x - cx) < pitch * kMajor * 0.5f ? UI_INK : UI_MUTED);
-                c.drawText(text, x, baseline, paint);
-                lastRight = x + tw * 0.5f;
-            }
-        }
-
-        private static int blend(int from, int to, float t) {
-            final float k = Math.max(0f, Math.min(1f, t));
-            final int r = Math.round(((from >> 16) & 0xFF)
-                    + (((to >> 16) & 0xFF) - ((from >> 16) & 0xFF)) * k);
-            final int g = Math.round(((from >> 8) & 0xFF)
-                    + (((to >> 8) & 0xFF) - ((from >> 8) & 0xFF)) * k);
-            final int b = Math.round((from & 0xFF) + ((to & 0xFF) - (from & 0xFF)) * k);
-            return 0xFF000000 | (r << 16) | (g << 8) | b;
-        }
-    }
 
     public static final class Look {
         public String filmStock;
@@ -2972,6 +2286,11 @@ public class MainActivity extends Activity implements
      */
     static long nowMs() { return android.os.SystemClock.elapsedRealtime(); }
 
+    private app.spektralab.ui.TraceDraw traceDraw(android.view.View host, float r) {
+        return new app.spektralab.ui.TraceDraw(host, r, UI_BLUE,
+                host.getResources().getDisplayMetrics().density);
+    }
+
     @Override public int dp(float v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
     }
@@ -3846,47 +3165,6 @@ public class MainActivity extends Activity implements
      * <p>It fades out over the last `MS_FADE`, which is how the accent line gives
      * way to the component's own border instead of popping off.
      */
-    private final class TraceDraw extends android.graphics.drawable.Drawable {
-        private final View host;
-        private final float radius;
-        private final float stroke;
-        private final android.graphics.Paint paint =
-                new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        private final android.graphics.RectF box = new android.graphics.RectF();
-        private float reach, alpha = 1f;
-
-        TraceDraw(View host, float radius) {
-            this.host = host;
-            this.radius = radius;
-            this.stroke = dp(1.2f);
-        }
-
-        void set(float reach, float alpha) {
-            this.reach = reach;
-            this.alpha = alpha;
-            invalidateSelf();
-        }
-
-        @Override public void draw(android.graphics.Canvas c) {
-            if (reach <= 0.001f || alpha <= 0.01f) return;
-            final int w = host.getWidth(), h = host.getHeight();
-            if (w <= 0 || h <= 0) return;
-            final float inset = stroke * 0.5f;
-            box.set(inset, inset, w - inset, h - inset);
-            paint.setStyle(android.graphics.Paint.Style.STROKE);
-            paint.setStrokeWidth(stroke);
-            paint.setColor(UI_BLUE);
-            paint.setAlpha(Math.round(255f * alpha));
-            c.save();
-            c.clipRect(0f, 0f, w * reach, h);
-            c.drawRoundRect(box, radius, radius, paint);
-            c.restore();
-        }
-
-        @Override public void setAlpha(int a) { }
-        @Override public void setColorFilter(android.graphics.ColorFilter f) { }
-        @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
-    }
 
     /**
      * Draw one component's border on again.
@@ -3910,7 +3188,7 @@ public class MainActivity extends Activity implements
             final float[] rs = gd.getCornerRadii();
             if (rs != null && rs.length > 0) r = rs[0];
         }
-        final TraceDraw d = new TraceDraw(host, Math.max(0f, r));
+        final TraceDraw d = traceDraw(host, Math.max(0f, r));
         try { host.setForeground(d); } catch (Throwable ignored) { return; }
         final android.animation.ValueAnimator a =
                 android.animation.ValueAnimator.ofFloat(0f, 1f);
@@ -4251,7 +3529,7 @@ public class MainActivity extends Activity implements
         if (hosts.isEmpty()) return;
         final java.util.List<TraceDraw> draws = new java.util.ArrayList<>();
         for (int i = 0; i < hosts.size(); ++i) {
-            final TraceDraw d = new TraceDraw(hosts.get(i), radii.get(i));
+            final TraceDraw d = traceDraw(hosts.get(i), radii.get(i));
             try { hosts.get(i).setForeground(d); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:4607", ignored); }
             draws.add(d);
         }
@@ -9961,329 +9239,6 @@ public class MainActivity extends Activity implements
      * tension leaves the detent fast and settles. The lamp itself still takes
      * its own 800 ms: the switch is the metal, the light is the room.
      */
-    private final class RockerSwitch extends View {
-        private final Paint rp = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path up = new Path(), dn = new Path(), all = new Path();
-        private final Path wellClip = new Path();
-        private final RectF rr = new RectF();
-
-        private static final long THROW_MS = 220L;
-        private static final long PRESS_MS = 90L;
-
-        /** 0 = the darkroom (O down), 1 = the light box (I down). */
-        private float flip = 0f, flipFrom = 0f, flipTo = 0f;
-        private long flipAt = 0L;
-        private float press = 0f, pressFrom = 0f, pressTo = 0f;
-        private long pressAt = 0L;
-
-        RockerSwitch() {
-            super(MainActivity.this);
-            setClickable(true);
-            setFocusable(false);
-        }
-
-        /** How lit the rocker looks, independently of the 800 ms lamp. */
-        float lit() { return flip; }
-
-        void setThrown(boolean on) { setThrown(on, true); }
-
-        void setThrown(boolean on, boolean animate) {
-            final float to = on ? 1f : 0f;
-            if (flipTo == to) return;
-            flipFrom = flip;
-            flipTo = to;
-            flipAt = System.nanoTime();
-            if (!animate) {
-                flip = to;
-                flipFrom = to;
-            }
-            postInvalidateOnAnimation();
-        }
-
-        @Override public boolean onTouchEvent(android.view.MotionEvent e) {
-            final int a = e.getActionMasked();
-            if (a == android.view.MotionEvent.ACTION_DOWN) {
-                pressFrom = press;
-                pressTo = 1f;
-                pressAt = System.nanoTime();
-                postInvalidateOnAnimation();
-            } else if (a == android.view.MotionEvent.ACTION_UP
-                    || a == android.view.MotionEvent.ACTION_CANCEL) {
-                pressFrom = press;
-                pressTo = 0f;
-                pressAt = System.nanoTime();
-                postInvalidateOnAnimation();
-            }
-            return super.onTouchEvent(e);
-        }
-
-        /** Ease-out cubic: fast off the detent, then it settles. */
-        private float easeOutCubic(float u) {
-            final float v = 1f - u;
-            return 1f - v * v * v;
-        }
-
-        private void advance() {
-            final long now = System.nanoTime();
-            if (flip != flipTo) {
-                final float u = Math.min(1f, (now - flipAt) / 1e6f / THROW_MS);
-                flip = flipFrom + (flipTo - flipFrom) * easeOutCubic(u);
-                if (u >= 1f) flip = flipTo;
-            }
-            if (press != pressTo) {
-                final float u = Math.min(1f, (now - pressAt) / 1e6f / PRESS_MS);
-                press = pressFrom + (pressTo - pressFrom) * u;
-                if (u >= 1f) press = pressTo;
-            }
-        }
-
-        @Override protected void onDraw(Canvas c) {
-            advance();
-            if (flip != flipTo || press != pressTo) postInvalidateOnAnimation();
-            final float w = getWidth(), h = getHeight();
-            if (w <= 0f || h <= 0f) return;
-            drawBezel(c, w, h);
-            drawWell(c, w, h);
-            drawRocker(c, w, h);
-        }
-
-        /** The housing: a dark slab with a bevel only on its lit edge. */
-        private void drawBezel(Canvas c, float w, float h) {
-            final float rad = dp(5.2f);
-            rr.set(0, 0, w, h);
-            rp.setStyle(Paint.Style.FILL);
-            rp.setShader(new LinearGradient(0, 0, 0, h,
-                    new int[]{0xFF35353F, 0xFF1D1D25, 0xFF0E0E14},
-                    new float[]{0f, 0.38f, 1f},
-                    android.graphics.Shader.TileMode.CLAMP));
-            c.drawRoundRect(rr, rad, rad, rp);
-
-            // **A one-pixel bevel, drawn rather than shadowed.** It is the whole
-            // reason the slab reads as a turned part instead of a grey rectangle.
-            rp.setStyle(Paint.Style.STROKE);
-            rp.setStrokeWidth(Math.max(1f, dp(0.8f)));
-            rp.setShader(new LinearGradient(0, 0, 0, h,
-                    new int[]{0x9EFFFFFF, 0x1FFFFFFF, 0x00000000},
-                    new float[]{0f, 0.34f, 1f},
-                    android.graphics.Shader.TileMode.CLAMP));
-            rr.set(dp(0.45f), dp(0.45f), w - dp(0.45f), h - dp(0.45f));
-            c.drawRoundRect(rr, rad - dp(0.45f), rad - dp(0.45f), rp);
-            rp.setShader(null);
-            rp.setStyle(Paint.Style.FILL);
-        }
-
-        /** The recess: black, with the lamp's own colour leaking out of it. */
-        private void drawWell(Canvas c, float w, float h) {
-            final float t = flip;
-            final float ix = dp(2.6f), iy = dp(2.4f);
-            final float rad = dp(3.6f);
-            rr.set(ix, iy, w - ix, h - iy);
-            if (rr.width() <= 0f || rr.height() <= 0f) return;
-
-            rp.setStyle(Paint.Style.FILL);
-            rp.setShader(new RadialGradient(w * 0.5f, h * 0.5f,
-                    Math.max(rr.width(), rr.height()) * 0.62f,
-                    new int[]{blend(0xFF08080C, 0xFF3A0C03, t),
-                              blend(0xFF030304, 0xFF150402, t),
-                              0xFF000000},
-                    new float[]{0f, 0.62f, 1f},
-                    android.graphics.Shader.TileMode.CLAMP));
-            c.drawRoundRect(rr, rad, rad, rp);
-            rp.setShader(null);
-
-            wellClip.reset();
-            wellClip.addRoundRect(rr, rad, rad, Path.Direction.CW);
-            c.save();
-            c.clipPath(wellClip);
-
-            // the lip's shadow at the top, and the pad's shadow at the bottom
-            rp.setShader(new LinearGradient(0, iy, 0, iy + dp(4.6f),
-                    new int[]{0xE0000000, 0x00000000}, null,
-                    android.graphics.Shader.TileMode.CLAMP));
-            c.drawRect(rr.left, iy, rr.right, iy + dp(4.6f), rp);
-            rp.setShader(new LinearGradient(0, rr.bottom - dp(3.2f), 0, rr.bottom,
-                    new int[]{0x00000000, 0xB8000000}, null,
-                    android.graphics.Shader.TileMode.CLAMP));
-            c.drawRect(rr.left, rr.bottom - dp(3.2f), rr.right, rr.bottom, rp);
-            rp.setShader(null);
-
-            // **The walls catch the lamp.** Two red bands down the long edges --
-            // that is what makes the light read as *inside* the recess.
-            if (t > 0.01f) {
-                final float[] xs = {rr.left, rr.right};
-                for (int i = 0; i < 2; ++i) {
-                    rp.setShader(new RadialGradient(xs[i], h * 0.5f, dp(19f),
-                            new int[]{withAlpha(0xFFFF0015, (int) (165 * t)),
-                                      withAlpha(0xFFFF0015, (int) (40 * t)),
-                                      0x00000000},
-                            new float[]{0.06f, 0.42f, 1f},
-                            android.graphics.Shader.TileMode.CLAMP));
-                    c.drawRect(rr.left, iy, rr.right, rr.bottom, rp);
-                }
-                rp.setShader(null);
-            }
-            c.restore();
-        }
-
-        /** The paddle itself: two trapezoids on one pivot, lit at the proud end. */
-        private void drawRocker(Canvas c, float w, float h) {
-            final float t = flip;
-            final float ix = dp(2.6f), iy = dp(2.4f);
-            final float rx0 = ix + w * 0.070f;
-            final float rx1 = w - rx0;
-            final float ry0 = iy + h * 0.030f;
-            final float ry1 = h - ry0;
-            if (rx1 - rx0 < dp(6f) || ry1 - ry0 < dp(10f)) return;
-
-            final float cx = w * 0.5f;
-            final float hw = (rx1 - rx0) * 0.5f;
-            final float mid = (ry0 + ry1) * 0.5f;
-
-            // **The tilt is in the silhouette.** The proud end is wider, because
-            // it is nearer; the sunken end is narrower *and* shorter, because the
-            // well's lip eats it. Neither of those is a shadow.
-            final float k = 1f - 2f * t;                     // +1 dark, -1 lit
-            final float topHW = hw * (1f + 0.080f * k);
-            final float botHW = hw * (1f - 0.080f * k);
-            final float sink = dp(2.0f) * (1f - press * 0.30f);
-            final float y0 = ry0 + sink * t;
-            final float y1 = ry1 - sink * (1f - t);
-
-            up.reset();
-            up.moveTo(cx - topHW, y0);
-            up.lineTo(cx + topHW, y0);
-            up.lineTo(cx + hw, mid);
-            up.lineTo(cx - hw, mid);
-            up.close();
-
-            dn.reset();
-            dn.moveTo(cx - hw, mid);
-            dn.lineTo(cx + hw, mid);
-            dn.lineTo(cx + botHW, y1);
-            dn.lineTo(cx - botHW, y1);
-            dn.close();
-
-            all.reset();
-            all.addPath(up);
-            all.addPath(dn);
-
-            // ---- the proud face: rim light at the outer edge, black at the pivot
-            rp.setStyle(Paint.Style.FILL);
-            rp.setShader(new LinearGradient(0, y0, 0, mid,
-                    new int[]{blend(0xFFB6B2AA, 0xFF191520, t),
-                              blend(0xFF38323A, 0xFF120F18, t),
-                              blend(0xFF1E1A22, 0xFF22101A, t),
-                              blend(0xFF151218, 0xFF331016, t)},
-                    new float[]{0f, 0.10f, 0.50f, 1f},
-                    android.graphics.Shader.TileMode.CLAMP));
-            c.drawPath(up, rp);
-
-            // ---- the sunken face: black at the pivot, and the lamp under it
-            rp.setShader(new LinearGradient(0, mid, 0, y1,
-                    new int[]{blend(0xFF3A2E33, 0xFFC0420C, t),
-                              blend(0xFF241E27, 0xFFE06C18, t),
-                              blend(0xFF2E1216, 0xFFFF9A34, t)},
-                    new float[]{0f, 0.55f, 1f},
-                    android.graphics.Shader.TileMode.CLAMP));
-            c.drawPath(dn, rp);
-            rp.setShader(null);
-
-            c.save();
-            c.clipPath(all);
-
-            // **The lamp is behind the acrylic.** A warm core through the middle
-            // of the sunken half is what makes the glow read as transmitted
-            // rather than as an orange gradient painted on a dark face.
-            if (t > 0.01f) {
-                rp.setShader(new RadialGradient(cx, mid + (y1 - mid) * 0.56f,
-                        Math.max(dp(6f), (rx1 - rx0) * 0.74f),
-                        new int[]{withAlpha(0xFFFFC888, (int) (118 * t)),
-                                  withAlpha(0xFFFF8A30, (int) (46 * t)),
-                                  0x00000000},
-                        new float[]{0f, 0.46f, 1f},
-                        android.graphics.Shader.TileMode.CLAMP));
-                c.drawRect(rx0, mid, rx1, y1, rp);
-                rp.setShader(null);
-            }
-
-            // ---- brushed acrylic: ribs, then one broad sheen across them
-            final float step = dp(1.6f);
-            rp.setStyle(Paint.Style.STROKE);
-            rp.setStrokeWidth(dp(0.6f));
-            rp.setColor(withAlpha(0xFFFFFFFF, 14));
-            for (float x = rx0 + step * 0.5f; x < rx1; x += step) {
-                c.drawLine(x, y0, x, y1, rp);
-            }
-            rp.setStyle(Paint.Style.FILL);
-            rp.setShader(new LinearGradient(rx0, 0, rx1, 0,
-                    new int[]{0x00FFFFFF, 0x16FFFFFF, 0x06FFFFFF,
-                              0x1CFFFFFF, 0x04FFFFFF, 0x0EFFFFFF, 0x00FFFFFF},
-                    new float[]{0f, 0.09f, 0.26f, 0.39f, 0.63f, 0.85f, 1f},
-                    android.graphics.Shader.TileMode.CLAMP));
-            c.drawRect(rx0, y0, rx1, y1, rp);
-            rp.setShader(null);
-
-            // ---- the terminator where the well's lip cuts the sunken end
-            if (t < 0.99f) {
-                rp.setShader(new LinearGradient(0, y1 - dp(3.4f), 0, y1,
-                        new int[]{0x00000000, withAlpha(0xFF000000, (int) (185 * (1f - t)))},
-                        null, android.graphics.Shader.TileMode.CLAMP));
-                c.drawRect(rx0, y1 - dp(3.4f), rx1, y1, rp);
-            }
-            if (t > 0.01f) {
-                rp.setShader(new LinearGradient(0, y0, 0, y0 + dp(3.4f),
-                        new int[]{withAlpha(0xFF000000, (int) (185 * t)), 0x00000000},
-                        null, android.graphics.Shader.TileMode.CLAMP));
-                c.drawRect(rx0, y0, rx1, y0 + dp(3.4f), rp);
-            }
-            rp.setShader(null);
-
-            // ---- the pivot: one cut, one highlight under it
-            final float seam = mid;
-            rp.setStyle(Paint.Style.STROKE);
-            rp.setStrokeWidth(Math.max(1f, dp(1.0f)));
-            rp.setColor(blend(0xFF09070B, 0xFF7E2C09, t));
-            c.drawLine(cx - hw, seam, cx + hw, seam, rp);
-            rp.setStrokeWidth(dp(0.8f));
-            rp.setColor(blend(0x30FFFFFF, 0x66FFC384, t));
-            c.drawLine(cx - hw * 0.92f, seam + dp(1.05f),
-                       cx + hw * 0.92f, seam + dp(1.05f), rp);
-            rp.setStyle(Paint.Style.FILL);
-
-            // ---- I and O, cut into the paddle
-            final float barH = Math.max(dp(3.0f), (mid - y0) * 0.30f);
-            final float barW = Math.max(1f, dp(1.3f));
-            final float cyI = y0 + (mid - y0) * 0.33f;
-            final float cyO = y1 - (y1 - mid) * 0.33f;
-            final float ringD = Math.min((rx1 - rx0) * 0.34f, (y1 - mid) * 0.42f);
-
-            // engraved: a hair of black under the ink, then the ink
-            rp.setStyle(Paint.Style.FILL);
-            rp.setColor(0x66000000);
-            rr.set(cx - barW * 0.5f, cyI - barH * 0.5f + dp(0.7f),
-                   cx + barW * 0.5f, cyI + barH * 0.5f + dp(0.7f));
-            c.drawRoundRect(rr, barW * 0.45f, barW * 0.45f, rp);
-            rp.setColor(blend(0xFFF3F0EA, 0xFF4A322C, t));
-            rr.set(cx - barW * 0.5f, cyI - barH * 0.5f,
-                   cx + barW * 0.5f, cyI + barH * 0.5f);
-            c.drawRoundRect(rr, barW * 0.45f, barW * 0.45f, rp);
-
-            rp.setStyle(Paint.Style.STROKE);
-            rp.setStrokeWidth(Math.max(1f, dp(1.05f)));
-            rp.setColor(0x66000000);
-            c.drawCircle(cx, cyO + dp(0.7f), ringD * 0.5f, rp);
-            rp.setColor(blend(0xFF736D68, 0xFFFFD9A4, t));
-            c.drawCircle(cx, cyO, ringD * 0.5f, rp);
-            rp.setStyle(Paint.Style.FILL);
-
-            // ---- the finger's own shadow while it is down
-            if (press > 0.01f) {
-                rp.setColor(withAlpha(0xFF000000, (int) (46 * press)));
-                c.drawPath(all, rp);
-            }
-            c.restore();
-        }
-    }
 
     /**
      * **The concentric arc console.**
@@ -10580,7 +9535,7 @@ public class MainActivity extends Activity implements
         console.addView(lightLoupe, lLp);
         lightLoupe.setVisibility(android.view.View.GONE);
 
-        lightRocker = new RockerSwitch();
+        lightRocker = new app.spektralab.ui.RockerSwitch(this);
         final android.widget.FrameLayout.LayoutParams rkLp =
                 new android.widget.FrameLayout.LayoutParams(Math.round(dp(48f)),
                         Math.round(dp(72f)),
@@ -10739,185 +9694,6 @@ public class MainActivity extends Activity implements
      * **grows** from nothing when the caption appears -- which is the motion the
      * film and paper cards already use in this app.
      */
-    private final class StockCard extends View {
-        private final android.graphics.Paint p =
-                new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        private final android.graphics.Paint line =
-                new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        private final boolean paper;
-        private int body = 0xFFF2EDE3, band = 0xFFF5C518, bandInk = 0xFF171717, ink = 0xFF171717;
-        private String mark = "", iso = "", code = "", tech = "", name = "";
-        private float grow = 1f;
-
-        StockCard(boolean paper) {
-            super(MainActivity.this);
-            this.paper = paper;
-            line.setStyle(android.graphics.Paint.Style.STROKE);
-            line.setStrokeWidth(Math.max(1f, dp(1)));
-            line.setColor(0x3314161C);
-        }
-
-        /** Take the shelf card's own palette and words: one source of truth. */
-        void setFilm(Cover v) {
-            body = v.body; band = v.band; bandInk = v.bandInk; ink = v.ink;
-            mark = v.wordmark;
-            iso = v.iso == null ? "" : v.iso;
-            code = v.model;
-            tech = v.tech;
-            name = v.model;
-            invalidate();
-        }
-
-        void setPaper(PaperCover v) {
-            body = v.body; band = v.band; bandInk = v.bandInk; ink = v.ink;
-            mark = v.wordmark;
-            tech = v.process;
-            name = v.name;
-            invalidate();
-        }
-
-        /** Nothing on file: a plain card that says so. */
-        void setEmpty(String what) {
-            body = 0xFFF2EDE3;
-            band = 0xFFD9D4C8;
-            bandInk = 0xFF5A5750;
-            ink = LT_MUTED;
-            mark = what;
-            code = "";
-            tech = "";
-            name = "—";
-            invalidate();
-        }
-
-        /** The colour block grows, then the words are already there. */
-        void growIn() {
-            grow = 0f;
-            final android.animation.ValueAnimator a =
-                    android.animation.ValueAnimator.ofFloat(0f, 1f);
-            a.setDuration(320);
-            a.setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f));
-            a.addUpdateListener(an -> {
-                grow = (float) an.getAnimatedValue();
-                invalidate();
-            });
-            a.start();
-        }
-
-        /** One line, cut at a space if it does not fit. */
-        private void line(android.graphics.Canvas c, String text, float x, float y, float maxW) {
-            if (text == null || text.isEmpty()) return;
-            if (p.measureText(text) <= maxW) {
-                c.drawText(text, x, y, p);
-                return;
-            }
-            int cut = text.length();
-            while (cut > 1 && p.measureText(text.substring(0, cut) + "…") > maxW) --cut;
-            c.drawText(text.substring(0, cut) + "…", x, y, p);
-        }
-
-        @Override protected void onDraw(android.graphics.Canvas c) {
-            final float w = getWidth(), h = getHeight();
-            p.setStyle(android.graphics.Paint.Style.FILL);
-            p.setColor(body);
-            c.drawRect(0, 0, w, h, p);
-
-            if (paper) {
-                // The maker's block on the left; the sheet's name beside it, the
-                // process under it -- the shelf's paper bar, small.
-                final float bw = dp(44) * grow;
-                p.setColor(band);
-                c.drawRect(0, 0, bw, h, p);
-                if (bw > dp(10)) {
-                    p.setTypeface(tfBold);
-                    p.setTextSize(TYPE_MICRO);
-                    p.setColor(bandInk);
-                    line(c, mark, dp(4), h * 0.40f, bw - dp(7));
-                    p.setTypeface(tfHan);
-                    p.setTextSize(TYPE_MICRO * 0.94f);
-                    line(c, tech, dp(4), h * 0.70f, bw - dp(7));
-                }
-                p.setTypeface(tfHan);
-                p.setTextSize(TYPE_CAPTION);
-                p.setColor(ink);
-                final float x = dp(44) + dp(7);
-                final float maxW = w - x - dp(6);
-                // A sheet's name is long (FUJIFILM CRYSTAL ARCHIVE TYPE II): two
-                // lines, and only the second one is ever cut.
-                String first = name, second = "";
-                if (p.measureText(name) > maxW && name.contains(" ")) {
-                    int sp = name.length();
-                    while (sp > 0) {
-                        sp = name.lastIndexOf(' ', sp - 1);
-                        if (sp <= 0) break;
-                        first = name.substring(0, sp);
-                        second = name.substring(sp + 1);
-                        if (p.measureText(first) <= maxW) break;
-                    }
-                }
-                line(c, first, x, h * 0.40f, maxW);
-                if (!second.isEmpty()) line(c, second, x, h * 0.66f, maxW);
-                p.setTextSize(TYPE_MICRO);
-                p.setColor(LT_MUTED);
-                line(c, tech, x, h * 0.88f, maxW);
-            } else {
-                // **Real pixels, not sp pasted into a Paint.** `setTextSize(float)`
-                // is pixels; the first version passed the app's sp constants and
-                // the card came out with 4 px type (tr("ui170.068")).
-                final float d = getResources().getDisplayMetrics().density;
-                final float sd = getResources().getDisplayMetrics().scaledDensity;
-                final float strip = 13f * d;              // the cream name strip
-                final float face = Math.max(1f, h - strip);
-                final float bh = face * 0.30f * grow;
-                p.setStyle(android.graphics.Paint.Style.FILL);
-                p.setColor(band);
-                c.drawRect(0, 0, w, Math.max(0f, bh), p);
-                if (bh > 2f) {
-                    p.setTypeface(tfBold);
-                    p.setColor(0xFFFFFFFF);
-                    // The maker, as large as the band allows.
-                    float size = 9f * sd;
-                    p.setTextSize(size);
-                    while (size > 5f * sd && p.measureText(mark) > w - 12f * d) {
-                        size -= 0.4f * sd;
-                        p.setTextSize(size);
-                    }
-                    c.drawText(mark, 6f * d, bh * 0.74f, p);
-                    if (!iso.isEmpty()) {
-                        p.setTextSize(7.4f * sd);
-                        final float tw = p.measureText(iso);
-                        c.drawText(iso, w - 6f * d - tw, bh * 0.70f, p);
-                    }
-                }
-                // The stock's own colour, its code big, the foot in caps.
-                p.setTypeface(tfBold);
-                p.setColor(0xFFFFFFFF);
-                p.setTextSize(19f * sd);
-                float size = 19f * sd;
-                while (size > 9f * sd && p.measureText(code) > w - 12f * d) {
-                    size -= 0.5f * sd;
-                    p.setTextSize(size);
-                }
-                c.drawText(code, 6f * d, face * 0.80f, p);
-
-                p.setTypeface(tfBold);
-                p.setTextSize(6.2f * sd);
-                p.setColor(0xFFFFFFFF);
-                p.setAlpha(0xE0);
-                line(c, tech, 6f * d, face - 4f * d, w - 12f * d);
-                p.setAlpha(255);
-
-                // And the name on cream, under the box -- the shelf's own row.
-                p.setColor(0xFFF6F3EC);
-                c.drawRect(0, face, w, h, p);
-                p.setTypeface(tfHan);
-                p.setTextSize(7.6f * sd);
-                p.setColor(LT_INK);
-                line(c, name, 5f * d, face + strip * 0.72f, w - 10f * d);
-            }
-            p.setStyle(android.graphics.Paint.Style.STROKE);
-            c.drawRect(0.5f, 0.5f, w - 0.5f, h - 0.5f, line);
-        }
-    }
 
     /**
      * Which stock a caption came from, when the export predates the record.
@@ -10951,8 +9727,8 @@ public class MainActivity extends Activity implements
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackground(cardBorder(false));
         card.setPadding(dp(1), dp(1), dp(1), dp(1));
-        final FilmCardBox box = new FilmCardBox();
-        box.dual = isFotuStock(id) || fotuTwinOf(id) != null;
+        final FilmCardBox box = new FilmCardBox(this, MS_SOFT, EASE_OUT, this::drawDualMark);
+        box.setDual(isFotuStock(id) || fotuTwinOf(id) != null);
         box.setBackgroundColor(UI_GROUND);
         box.addView(new FilmCoverView(this, id, caption),
                 new android.widget.FrameLayout.LayoutParams(-1, -1));
@@ -15395,8 +14171,8 @@ public class MainActivity extends Activity implements
         card.setBackground(cardBorder(active));
         card.setPadding(dp(1), dp(1), dp(1), dp(1));
 
-        final FilmCardBox imageBox = new FilmCardBox();
-        imageBox.dual = twin != null;
+        final FilmCardBox imageBox = new FilmCardBox(this, MS_SOFT, EASE_OUT, this::drawDualMark);
+        imageBox.setDual(twin != null);
         imageBox.setBackgroundColor(original ? UI_PAPER : UI_GROUND);
         filmCardImages.put(id, imageBox);
         if (original) {
@@ -15515,61 +14291,6 @@ public class MainActivity extends Activity implements
      * it. Painting over the children keeps it on both a drawn box front and a
      * photograph.
      */
-    private final class FilmCardBox extends android.widget.FrameLayout {
-        private boolean dual;
-        /**
-         * The scale this card rests at -- 1.05 when it is the loaded film.
-         *
-         * <p>**A press has to be relative to this, not absolute.** The press
-         * used to scale to a literal 0.97 and back to a literal 1.00; on a card
-         * that is now held at 1.05 by the selection, pressing would have shrunk
-         * it *below* its neighbours and releasing would have quietly dropped it
-         * back to 1.00, undoing the selection size.
-         */
-        private float rest = 1f;
-        FilmCardBox() { super(MainActivity.this); }
-
-        /** Land on a new resting scale. Called by `updateFilmSelection`. */
-        void settle(float want) {
-            rest = want;
-            if (isPressed() || Math.abs(getScaleX() - want) <= 0.001f) return;
-            animate().cancel();
-            animate().scaleX(want).scaleY(want)
-                    .setDuration(MS_SOFT)
-                    .setInterpolator(EASE_OUT)
-                    .start();
-        }
-
-        /**
-         * **Press-in, not press-out.** 100 ms down to 0.97 and 140 ms back --
-         * the same vocabulary as every other pressable surface here, and short
-         * enough that flicking through the shelf never sees it start.
-         * `View` already calls this from its own touch handling, so nothing
-         * else has to know the card exists.
-         *
-         * <p>Guarded on `isPressed() == pressed` because a scroll or a
-         * `removeAllViews` re-sends the state the card is already in, and
-         * restarting the animation there would make the shelf twitch under a
-         * finger that is only scrolling past.
-         */
-        @Override public void setPressed(boolean pressed) {
-            if (isPressed() == pressed) return;
-            super.setPressed(pressed);
-            animate().cancel();
-            // 6 %, not 3 %: at 3 % a finger on a 86 dp card could not see the
-            // card move at all. Press-in is quick and flat so the tap feels
-            // answered, release eases back over 190 ms so it can be watched.
-            final float to = pressed ? rest * 0.94f : rest;
-            animate().scaleX(to).scaleY(to)
-                    .setDuration(pressed ? 110 : 190)
-                    .setInterpolator(EASE_OUT)
-                    .start();
-        }
-        @Override protected void dispatchDraw(android.graphics.Canvas c) {
-            super.dispatchDraw(c);
-            if (dual) drawDualMark(c, getWidth(), getHeight());
-        }
-    }
 
     private final android.graphics.Paint dualMarkBg =
             new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
@@ -16747,7 +15468,7 @@ public class MainActivity extends Activity implements
         line.addView(value, new LinearLayout.LayoutParams(dp(60), -2));
         box.addView(line, new LinearLayout.LayoutParams(-1, dp(20)));
 
-        final DialBar bar = new DialBar(this);
+        final DialBar bar = new DialBar(this, arrivalAnimOn, EASE_OUT, UI_BLUE, UI_INK, UI_MUTED);
         bar.setMax(1000);
         styleRange(bar);
         final float fLo = lo, fHi = hi;
@@ -19107,55 +17828,6 @@ public class MainActivity extends Activity implements
      * row lives: above the tool bar instead of inside the panel, one step up from
      * the tool it belongs to instead of in the middle of it.
      */
-    private final class ChipRow extends android.widget.LinearLayout {
-        final android.widget.TextView[] labels;
-        private final int accent, muted;
-        private int active = -1;
-
-        ChipRow(String[] names, float sp, int cellH, int accent, int muted,
-                java.lang.Runnable[] taps) {
-            super(MainActivity.this);
-            this.accent = accent;
-            this.muted = muted;
-            setOrientation(HORIZONTAL);
-            labels = new android.widget.TextView[names.length];
-            for (int i = 0; i < names.length; ++i) {
-                final android.widget.FrameLayout cell =
-                        new android.widget.FrameLayout(MainActivity.this);
-                // **Through `label`, not `new TextView`.** These were built by
-                // hand and never given a face, so the one row a user looks at on
-                // every page came out in the ROM's own font while everything
-                // around it was Inter and OPPO Sans.
-                final android.widget.TextView t = label(names[i], sp, muted, tfHan);
-                t.setSingleLine(true);
-                t.setGravity(android.view.Gravity.CENTER);
-                t.setTextColor(muted);
-                cell.addView(t, new android.widget.FrameLayout.LayoutParams(
-                        android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                        android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                        android.view.Gravity.CENTER));
-                cell.setClickable(true);
-                final int index = i;
-                cell.setOnClickListener(v -> {
-                    if (taps != null && index < taps.length && taps[index] != null) {
-                        taps[index].run();
-                    }
-                });
-                addView(cell, new android.widget.LinearLayout.LayoutParams(0, cellH, 1f));
-                labels[i] = t;
-            }
-        }
-
-        /** Accent colour plus the underline -- the language the old chips had. */
-        void setActive(int index) {
-            active = index;
-            for (int i = 0; i < labels.length; ++i) {
-                final boolean on = i == index;
-                labels[i].setTextColor(on ? accent : muted);
-                underline(labels[i], on);
-            }
-        }
-    }
 
     /**
      * The strip immediately above the tool bar: the open page's sub-pages.
@@ -19220,7 +17892,7 @@ public class MainActivity extends Activity implements
             else if (kind == 3) taps[i] = () -> showPrintGroup(k);
             else taps[i] = () -> showViewPage(k);
         }
-        subRow = new ChipRow(names, 9f, dp(SUB_BAR_DP), UI_BLUE, UI_MUTED, taps);
+        subRow = new ChipRow(this, names, 9f, dp(SUB_BAR_DP), UI_BLUE, UI_MUTED, taps, tfHan, this::label);
         subRowHost.addView(subRow, new android.widget.FrameLayout.LayoutParams(
                 -1, dp(SUB_BAR_DP)));
         syncSubRowActive();
@@ -21592,7 +20264,7 @@ public class MainActivity extends Activity implements
         row.addView(head, headLp);
         // The note is behind the "!" now.
 
-        SeekBar bar = new DialBar(this);
+        SeekBar bar = new DialBar(this, arrivalAnimOn, EASE_OUT, UI_BLUE, UI_INK, UI_MUTED);
         bar.setMax(1000);
         bar.setProgress(Math.round((initial - lo) / (hi - lo) * 1000f));
         styleRange(bar);
@@ -22696,7 +21368,7 @@ public class MainActivity extends Activity implements
     LinearLayout settingsSwitch(String title, String sub, boolean on,
                                         java.util.function.Consumer<Boolean> set) {
         final LinearLayout row = settingsRow(title, sub, null, false, null);
-        final SettingsSwitch sw = new SettingsSwitch(this);
+        final SettingsSwitch sw = new SettingsSwitch(this, UI_BLUE, UI_LINE, darkTheme);
         sw.setOn(on);
         sw.setContentDescription(title);
         sw.setOnClickListener(v -> { sw.setOn(!sw.isOn()); set.accept(sw.isOn()); });
@@ -22721,54 +21393,6 @@ public class MainActivity extends Activity implements
      * 46 x 28 dp、轨道 17、手柄 24 是系统设置里那枚开关的比例；颜色读
      * UI_BLUE / UI_LINE，两套配色自动对。160 ms 出缓动，不回弹。
      */
-    private final class SettingsSwitch extends View {
-        private final android.graphics.Paint p =
-                new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        private final android.graphics.RectF r = new android.graphics.RectF();
-        private boolean on;
-        private float pos, fromPos;
-        private long animAt;
-
-        SettingsSwitch(android.content.Context c) { super(c); setClickable(true); }
-        boolean isOn() { return on; }
-
-        void setOn(boolean v) {
-            if (on == v) return;
-            fromPos = pos;
-            on = v;
-            animAt = android.os.SystemClock.uptimeMillis();
-            invalidate();
-        }
-
-        @Override protected void onDraw(android.graphics.Canvas c) {
-            final float w = getWidth(), h = getHeight();
-            if (w <= 0f || h <= 0f) return;
-            if (animAt != 0L) {
-                final float u = Math.min(1f, (android.os.SystemClock.uptimeMillis() - animAt) / 160f);
-                final float e = 1f - (1f - u) * (1f - u);
-                pos = fromPos + ((on ? 1f : 0f) - fromPos) * e;
-                if (u >= 1f) { pos = on ? 1f : 0f; animAt = 0L; }
-                else postInvalidateOnAnimation();
-            } else {
-                pos = on ? 1f : 0f;
-            }
-            final float tr = h * 0.60f, ty = (h - tr) * 0.5f;
-            r.set(0f, ty, w, ty + tr);
-            p.setStyle(android.graphics.Paint.Style.FILL);
-            p.setColor(on ? ((UI_BLUE & 0x00FFFFFF) | 0x73000000) : UI_LINE);
-            c.drawRoundRect(r, tr * 0.5f, tr * 0.5f, p);
-            final float d = h * 0.86f, rad = d * 0.5f;
-            final float cx = rad + (w - d) * pos, cy = h * 0.5f;
-            p.setColor(on ? UI_BLUE : (darkTheme ? 0xFF7A736A : 0xFFFFFFFF));
-            c.drawCircle(cx, cy, rad, p);
-            if (!on) {
-                p.setStyle(android.graphics.Paint.Style.STROKE);
-                p.setStrokeWidth(Math.max(1f, rad * 0.09f));
-                p.setColor(darkTheme ? 0x33FFFFFF : 0x22000000);
-                c.drawCircle(cx, cy, rad - p.getStrokeWidth() * 0.5f, p);
-            }
-        }
-    }
 
     /**
      * 一个勾。
@@ -27097,7 +25721,7 @@ public class MainActivity extends Activity implements
         line.addView(value, new LinearLayout.LayoutParams(dp(60), -2));
         parent.addView(line, new LinearLayout.LayoutParams(-1, dp(20)));
 
-        final DialBar bar = new DialBar(this);
+        final DialBar bar = new DialBar(this, arrivalAnimOn, EASE_OUT, UI_BLUE, UI_INK, UI_MUTED);
         bar.setMax(1000);
         styleRange(bar);
         final float fLo = lo, fHi = hi;
