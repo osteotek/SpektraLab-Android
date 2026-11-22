@@ -33,3 +33,50 @@ jobs:
         run: |
           $ndk = Join-Path $env:ANDROID_HOME 'ndk/28.2.13676358'
           ./scripts/verify.ps1 -JavaHome $env:JAVA_HOME -AndroidSdkRoot $env:ANDROID_HOME -NdkPath $ndk -EngineRoot (Join-Path $PWD 'upstream')
+
+  release:
+    # Fork PRs cannot read repository secrets, so they only run the offline job.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check release secrets
+        shell: pwsh
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STOREPASS: ${{ secrets.RELEASE_STOREPASS }}
+          KEYALIAS: ${{ secrets.RELEASE_KEYALIAS }}
+        run: |
+          foreach ($name in 'KEYSTORE_B64', 'STOREPASS', 'KEYALIAS') {
+            if ([string]::IsNullOrEmpty((Get-Item "env:$name").Value)) {
+              throw "Missing GitHub secret for release signing: $name"
+            }
+          }
+      - name: Install build tools
+        shell: pwsh
+        run: ./scripts/setup-windows.ps1 -AcceptAndroidLicenses
+      - name: Build release-signed APK from source
+        shell: pwsh
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STOREPASS: ${{ secrets.RELEASE_STOREPASS }}
+          KEYALIAS: ${{ secrets.RELEASE_KEYALIAS }}
+          EXPECTED_SIGNER_SHA256: ${{ secrets.EXPECTED_SIGNER_SHA256 }}
+        run: |
+          $keystore = Join-Path $env:RUNNER_TEMP 'release.jks'
+          [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:KEYSTORE_B64))
+          try {
+            ./scripts/build-windows.ps1 `
+              -ReleaseKeystore $keystore `
+              -ReleaseStorePass $env:STOREPASS `
+              -ReleaseKeyAlias $env:KEYALIAS `
+              -OutputDirectory (Join-Path $env:RUNNER_TEMP 'apk')
+          } finally {
+            Remove-Item -LiteralPath $keystore -Force -ErrorAction SilentlyContinue
+          }
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpektraLab-release-signed
+          path: ${{ runner.temp }}/apk/SpektraLab-release-signed.apk
+          if-no-files-found: error
