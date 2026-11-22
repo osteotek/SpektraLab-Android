@@ -42,6 +42,7 @@ import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
+import app.spektralab.ui.panels.PickerSheets;
 import app.spektralab.ui.panels.SettingsDialogs;
 import app.spektralab.ui.panels.PrintEdge;
 import app.spektralab.ui.panels.AppDialogs;
@@ -118,10 +119,10 @@ public class MainActivity extends Activity implements
     // switch: every path that asks "which engine" reads it, and nothing else
     // has to be kept in sync with a flag.
     private boolean fotuAssetsReady;
-    private String fotuRoot;
+    String fotuRoot;
     private final List<String> fotuIds = new ArrayList<>(), fotuNames = new ArrayList<>(),
             fotuSubs = new ArrayList<>(), fotuKinds = new ArrayList<>();
-    private final java.util.Map<String, FotuFilm.Stock> fotuStocks = new java.util.HashMap<>();
+    final java.util.Map<String, FotuFilm.Stock> fotuStocks = new java.util.HashMap<>();
     private volatile boolean fotuRendering;
     /** One automatic re-cut per frame when the host refuses the gate's shape. */
     private boolean fotuGateHealed;
@@ -328,7 +329,7 @@ public class MainActivity extends Activity implements
      *  catalogue's alias for a stub profile). Selecting a film moves the paper
      *  here -- the macOS/iOS app's `selectFilmStock` rule. */
     private final java.util.Map<String, String> filmTargetPrints = new java.util.HashMap<>();
-    private final List<String> printIds = new ArrayList<>(), printLabels = new ArrayList<>();
+    final List<String> printIds = new ArrayList<>(), printLabels = new ArrayList<>();
     /** null until the user picks a film: a fresh launch must not look like
      *  a Portra 400 session, and must not render one behind their back. */
     String filmStock = null;
@@ -367,12 +368,12 @@ public class MainActivity extends Activity implements
     Square hueOwnMark;
 
     /** Order is the sheet's order; `""` first so "off" is the first row. */
-    private static final String[] METER_IDS = {
+    static final String[] METER_IDS = {
             "", "balanced", "highlight_weighted", "protect_highlights", "protect_shadows",
             "center", "center_weighted", "average", "median"};
-    private static String[] METER_NAMES = {
+    static String[] METER_NAMES = {
             tr("meter.off"), tr("meter.balanced"), tr("ui170.002"), tr("meter.protect_highlights"), tr("meter.protect_shadows"), tr("meter.center"), tr("meter.center_weighted"), tr("meter.average"), tr("meter.median")};
-    private static String[] METER_NOTES = {
+    static String[] METER_NOTES = {
             tr("meter.skip_metering_and_use_the"),
             tr("meter.align_the_full_frame_median"),
             tr("ui170.003"),
@@ -481,7 +482,7 @@ public class MainActivity extends Activity implements
     float preflash = 0.0f;         // 0..1
     float edgeFog = 1.0f;          // 0..4
     /** 印刷边框 (fotufilm's print-frame model). */
-    private String pfKind = "none";
+    String pfKind = "none";
     /** The user actually picked a print frame (see `Look.pfChosen`). */
     private boolean pfChosen = false;
     float pfMargin = 3.0f, pfFx = 0f, pfFy = 0f;
@@ -513,7 +514,7 @@ public class MainActivity extends Activity implements
      * 却只有 `io.scan_film` 一个布尔，我一开始把它塞进了「冲印 → 胶片」——
      * 没人会去那里找「不印相纸」。同一个概念在同一个 app 里只能有一个位置。
      */
-    private static final String PAPER_SCAN = "__scan__";
+    static final String PAPER_SCAN = "__scan__";
     // Five engine knobs that had no home in the app (see the schema diff):
     // the scanner's own lens, the halo's headroom, the density curve's gamma,
     // and the two switches that pick a different output path.
@@ -1044,12 +1045,12 @@ public class MainActivity extends Activity implements
     static final String[] STYLE_IDS = {"lcd", "dots", "data"};
     static String[] STYLE_LABELS = {tr("meter.seven_segment_lcd"), tr("meter.dot_matrix"), tr("meter.shooting_data")};
     static String[] CORNER_LABELS = {tr("meter.bottom_right"), tr("meter.bottom_left"), tr("meter.top_right"), tr("meter.top_left")};
-    private static final String[] PF_IDS = {
+    static final String[] PF_IDS = {
             "none", "film", "film-positive", "slide-mount",
             "paper-4x6", "paper-5x7", "paper-8x10", "paper-5x5",
             "carrier", "emulsion", "white-mount", "black-mount",
             "social-square", "social-portrait", "social-story"};
-    private static String[] PF_LABELS = {
+    static String[] PF_LABELS = {
             tr("ui170.006"), tr("ui170.007"), tr("ui170.008"), tr("ui170.009"),
             tr("ui170.010"), tr("ui170.011"), tr("ui170.012"), tr("ui170.013"),
             tr("ui170.014"), tr("ui170.015"), tr("ui170.016"), tr("ui170.017"),
@@ -1077,7 +1078,7 @@ public class MainActivity extends Activity implements
             "Instax mini", "Instax SQ", "Instax wide"};
     /** The last seven are fotufilm's gauges (`FilmFormat.swift`): the engine's
      *  overscan has no gate for them, so they are drawn by the host. */
-    private static final String[] EDGE_IDS = {
+    static final String[] EDGE_IDS = {
             "135", "135_half", "135_xpan", "120_645",
             "120_6x6", "120_6x7", "120_6x8", "120_6x9", "120_6x12", "120_6x17",
             "super35", "16mm", "super8", "4x5",
@@ -3114,7 +3115,7 @@ public class MainActivity extends Activity implements
     // with nothing to say which was which -- so "645" and tr("meter.35_mm_half_frame") could not be
     // told apart from "6x6", and two of the ten gates had no card at all. Now
     // index i is EDGE_IDS[i], which is what `applyGate` needs.
-    private static final String[] FORMAT_NAMES = EDGE_LABELS;
+    static final String[] FORMAT_NAMES = EDGE_LABELS;
     static final float[] FORMAT_MM = EDGE_MM;
     private final View[] tabCells = new View[6];
     /** The one 26 x 3 dp bar that travels between the six tabs. */
@@ -4479,7 +4480,7 @@ public class MainActivity extends Activity implements
     /** The window is actually in HDR mode this run (the viewing desks read it). */
     private boolean hdrWindow;
 
-    private boolean hdrDisplaySupported() {
+    boolean hdrDisplaySupported() {
         if (hdrSupportedCache != null) return hdrSupportedCache;
         boolean ok = false;
         if (android.os.Build.VERSION.SDK_INT >= 26) {
@@ -4504,7 +4505,7 @@ public class MainActivity extends Activity implements
      * the brightness slider. Clamped: the probe reports optimistic peaks, and
      * no file we write declares more than ~3.8 stops anyway.
      */
-    private float hdrHeadroomStops() {
+    float hdrHeadroomStops() {
         float peak = 0f;
         try {
             if (android.os.Build.VERSION.SDK_INT >= 26) {
@@ -4540,7 +4541,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void setHdrFloor(float stops) {
+    void setHdrFloor(float stops) {
         hdrFloorCache = stops;
         getSharedPreferences("ui", MODE_PRIVATE).edit()
                 .putFloat("hdr_floor", stops).apply();
@@ -4558,7 +4559,7 @@ public class MainActivity extends Activity implements
         return hdrPrefCache;
     }
 
-    private void setHdrPreviewPref(boolean on) {
+    void setHdrPreviewPref(boolean on) {
         hdrPrefCache = on;
         getSharedPreferences("ui", MODE_PRIVATE).edit()
                 .putBoolean("hdr_preview", on).apply();
@@ -4592,40 +4593,7 @@ public class MainActivity extends Activity implements
      * `w` already 1, the print's white landed at 13x SDR white. The floor is a
      * choice, and the row above says which one is in force.
      */
-    void showHdrSheet() {
-        if (!hdrDisplaySupported()) {
-            showActionSheet(tr("ui170.039"),
-                    tr("ui170.040")
-                    + tr("ui170.041"),
-                    new String[]{tr("print.ok")}, done -> { });
-            return;
-        }
-        final float h = hdrHeadroomStops();
-        final String note = String.format(java.util.Locale.US,
-                "屏幕余量 %.1f 档。\n"
-                + tr("ui170.042")
-                + tr("ui170.043"), h, h);
-        final String[] names = {
-                tr("ui170.044"),
-                tr("ui170.045"),
-                tr("ui170.046"),
-                tr("ui170.047"),
-                tr("ui170.048"),
-                tr("ui170.049"),
-                tr("ui170.050")
-        };
-        final float[] vals = {-1f, 0f, 0.5f, 0.8f, 1.2f, 1.6f, 2.0f};
-        showActionSheet(tr("ui170.051"), note, names, which -> {
-            if (which < 0 || which >= vals.length) return;
-            if (vals[which] < 0f) {
-                setHdrPreviewPref(false);
-            } else {
-                setHdrFloor(vals[which]);
-                setHdrPreviewPref(true);
-            }
-            if (settingsOpen) fillSettings();
-        });
-    }
+    void showHdrSheet() { PickerSheets.showHdrSheet(new PickerSheetsHostImpl(this)); }
 
     /**
      * **The window has to be HDR for values above 1 to survive.** SDR windows
@@ -12699,7 +12667,7 @@ public class MainActivity extends Activity implements
             new java.util.HashMap<>();
 
     /** Prints in flight, so a missing cell asks once and not once a frame. */
-    private final java.util.Set<String> printing =
+    final java.util.Set<String> printing =
             java.util.Collections.synchronizedSet(new java.util.HashSet<String>());
 
     /**
@@ -16861,7 +16829,7 @@ public class MainActivity extends Activity implements
 
     /** The paper shelf, rebuilt. Kept under the old name: every caller is
      *  saying "the sheet changed", which is exactly what a rebuild is. */
-    private void refreshPaperLabel() {
+    void refreshPaperLabel() {
         rebuildPaperCards();
     }
 
@@ -16934,7 +16902,7 @@ public class MainActivity extends Activity implements
     /** What a second-engine medium is, in the one line a card has room for.
      *  Process facts only: these sheets were not measured against each other
      *  here, so the card does not pretend they were. */
-    private static String fotuMediumNote(String id) {
+    static String fotuMediumNote(String id) {
         if (id == null) return null;
         switch (id) {
             // What the sheet does, not what family it belongs to -- the maker
@@ -17002,7 +16970,7 @@ public class MainActivity extends Activity implements
     }
 
     /** tr("ui170.121"): what it is, then what it does. */
-    private static String paperLine(String id, String character) {
+    static String paperLine(String id, String character) {
         final String process = paperProcess(id);
         if (character == null || character.isEmpty()) return process;
         return process + " · " + character;
@@ -17389,46 +17357,12 @@ public class MainActivity extends Activity implements
         }
     }
 
-     void showPaperPicker() {
-        if (isFotuStock(filmStock)) { showFotuMediumPicker(); return; }
-        if (printIds.isEmpty()) return;
-        if (isPositiveStock(filmStock)) {
-            showInAppToast(tr("film.slide_film_is_scanned_directly"));
-            return;
-        }
-        // The current paper, by its **label**: this sheet matched the id
-        // against a list of names, so nothing was ever marked as selected.
-        // **The list plus the one entry that is not a sheet.** 无相纸 lives here
-        // because this is where the question "what am I printing on" is asked;
-        // it rides the same sheet so the selection reads like every other one.
-        final List<String> ids = new ArrayList<>(printIds);
-        final List<String> names = new ArrayList<>(printLabels);
-        final List<String> notes = new ArrayList<>();
-        for (String id : printIds) notes.add(paperLine(id, paperNote(id)));
-        ids.add(PAPER_SCAN);
-        names.add(tr("ui170.100"));
-        notes.add(tr("ui170.101"));
-        final int current = ids.indexOf(printStock);
-        final boolean filmKnown = filmStock != null;
-        final boolean filmMono = isMonochromeStock(filmStock);
-        showChoiceSheet(tr("film.choose_paper_or_print_film"), names, notes,
-                current >= 0 && current < names.size() ? names.get(current) : null,
-                i -> PAPER_SCAN.equals(ids.get(i))
-                        || !filmKnown || paperFitsFilm(ids.get(i), filmMono),
-                picked -> {
-                    final int i = names.indexOf(picked);
-                    if (i < 0 || printStock.equals(ids.get(i))) return;
-                    printStock = ids.get(i);
-                    refreshPaperLabel();
-                    showingOriginal = false;
-                    onStockChanged();
-                });
-    }
+    void showPaperPicker() { PickerSheets.showPaperPicker(new PickerSheetsHostImpl(this)); }
 
     /** A silver paper takes a silver film and nothing else; a colour paper
      *  takes a colour film. Anything within a kind is the user's to try -- the
      *  film's declared paper is already selected for them when they pick it. */
-    private static boolean paperFitsFilm(String paper, boolean filmIsMonochrome) {
+    static boolean paperFitsFilm(String paper, boolean filmIsMonochrome) {
         // 无相纸 is not a sheet: it takes a silver film and a colour film alike.
         if (PAPER_SCAN.equals(paper)) return true;
         final boolean paperIsMonochrome = "ilford_multigrade_iv_rc".equals(paper);
@@ -17444,7 +17378,7 @@ public class MainActivity extends Activity implements
      * Crystal Archive 8.7 / 22.0 · green-heavy; Ilford 16.0 / 0.0 %;
      * 2383 4.2 / 21.5 · warm; 2393 3.0 / 24.5.
      */
-    private static String paperNote(String id) {
+    static String paperNote(String id) {
         if (id == null) return null;
         switch (id) {
             case "kodak_portra_endura":  return tr("film.neutral_lifted_blacks_good_for");
@@ -18367,22 +18301,9 @@ public class MainActivity extends Activity implements
 
     LinearLayout[] effectPages;
     TextView[] effectChips;
-    private int effectTab;
+    int effectTab;
 
-    void showEffectTab(int tab) {
-        effectTab = tab;
-        if (effectPages != null) {
-            for (int i = 0; i < effectPages.length; ++i) {
-                if (effectPages[i] != null) {
-                    effectPages[i].setVisibility(i == tab ? View.VISIBLE : View.GONE);
-                }
-                if (effectChips != null) {
-                    effectChips[i].setTextColor(i == tab ? UI_BLUE : UI_MUTED);
-                }
-            }
-        }
-        if (tab == 1) { unlockGlowPage(); refreshGlowVars(); }
-    }
+    void showEffectTab(int tab) { PickerSheets.showEffectTab(new PickerSheetsHostImpl(this), tab); }
 
     /** The eight hue dots of 混色, and whether one of them is picked. */
     private static final float[] HSL_HUES = {0f, 30f, 60f, 120f, 180f, 240f, 280f, 320f};
@@ -20471,7 +20392,7 @@ public class MainActivity extends Activity implements
     }
 
     /** Greys the controls that do nothing while the pass is off. */
-    private void refreshGlowVars() {
+    void refreshGlowVars() {
         if (glowMark != null) glowMark.setLit(glowOn);
         final float alpha = glowOn ? 1f : 0.38f;
         // **A dark page cannot be dragged.** Everything else on 光学 is locked
@@ -20726,7 +20647,7 @@ public class MainActivity extends Activity implements
     }
 
     /** Repaint the two entry cards. Cheap, so it runs on every state change. */
-    private void refreshEdgeCards() {
+    void refreshEdgeCards() {
         if (edgeRoot == null || edgeRoot.getChildCount() == 0) return;
         View home = edgeRoot.getChildAt(0);
         if (!(home instanceof android.view.ViewGroup)) return;
@@ -20787,13 +20708,13 @@ public class MainActivity extends Activity implements
             "super35", "16mm", "super8", "4x5",
             "instax-mini", "instax-square", "instax-wide"};
 
-    private static boolean isPrintFrameGauge(String id) {
+    static boolean isPrintFrameGauge(String id) {
         if (id == null) return false;
         for (String g : PF_FILM_GAUGES) if (g.equals(id)) return true;
         return false;
     }
 
-    private boolean pfGaugeIsPrintFrame() { return isPrintFrameGauge(overscanFormat); }
+    boolean pfGaugeIsPrintFrame() { return isPrintFrameGauge(overscanFormat); }
 
     /**
      * 半格对真的在生效。
@@ -20812,13 +20733,13 @@ public class MainActivity extends Activity implements
      * 自己的比例是 24:18。片门列表、裁切和「已裁成」的提示都要读这一个数，
      * 否则选了半格对之后画面还是 4:3，引擎会以 "not the gate's shape" 拒绝。
      */
-    private double gateRatioAt(int at) {
+    double gateRatioAt(int at) {
         if (at == 1 && pairActive()) return (18.0 + 19.0) / 24.0;
         return EDGE_RATIOS[at];
     }
 
     /** The same ratio as words, for the toasts and the picker's notes. */
-    private String gateRatioLabel(int at) {
+    String gateRatioLabel(int at) {
         if (at == 1 && pairActive()) return "37:24";
         return EDGE_RATIO_LABELS[at];
     }
@@ -20878,16 +20799,7 @@ public class MainActivity extends Activity implements
         refreshPfRows();
     }
 
-    void showPfPicker() {
-        showChoiceSheet(tr("ui170.226"), java.util.Arrays.asList(PF_LABELS), pfLabel(), picked -> {
-            final int i = java.util.Arrays.asList(PF_LABELS).indexOf(picked);
-            if (i < 0) return;
-            pfKind = PF_IDS[i];
-            refreshPfRows();
-            refreshEdgeCards();
-            onEdgeChanged();
-        });
-    }
+    void showPfPicker() { PickerSheets.showPfPicker(new PickerSheetsHostImpl(this)); }
 
     /** The print frame: what happens after the picture is formed. */
     private void buildPrintFramePage() { PrintEdge.buildPrintFramePage(new PrintEdgeHostImpl(this)); }
@@ -21220,39 +21132,7 @@ public class MainActivity extends Activity implements
                 + " aspect=" + originalAspect() + " fits=" + edgeIds);
     }
 
-    void showEdgePicker() {
-        // **Every gate is usable, because choosing one now gives the picture
-        // that shape.** This sheet used to grey out every gate the frame did
-        // not already match, so a 3:2 picture offered exactly two rows and both
-        // ran the film the same way -- tr("ui170.262") was a selector that had
-        // nothing left to pick. A gate is a physical shape; picking it now
-        // crops the frame, centred, to that shape *from the whole picture* -- a
-        // gate is a shape, not an extra cut on top of the previous gate.
-        final float ca = originalAspect();
-        final double aspect = ca > 0 ? (double) Math.max(ca, 1f / ca) : 0.0;
-        final java.util.List<String> labels = new java.util.ArrayList<>();
-        final java.util.List<String> notes = new java.util.ArrayList<>();
-        String selectedLabel = null;
-        for (int i = 0; i < EDGE_IDS.length; ++i) {
-            final boolean fits = aspect > 0
-                    && Math.abs(aspect / gateRatioAt(i) - 1.0) <= 0.045;
-            labels.add(EDGE_LABELS[i]);
-            notes.add(isPrintFrameGauge(EDGE_IDS[i])
-                    ? tr("ui170.263")
-                      + gateRatioLabel(i)
-                    : (fits ? null : tr("border.centers_and_crops_to") + gateRatioLabel(i) + tr("border.to_fit_the_film_border")));
-            if (EDGE_IDS[i].equals(overscanFormat)) selectedLabel = EDGE_LABELS[i];
-        }
-        showChoiceSheet(tr("border.choose_a_film_gate"), labels, notes, selectedLabel, null,
-                picked -> {
-                    final int i = labels.indexOf(picked);
-                    if (i < 0) {
-                        Probe.log("gate", "picked an unknown label: " + picked);
-                        return;
-                    }
-                    applyGate(EDGE_IDS[i]);
-                });
-    }
+    void showEdgePicker() { PickerSheets.showEdgePicker(new PickerSheetsHostImpl(this)); }
 
     /**
      * Cut the current window to `want` (an aspect in the picture's own
@@ -22506,21 +22386,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The seven meters, one row each, with what each one actually does. */
-     void showMeterPicker() {
-        final java.util.List<String> labels = new java.util.ArrayList<>();
-        final java.util.List<String> notes = new java.util.ArrayList<>();
-        int at = 0;
-        for (int i = 0; i < METER_IDS.length; ++i) {
-            labels.add(METER_NAMES[i]);
-            notes.add(METER_NOTES[i]);
-            if (METER_IDS[i].equals(meterMethod == null ? "" : meterMethod)) at = i;
-        }
-        showChoiceSheet(tr("film.metering_mode_sets_overall_exposure"), labels, notes, labels.get(at), null,
-                picked -> {
-                    final int index = labels.indexOf(picked);
-                    if (index >= 0) setMeterMethod(METER_IDS[index]);
-                });
-    }
+    void showMeterPicker() { PickerSheets.showMeterPicker(new PickerSheetsHostImpl(this)); }
 
     public void setMeterMethod(String method) {
         meterMethod = method == null ? "" : method;
@@ -22639,7 +22505,7 @@ public class MainActivity extends Activity implements
      */
     // ---- 光圈值：标准档位 + 键入 -------------------------------------------
     /** 0 first: 未知. The rest is the list the report named, plus the ends. */
-    private static final float[] APERTURE_STOPS =
+    static final float[] APERTURE_STOPS =
             {0f, 1.0f, 1.2f, 1.4f, 1.8f, 2.0f, 2.8f, 3.2f, 4.0f, 5.6f, 8f, 11f, 16f, 22f, 32f};
 
     /** `f/2.8`, `f/8`, `未知` -- no trailing `.0`, never `f/0`. */
@@ -22650,83 +22516,12 @@ public class MainActivity extends Activity implements
         return "f/" + t;
     }
 
-    private void refreshFNumValue() {
+    void refreshFNumValue() {
         if (edgeFNumValue != null) edgeFNumValue.setText(fNumLabel(edgeFNumber));
     }
 
     /** The stop list, on the app's own chip language, with a typed field. */
-    void showApertureSheet() {
-        final android.app.Dialog dialog = new android.app.Dialog(this);
-        LinearLayout sheet = new LinearLayout(this);
-        sheet.setOrientation(LinearLayout.VERTICAL);
-        sheet.setBackgroundColor(UI_PAPER);
-
-        View cap = new View(this);
-        cap.setBackgroundColor(UI_BLUE);
-        sheet.addView(cap, new LinearLayout.LayoutParams(-1, dp(3)));
-
-        LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.HORIZONTAL);
-        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.setPadding(dp(16), 0, dp(16), 0);
-        head.addView(label(tr("ui170.278"), 10, UI_INK, tfHan),
-                new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
-        close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-        close.setPadding(dp(12), dp(14), 0, dp(14));
-        close.setOnClickListener(v -> dialog.dismiss());
-        head.addView(close);
-        sheet.addView(head, new LinearLayout.LayoutParams(-1, dp(48)));
-
-        TextView note = label(tr("ui170.279"),
-                8f, UI_MUTED, tfHan);
-        note.setPadding(dp(16), 0, dp(16), dp(8));
-        sheet.addView(note);
-
-        final int cells = APERTURE_STOPS.length + 1;            // + 键入…
-        for (int i = 0; i < cells; i += 4) {
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            for (int c = 0; c < 4; ++c) {
-                final int at = i + c;
-                final boolean stop = at < APERTURE_STOPS.length;
-                final boolean typed = at == APERTURE_STOPS.length;
-                final LinearLayout.LayoutParams lp =
-                        new LinearLayout.LayoutParams(0, dp(40), 1f);
-                lp.setMargins(dp(3), dp(3), dp(3), dp(3));
-                if (!stop && !typed) {
-                    row.addView(new View(this), lp);
-                    continue;
-                }
-                final String text = typed ? tr("ui170.280")
-                        : (at == 0 ? tr("ui170.277") : fNumLabel(APERTURE_STOPS[at]));
-                final boolean on = stop && Math.abs(APERTURE_STOPS[at] - edgeFNumber) < 0.05f;
-                TextView chip = label(text, 9.5f, on ? UI_PAPER : UI_INK, stop ? tfBody : tfHan);
-                chip.setGravity(android.view.Gravity.CENTER);
-                android.graphics.drawable.GradientDrawable bg =
-                        new android.graphics.drawable.GradientDrawable();
-                bg.setColor(on ? UI_BLUE : 0x00000000);
-                bg.setStroke(Math.max(1, dp(1)), on ? UI_BLUE : UI_LINE);
-                chip.setBackground(bg);
-                chip.setOnClickListener(v -> {
-                    dialog.dismiss();
-                    if (typed) { askAperture(); return; }
-                    edgeFNumber = APERTURE_STOPS[at];
-                    refreshFNumValue();
-                    onEdgeChanged();
-                });
-                row.addView(chip, lp);
-            }
-            sheet.addView(row, new LinearLayout.LayoutParams(-1, -2));
-        }
-        View pad = new View(this);
-        sheet.addView(pad, new LinearLayout.LayoutParams(-1, dp(8)));
-
-        dialog.setContentView(sheet);
-        dialog.setCanceledOnTouchOutside(true);
-        showBottomSheet(dialog, sheet);
-        SheetDialogs.presentBottom(dialog, sheet, this);
-    }
+    void showApertureSheet() { PickerSheets.showApertureSheet(new PickerSheetsHostImpl(this)); }
 
     /**
      * A number that is safe to put in JSON.
@@ -22782,7 +22577,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void askAperture() {
+    void askAperture() {
         askText(tr("ui170.281"),
                 edgeFNumber <= 0.5f ? "" : fNumLabel(edgeFNumber).substring(2), true, v -> {
                     final Float parsed = parseUserNumber(v);
@@ -23718,7 +23513,7 @@ public class MainActivity extends Activity implements
      * the frame -- grain, halation, the rebate -- is the film's own, which is
      * why the shelf can show one at all.
      */
-    private boolean isPositiveStock(String stock) {
+    boolean isPositiveStock(String stock) {
         final int i = stock == null ? -1 : filmIds.indexOf(stock);
         return i >= 0 && i < filmTypes.size() && "positive".equals(filmTypes.get(i));
     }
@@ -23732,7 +23527,7 @@ public class MainActivity extends Activity implements
      * sends the single-layer one for these -- three sub-layers are the colour
      * films' model, and nothing on a silver sheet supports the split.
      */
-    private static boolean isMonochromeStock(String stock) {
+    static boolean isMonochromeStock(String stock) {
         if (stock == null) return false;
         switch (stock) {
             case "kodak_tri_x_400":
@@ -24504,7 +24299,7 @@ public class MainActivity extends Activity implements
      * multiplies its children's -- enabling the leaves without lifting those
      * would leave the page tappable but still grey.
      */
-    private void unlockGlowPage() {
+    void unlockGlowPage() {
         if (viewRoot == null) return;
         final boolean live = beforeBitmap != null || panelsLive();
         if (effectChips != null && effectChips.length > 0 && effectChips[0] != null) {
@@ -26150,7 +25945,7 @@ public class MainActivity extends Activity implements
     /** 上一次填的是哪一页：换页才回到顶部、才播进场。 */
     String settingsFilledSection = "\u0000";
 
-    private void fillSettings() { SettingsDialogs.fillSettings(new SettingsDialogsHostImpl(this)); }
+    void fillSettings() { SettingsDialogs.fillSettings(new SettingsDialogsHostImpl(this)); }
 
     /** Pick the editor language; a restart reloads every translated label. */
     private void showLanguageSheet() { SettingsDialogs.showLanguageSheet(new SettingsDialogsHostImpl(this)); }
@@ -27774,7 +27569,7 @@ public class MainActivity extends Activity implements
      * `spk_solve` here re-metered a cached full-size negative and never returned,
      * which is what left the status bar stuck on tr("ui170.422").
      */
-    private void onStockChanged() {
+    void onStockChanged() {
         if (session == null || !uiReady) return;
         if (filmStock == null) {
             // No film yet: the frame stays the import's own, and the sheet's
@@ -28965,7 +28760,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The medium this frame is printed through, always one the stock allows. */
-    private String fotuMedium() {
+    String fotuMedium() {
         return fotuMediumFor(FotuFilm.idOf(filmStock));
     }
 
@@ -29069,7 +28864,7 @@ public class MainActivity extends Activity implements
     }
 
     /** A quiet unpack for the first tap on a fotufilm stock. */
-    private void ensureFotuRootAsync(final Runnable after) {
+    void ensureFotuRootAsync(final Runnable after) {
         statusText.setText(tr("ui170.429"));
         new Thread(() -> {
             String failure = null;
@@ -30526,68 +30321,10 @@ public class MainActivity extends Activity implements
     }
 
     /** Which media this stock may be printed on, with the current one marked. */
-    private void showFotuMediumPicker() {
-        final String id = FotuFilm.idOf(filmStock);
-        final FotuFilm.Stock stock = fotuStocks.get(id);
-        if (stock == null) return;
-        final List<String> media = FotuFilm.mediaFor(stock);
-        final List<String> labels = new ArrayList<>();
-        final List<String> notes = new ArrayList<>();
-        for (String medium : media) {
-            labels.add(FotuFilm.mediumLabel(medium));
-            // What the sheet does, not just its name: this is the only place
-            // the second engine's twelve media are explained.
-            notes.add(paperLine(medium, fotuMediumNote(medium)));
-        }
-        final String current = fotuMedium();
-        final int at = media.indexOf(current);
-        showChoiceSheet(tr("ui170.464"), labels, notes,
-                at >= 0 ? labels.get(at) : null, index -> true,
-                picked -> {
-                    final int i = labels.indexOf(picked);
-                    if (i < 0 || i >= media.size()) return;
-                    final String want = media.get(i);
-                    if (want.equals(fotuMedium())) return;
-                    printStock = want;
-                    refreshPaperLabel();
-                    showingOriginal = false;
-                    onStockChanged();
-                });
-    }
+    void showFotuMediumPicker() { PickerSheets.showFotuMediumPicker(new PickerSheetsHostImpl(this)); }
 
     /** 推拉显影: only the steps the stock's pack actually lists. */
-    void showFotuPushPicker() {
-        if (fotuRoot == null) {
-            ensureFotuRootAsync(this::showFotuPushPicker);
-            return;
-        }
-        final String id = FotuFilm.idOf(filmStock);
-        final float[] listed = FotuFilm.pushStops(fotuRoot, id);
-        final List<String> labels = new ArrayList<>();
-        final List<Float> values = new ArrayList<>();
-        labels.add(tr("ui170.465"));
-        values.add(0f);
-        if (listed != null) {
-            for (float v : listed) {
-                labels.add(String.format(java.util.Locale.US, tr("ui170.466"), v));
-                values.add(v);
-            }
-        }
-        int selected = 0;
-        for (int i = 0; i < values.size(); ++i) {
-            if (Math.abs(values.get(i) - fotuPush) < 1e-4f) { selected = i; break; }
-        }
-        showChoiceSheet(tr("ui170.467"), labels, labels.get(selected), picked -> {
-            final int i = labels.indexOf(picked);
-            if (i < 0) return;
-            fotuPush = values.get(i);
-            refreshFotuPush();
-            if (uiReady && isFotuStock(filmStock)) {
-                showingOriginal = false;
-                renderFotu();
-            }
-        });
-    }
+    void showFotuPushPicker() { PickerSheets.showFotuPushPicker(new PickerSheetsHostImpl(this)); }
 
     void refreshFotuPush() {
         if (fotuPushValue == null) return;
