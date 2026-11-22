@@ -150,6 +150,14 @@ physical-device equivalence baseline was recorded.
   `check-patch.py`, and the NDK/CMake build of `libspektrafilm_engine.so`
   succeeds. No pixel-equivalence claim is made because Phase 0 was skipped.
 
+**Phase 5 (offline portion) complete:** `scripts/verify.ps1 -EngineRoot <clean
+445e314 checkout>` passes every check including locales, version, prebuilt payload,
+checkers, JVM tests, C++ compile checks, `check-patch.py` and the JNI compile. A
+side-by-side APK built from the merged engine is 18.4 MB, signed and verified;
+it installs and launches on the emulator with no fatal log. Device golden and
+export-metadata comparison remain unrun because Phase 0 was skipped and no
+physical device is attached.
+
 ### Phase 3 — Reconcile the memory work (`3fbd9bd3`)
 
 - Three-way merge our `gpu.hpp`/`vulkan_gpu.cpp`/`pipeline.cpp` additions with
