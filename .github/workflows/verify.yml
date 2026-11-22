@@ -19,8 +19,11 @@ jobs:
       # install the SDK components directly on the pre-provisioned runner image.
       - name: Environment setup
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "platform-tools"
+          SDKMGR="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$SDKMGR" ]; then echo "sdkmanager not found under $ANDROID_HOME" >&2; exit 1; fi
+          echo "Using $SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "platform-tools"
           sudo apt-get update
           sudo apt-get install -y libjpeg-dev
       - name: Upstream engine at 445e314 (patch diagnostic + JNI compile)
