@@ -100,6 +100,24 @@ Known follow-ups, not merge blockers:
   unchanged; the GPL source-publication obligation is satisfied by pushing this
   public fork.
 
+### 1.7.0 performance review (2026-11-22)
+
+Reviewed the upstream 1.7.0 commits for performance work and checked each
+against the merged tree:
+
+| Upstream change | Present in product? | Action |
+|---|---|---|
+| `9709412` — free the 12 B/px import staging copy above 4 MP (36 MP peak 2.7 → ~2.25 GB) | Yes, in upstream `loadImage` (`freePixels(sourcePixels)`, `import:staging freed`) | None. Our `ImportWorker` uses a short-lived local direct buffer, so it never retains a session-long staging copy. |
+| `92ab740` — banded row lift: one `getPixels` + one JNI call per 64 rows instead of per row (200 MP import ANR fix) | Yes, upstream `liftRows` used in 4 places | **Ported into our workers:** `SpektraLabEngine.liftRows(Bitmap, ByteBuffer, w, h)` backed by `nativeFillRow`; `ImportWorker` and `ExportWorker` now use it instead of per-pixel `putFloat` loops. Same row-major bytes, 3 MB scratch on a 12,288-wide frame. |
+| `a2b658e` — parallel film-shelf prefetch | Yes, upstream prefetch path | None. Workers call `host.startPrefetch()`, which now uses the improved implementation. |
+| `ff0d263` — `onTrimMemory` response and rebate self-heal on oversized canvas | Yes, in upstream Activity | None. |
+| `d0809a5` — engine teardown abort (`upload_cache_` lifetime) | Yes, in the merged engine patch | None. |
+| Upstream engine memory/lifetime work (`3fbd9bd3` etc. from `Windows_Linux_v2`) | Yes, in the merged engine patch | None. |
+
+So no product-side performance work was missing — the wholesale upstream merge
+already carried it. The only gap was in the not-yet-wired workers, which still
+used 1.6.2m-era per-pixel loops; the banded lift is now ported there too.
+
 ## 1. Verified starting state (2026-11-22)
 
 | Item | State |

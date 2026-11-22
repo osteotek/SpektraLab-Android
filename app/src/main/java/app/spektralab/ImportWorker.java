@@ -299,15 +299,9 @@ final class ImportWorker extends HostWorker {
                         + (host.availableMemoryBytes() >> 20) + " MB)."
                         + tr("import.import_the_photo_again_and"), oom);
             }
-            final int[] rowPixels = new int[host.sourceWidth];
-            for (int y = 0; y < host.sourceHeight; y++) {
-                host.sourceBitmap.getPixels(rowPixels, 0, host.sourceWidth, 0, y, host.sourceWidth, 1);
-                for (int px : rowPixels) {
-                    pixels.putFloat(((px >> 16) & 0xFF) / 255.0f);
-                    pixels.putFloat(((px >> 8) & 0xFF) / 255.0f);
-                    pixels.putFloat((px & 0xFF) / 255.0f);
-                }
-            }
+            // 1.7.0f perf fix: one getPixels + one JNI call per 64-row band.
+            SpektraLabEngine.liftRows(host.sourceBitmap, pixels,
+                    host.sourceWidth, host.sourceHeight);
             pixels.rewind();
             
             final int pw = Math.max(1, Math.round(host.sourceWidth * Math.min(1f, 1024f / Math.max(host.sourceWidth, host.sourceHeight))));

@@ -240,15 +240,9 @@ final class ExportWorker extends HostWorker {
                                 try {
                                     fullBuf = SpektraLabEngine.allocDirect((long) fw * fh * 12L)
                                             .order(ByteOrder.nativeOrder());
-                                    final int[] row = new int[fw];
-                                    for (int y = 0; y < fh; y++) {
-                                        fullBmp.getPixels(row, 0, fw, 0, y, fw, 1);
-                                        for (int px : row) {
-                                            fullBuf.putFloat(((px >> 16) & 0xFF) / 255.0f);
-                                            fullBuf.putFloat(((px >> 8) & 0xFF) / 255.0f);
-                                            fullBuf.putFloat((px & 0xFF) / 255.0f);
-                                        }
-                                    }
+                                    // 1.7.0f perf fix: banded lift instead of
+                                    // a getPixels + JNI call per row.
+                                    SpektraLabEngine.liftRows(fullBmp, fullBuf, fw, fh);
                                     fullBuf.rewind();
                                     fresh = host.engine.openSession(fullBuf, fw, fh, 3);
                                     CrashTrail.markNow(host,

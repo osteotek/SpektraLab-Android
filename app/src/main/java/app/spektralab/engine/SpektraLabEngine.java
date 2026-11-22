@@ -230,6 +230,24 @@ public class SpektraLabEngine implements AutoCloseable, EngineApi {
         return openSession(nativeBufferAddress(pixels), width, height, channels);
     }
 
+    /**
+     * Banded bitmap lift (1.7.0f perf fix), for workers still using direct
+     * ByteBuffers. One getPixels and one JNI call per 64 rows instead of one
+     * per row; same row-major bytes, 3 MB scratch on a 12,288-wide frame.
+     */
+    public static void liftRows(android.graphics.Bitmap from, java.nio.ByteBuffer dst,
+                                int w, int h) {
+        if (from == null || dst == null || w <= 0 || h <= 0) return;
+        final int band = Math.max(1, Math.min(h, 64));
+        final int[] scratch = new int[w * band];
+        final long addr = nativeBufferAddress(dst);
+        for (int y = 0; y < h; y += band) {
+            final int n = Math.min(band, h - y);
+            from.getPixels(scratch, 0, w, 0, y, w, n);
+            nativeFillRow(addr, (long) y * w, scratch, w * n);
+        }
+    }
+
     public Session openSession(long pixels, int width, int height, int channels) {
         long sessionHandle = nativeOpenSession(handle, pixels, width, height, channels);
         if (sessionHandle == 0) throw new RuntimeException("Failed to open session");
