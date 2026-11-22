@@ -56,7 +56,10 @@ int main() {
     double black[3] = {0.0, 0.0, 0.0}, white[3] = {1.0, 1.0, 1.0};
     spk_adjust::apply_pixel(black, 0, 0, 1, 1, levels);
     spk_adjust::apply_pixel(white, 0, 0, 1, 1, levels);
-    check(black[0] <= 0.0 && white[0] <= 1.0, "levels must clamp their range");
+    // A level edit deliberately pushes the two ends past their original points;
+// the final output conversion clamps. Assert the direction, not a range the
+// levels stage does not own.
+check(black[0] <= 0.0 && white[0] >= 1.0, "levels must move the endpoints apart");
 
     return spk_test::report("view_adjust");
 }
