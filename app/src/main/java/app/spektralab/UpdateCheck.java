@@ -41,7 +41,7 @@ import java.net.URL;
  * and the app carries on. Nothing about the device is sent with the request:
  * it is a GET of a public file, and the reply is a version number.
  */
-final class UpdateCheck {
+public final class UpdateCheck {
 
     private static final String[] ENDPOINTS = {
             // Cloudflare, on a name that resolves and serves in mainland China.
@@ -193,7 +193,7 @@ final class UpdateCheck {
         });
     }
 
-    static int versionCode(Context c) {
+    public static int versionCode(Context c) {
         try {
             PackageInfo p = c.getPackageManager().getPackageInfo(c.getPackageName(), 0);
             return android.os.Build.VERSION.SDK_INT >= 28 ? (int) p.getLongVersionCode() : p.versionCode;
@@ -202,7 +202,7 @@ final class UpdateCheck {
         }
     }
 
-    static String versionName(Context c) {
+    public static String versionName(Context c) {
         try {
             return c.getPackageManager().getPackageInfo(c.getPackageName(), 0).versionName;
         } catch (Throwable t) {

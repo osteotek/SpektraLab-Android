@@ -43,6 +43,7 @@ import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
 import app.spektralab.ui.panels.PrintEdge;
+import app.spektralab.ui.panels.AppDialogs;
 import app.spektralab.ui.panels.FotuGroups;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -810,7 +811,7 @@ public class MainActivity extends Activity implements
     // system: no per-widget branches, no second layout.
     static int UI_BLUE       = 0xFF1C2AA5;   // accent, on paper
     private static int UI_BLUE_LIGHT = 0xFF3B4BC0;   // accent, lighter
-    private static int UI_PAPER      = 0xFFF1F1EE;   // panel background
+    static int UI_PAPER      = 0xFFF1F1EE;   // panel background
     private static int UI_GROUND     = 0xFFE3E3E0;   // card background
     static int UI_INK        = 0xFF171717;   // text
     // **Secondary text, measured rather than eyeballed.** #777772 on #F1F1EE is
@@ -819,7 +820,7 @@ public class MainActivity extends Activity implements
     // and 4.17:1 on a card: above the line where it is read, and still far
     // enough below `UI_INK`'s 15.8:1 that the hierarchy has not moved.
     static int UI_MUTED      = 0xFF6B6B66;   // secondary text
-    private static int UI_LINE       = 0xFFCECEC8;   // strokes
+    static int UI_LINE       = 0xFFCECEC8;   // strokes
     private static int UI_STAGE      = 0xFF172174;   // the canvas
     /**
      * Ink for anything that sits on a white disc.
@@ -955,7 +956,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private Typeface tfDisplay;      // Inter 300 — numbers and the wordmark
+    Typeface tfDisplay;      // Inter 300 — numbers and the wordmark
     static Typeface tfBody;  // Inter 400 — Latin labels
     /** 600 and 700 from the same variable face. A synthesised bold is the one
      *  thing in this UI whose weight changes from device to device: Skia fakes
@@ -3080,7 +3081,7 @@ public class MainActivity extends Activity implements
     private static final int CONTROLS_OPEN_DP = 298;
     private static final int CONTROLS_CLOSED_DP = 58;
     /** 反馈群：the one place a user can reach a human. Shown once per build. */
-    private static final String QQ_GROUP = "1134320449";
+    static final String QQ_GROUP = "1134320449";
     // **A hidden pixel ceiling, for one purpose: letting a tester name a size
     // the device's free-memory estimate would not pick.** `maxImportPixels`
     // no longer consults the driver's binding range at all -- the engine bands
@@ -3094,9 +3095,9 @@ public class MainActivity extends Activity implements
      *  own 2^21. Raising it is the only way to ask "is this a band seam?" on a
      *  device that shows the symptom and not on one that does not. */
     private static final String DEBUG_BAND_CAP = "band_cap";
-    private static final String PROMO_PREFS = "promo";
-    private static final String PROMO_SEEN_CODE = "qq_group_seen_code";
-    private static final String PROMO_MUTED = "qq_group_muted";
+    static final String PROMO_PREFS = "promo";
+    static final String PROMO_SEEN_CODE = "qq_group_seen_code";
+    static final String PROMO_MUTED = "qq_group_muted";
 
     // **One shelf, both engines.** The second engine used to get a tab of its
     // own ("fotufilm 47"); a film is a film, and someone looking for C200 looks
@@ -5186,7 +5187,7 @@ public class MainActivity extends Activity implements
      * full size would be seen at full size once and then jump back. `post`
      * defers the animation until the card has a window to run in.
      */
-    private void popInCard(final View card) {
+    void popInCard(final View card) {
         if (card == null) return;
         card.setScaleX(0.86f);
         card.setScaleY(0.86f);
@@ -5291,7 +5292,7 @@ public class MainActivity extends Activity implements
         return sb;
     }
 
-    private TextView mixedLabel(String text, float sp, int color) {
+    TextView mixedLabel(String text, float sp, int color) {
         TextView t = new TextView(this);
         t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, snapSp(sp));
         t.setTextColor(color);
@@ -7377,7 +7378,7 @@ public class MainActivity extends Activity implements
         }
         /** The station's own rectangle while it is being kept clear. */
         private final android.graphics.RectF hero = new android.graphics.RectF();
-        private final android.graphics.RectF probe = new android.graphics.RectF();
+        final android.graphics.RectF probe = new android.graphics.RectF();
         private final java.util.ArrayList<Plane> planes = new java.util.ArrayList<>();
         private final int[] order = new int[512];
         private final float[] depth = new float[512];
@@ -14431,7 +14432,7 @@ public class MainActivity extends Activity implements
     private long lastReportAt = 0L;
     private String lastReportKey = "";
 
-    private void reportFailure(String title, String body) {
+    void reportFailure(String title, String body) {
         final long now = nowMs();
         final String key = title + "|" + body;
         if (key.equals(lastReportKey) && now - lastReportAt < 60_000L) return;
@@ -22310,15 +22311,7 @@ public class MainActivity extends Activity implements
      *  card on every launch is a card people learn to dismiss without reading.
      *  The About sheet carries a permanent entry, so the way back never depends
      *  on this having appeared. */
-    private void maybeShowFeedbackGroup() {
-        final android.content.SharedPreferences p = getSharedPreferences(PROMO_PREFS, MODE_PRIVATE);
-        if (p.getBoolean(PROMO_MUTED, false)) return;
-        if (p.getInt(PROMO_SEEN_CODE, 0) == UpdateCheck.versionCode(this)) return;
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            if (isFinishing() || !uiReady) return;
-            showFeedbackGroup(true);
-        }, 1800);
-    }
+    private void maybeShowFeedbackGroup() { AppDialogs.maybeShowFeedbackGroup(new AppDialogsHostImpl(this)); }
 
     /**
      * One "scan to join" block: the code on the left, the words on the right.
@@ -22329,7 +22322,7 @@ public class MainActivity extends Activity implements
      *
      * @param hint2 a second, quieter line; null for none
      */
-    private LinearLayout groupRow(int drawableId, String title, String hint, String hint2) {
+    LinearLayout groupRow(int drawableId, String title, String hint, String hint2) {
         final LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
@@ -22358,149 +22351,9 @@ public class MainActivity extends Activity implements
         return row;
     }
 
-    void showFeedbackGroup(final boolean auto) {
-        if (isFinishing()) return;
-        final android.content.SharedPreferences p = getSharedPreferences(PROMO_PREFS, MODE_PRIVATE);
-        final android.app.Dialog dialog = new android.app.Dialog(this);
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackgroundColor(UI_PAPER);
-        View cap = new View(this);
-        cap.setBackgroundColor(UI_BLUE);
-        card.addView(cap, new LinearLayout.LayoutParams(-1, dp(3)));
+    private void showFeedbackGroup(final boolean auto) { AppDialogs.showFeedbackGroup(new AppDialogsHostImpl(this), auto); }
 
-        LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.HORIZONTAL);
-        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.setPadding(dp(16), 0, dp(16), 0);
-        head.addView(mixedLabel(tr("feedback.feedback_community"), 8, UI_BLUE),
-                new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
-        close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-        close.setPadding(dp(12), dp(14), 0, dp(14));
-        close.setOnClickListener(v -> dialog.dismiss());
-        head.addView(close);
-        card.addView(head, new LinearLayout.LayoutParams(-1, dp(42)));
-
-        LinearLayout body = new LinearLayout(this);
-        body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(16), 0, dp(16), 4);
-        TextView title = label(tr("feedback.need_help_or_want_to"), 17, UI_INK, tfHan);
-        body.addView(title);
-        TextView copyText = label(tr("feedback.use_the_group_to_report")
-                + tr("feedback.if_you_can_reproduce_the"), 10, UI_MUTED, tfHan);
-        copyText.setLineSpacing(dp(4), 1f);
-        LinearLayout.LayoutParams copyTextLp = new LinearLayout.LayoutParams(-1, -2);
-        copyTextLp.topMargin = dp(9);
-        body.addView(copyText, copyTextLp);
-
-        // **Two rooms, one door.** The QQ group is a number you type; the
-        // WeChat group is a code you scan. A report should never stall on
-        // "which app do I not have installed".
-        LinearLayout.LayoutParams groupLp = new LinearLayout.LayoutParams(-1, -2);
-        groupLp.topMargin = dp(16);
-        body.addView(groupRow(
-                getResources().getIdentifier("wechat_qr", "drawable", getPackageName()),
-                tr("feedback.wechat_group"), tr("feedback.scan_with_wechat_to_join"), tr("feedback.if_the_qr_code_has")), groupLp);
-
-        // **维修二群.** The first room filled up, so the invite that still works
-        // has to be the second one, and the card has to say so -- otherwise a
-        // newcomer scans the first code, is refused, and has nowhere to go.
-        final int qr2 = getResources().getIdentifier("group_qr_2", "drawable", getPackageName());
-        if (qr2 != 0) {
-            LinearLayout.LayoutParams group2Lp = new LinearLayout.LayoutParams(-1, -2);
-            group2Lp.topMargin = dp(12);
-            body.addView(groupRow(qr2, tr("ui170.271"), tr("ui170.272"), null), group2Lp);
-        }
-
-        View divider = new View(this);
-        divider.setBackgroundColor(UI_LINE);
-        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(-1, dp(1));
-        dividerLp.topMargin = dp(16);
-        body.addView(divider, dividerLp);
-
-        TextView number = label(QQ_GROUP, 20, UI_BLUE, tfDisplay);
-        number.setLetterSpacing(-0.02f);
-        LinearLayout.LayoutParams numberLp = new LinearLayout.LayoutParams(-1, -2);
-        numberLp.topMargin = dp(16);
-        body.addView(number, numberLp);
-        TextView hint = label(tr("ui170.273"), 9, UI_MUTED, tfHan);
-        LinearLayout.LayoutParams hintLp = new LinearLayout.LayoutParams(-1, -2);
-        hintLp.topMargin = dp(5);
-        body.addView(hint, hintLp);
-        // **The body scrolls, the buttons do not.** Two group codes made the card
-        // ~630 dp tall -- taller than a 640 dp screen, which is the shape of bug
-        // that once pushed 「去更新」 off the update dialog. The cap leaves the
-        // head and the two actions where they are and scrolls the middle.
-        final CappedScroll bodyScroll = new CappedScroll(this, Math.max(dp(300),
-                (int) (getResources().getDisplayMetrics().heightPixels * 0.62f)));
-        bodyScroll.addView(body, new android.widget.FrameLayout.LayoutParams(-1, -2));
-        card.addView(bodyScroll, new LinearLayout.LayoutParams(-1, -2));
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        actions.setPadding(dp(16), dp(16), dp(16), dp(16));
-
-        TextView open = label(tr("feedback.open_qq"), 10, UI_BLUE, tfHan);
-        open.setGravity(android.view.Gravity.CENTER);
-        android.graphics.drawable.GradientDrawable openBg = new android.graphics.drawable.GradientDrawable();
-        openBg.setColor(UI_PAPER);
-        openBg.setStroke(dp(1), UI_BLUE);
-        open.setBackground(openBg);
-        open.setOnClickListener(v -> openQqGroup());
-        LinearLayout.LayoutParams openLp = new LinearLayout.LayoutParams(0, dp(42), 1f);
-        openLp.rightMargin = dp(8);
-        actions.addView(open, openLp);
-
-        TextView copy = label(tr("feedback.copy_group_id"), 10, UI_PAPER, tfHan);
-        copy.setGravity(android.view.Gravity.CENTER);
-        android.graphics.drawable.GradientDrawable copyBg = new android.graphics.drawable.GradientDrawable();
-        copyBg.setColor(UI_BLUE);
-        copy.setBackground(copyBg);
-        copy.setOnClickListener(v -> {
-            if (copyToClipboard(tr("feedback.spektralab_feedback_group"), QQ_GROUP)) {
-                copy.setText(tr("feedback.copied"));
-            } else {
-                copy.setText(tr("feedback.could_not_copy_press_and"));
-            }
-        });
-        copy.setLongClickable(true);
-        copy.setOnLongClickListener(v -> {
-            copyToClipboard(tr("feedback.spektralab_feedback_group"), QQ_GROUP);
-            return true;
-        });
-        actions.addView(copy, new LinearLayout.LayoutParams(0, dp(42), 1.45f));
-        card.addView(actions, new LinearLayout.LayoutParams(-1, -2));
-
-        if (auto) {
-            TextView mute = label(tr("feedback.don_t_show_automatically"), 8.5f, UI_MUTED, tfHan);
-            mute.setGravity(android.view.Gravity.CENTER);
-            mute.setPaintFlags(mute.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            mute.setPadding(0, 0, 0, dp(14));
-            mute.setOnClickListener(v -> {
-                p.edit().putBoolean(PROMO_MUTED, true).apply();
-                dialog.dismiss();
-                showInAppToast(tr("feedback.automatic_prompts_are_off_the"));
-            });
-            card.addView(mute, new LinearLayout.LayoutParams(-1, dp(30)));
-        }
-
-        dialog.setContentView(card);
-        dialog.setCanceledOnTouchOutside(true);
-        dialog.show();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            int width = Math.min(dp(358), getResources().getDisplayMetrics().widthPixels - dp(32));
-            dialog.getWindow().setLayout(width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            dialog.getWindow().setDimAmount(0.32f);
-        }
-        popInCard(card);
-        // Shown counts as seen: the point is that a new build mentions it once.
-        p.edit().putInt(PROMO_SEEN_CODE, UpdateCheck.versionCode(this)).apply();
-    }
-
-    private boolean copyToClipboard(String labelText, String text) {
+    boolean copyToClipboard(String labelText, String text) {
         try {
             android.content.ClipboardManager cm = (android.content.ClipboardManager)
                     getSystemService(android.content.Context.CLIPBOARD_SERVICE);
@@ -22514,7 +22367,7 @@ public class MainActivity extends Activity implements
 
     /** QQ's group card, then the search route. A ROM without QQ simply gets
      *  the number copied; that is a working answer, not a failure. */
-    private void openQqGroup() {
+    void openQqGroup() {
         final String[] schemes = {
                 "mqqwpa://im/chat?chat_type=group&uin=" + QQ_GROUP + "&version=1&src_type=web",
                 "mqq://im/chat?chat_type=group&uin=" + QQ_GROUP + "&version=1&src_type=web",
@@ -27759,9 +27612,7 @@ public class MainActivity extends Activity implements
      * scrolls, can be selected, and copies itself in one tap -- an error the
      * user cannot forward is an error nobody can fix.
      */
-    void showErrorDialog(String title, String body) {
-        showTextDialog(title, body, true);
-    }
+    private void showErrorDialog(String title, String body) { AppDialogs.showErrorDialog(new AppDialogsHostImpl(this), title, body); }
 
     /**
      * Shared body for the error dialog and for the answer to tr("ui170.420").
@@ -27770,122 +27621,7 @@ public class MainActivity extends Activity implements
      * event: a failure is (once), a confirmation of a report the user just
      * asked for is not.
      */
-    private void showTextDialog(String title, String body, boolean report) {
-        // **A batch must not stop at the first bad frame.** One dialog per
-        // failure would hide the queue behind a stack of sheets; the line is
-        // recorded, the queue moves on, and the summary at the end counts it.
-        if (batchExportRunning) {
-            try { DebugSink.text("batch-error", title + " | " + body); }
-            catch (Throwable ignored) { Diagnostics.ignored("MainActivity:30007", ignored); }
-            return;
-        }
-        final String shownTitle = (title == null || title.isEmpty()) ? tr("import.error") : title;
-        final String shownBody = (body == null || body.isEmpty()) ? tr("import.e_0000_unknown_error") : body;
-        // **One row per failure.** The ring is already in memory; sending it
-        // here is what makes an error report readable without the user having
-        // to copy anything, and it costs one write instead of sixty-four.
-        if (report) reportFailure(shownTitle, shownBody);
-        runOnUiThread(() -> {
-            final android.app.Dialog dialog = new android.app.Dialog(this);
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setBackgroundColor(UI_PAPER);
-            View cap = new View(this);
-            cap.setBackgroundColor(UI_BLUE);
-            card.addView(cap, new LinearLayout.LayoutParams(-1, dp(3)));
-
-            LinearLayout head = new LinearLayout(this);
-            head.setOrientation(LinearLayout.HORIZONTAL);
-            head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            head.setPadding(dp(16), 0, dp(16), 0);
-            TextView kicker = mixedLabel(tr("import.error_details"), 8, UI_BLUE);
-            kicker.setLetterSpacing(0.08f);
-            head.addView(kicker, new LinearLayout.LayoutParams(0, -2, 1f));
-            TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
-            close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            close.setPadding(dp(12), dp(14), 0, dp(14));
-            close.setOnClickListener(v -> dialog.dismiss());
-            head.addView(close);
-            card.addView(head, new LinearLayout.LayoutParams(-1, dp(42)));
-
-            ScrollView scroll = new ScrollView(this);
-            LinearLayout bodyBox = new LinearLayout(this);
-            bodyBox.setOrientation(LinearLayout.VERTICAL);
-            bodyBox.setPadding(dp(16), 0, dp(16), 4);
-            TextView titleView = label(shownTitle, 18, UI_INK, tfHan);
-            titleView.setLetterSpacing(-0.02f);
-            bodyBox.addView(titleView);
-            TextView advice = label(tr("import.copy_the_full_details_below") + DebugSink.REF, 10, UI_MUTED, tfHan);
-            LinearLayout.LayoutParams adviceLp = new LinearLayout.LayoutParams(-1, -2);
-            adviceLp.topMargin = dp(8);
-            bodyBox.addView(advice, adviceLp);
-            TextView detail = label(shownBody, 9.5f, 0xFF454640, tfHan);
-            detail.setTextIsSelectable(true);
-            detail.setLineSpacing(dp(4), 1f);
-            detail.setPadding(dp(12), dp(11), dp(12), dp(11));
-            android.graphics.drawable.GradientDrawable detailBg = new android.graphics.drawable.GradientDrawable();
-            detailBg.setColor(0xFFE7E8E3);
-            detail.setBackground(detailBg);
-            LinearLayout.LayoutParams detailLp = new LinearLayout.LayoutParams(-1, -2);
-            detailLp.topMargin = dp(14);
-            bodyBox.addView(detail, detailLp);
-            scroll.addView(bodyBox, new android.widget.FrameLayout.LayoutParams(-1, -2));
-            int bodyHeight = (int) Math.min(dp(340), getResources().getDisplayMetrics().heightPixels * 0.44f);
-            card.addView(scroll, new LinearLayout.LayoutParams(-1, bodyHeight));
-
-            LinearLayout actions = new LinearLayout(this);
-            actions.setOrientation(LinearLayout.HORIZONTAL);
-            actions.setPadding(dp(16), dp(14), dp(16), dp(16));
-            TextView closeAction = label(tr("crash.close"), 10, UI_BLUE, tfHan);
-            closeAction.setGravity(android.view.Gravity.CENTER);
-            android.graphics.drawable.GradientDrawable closeBg = new android.graphics.drawable.GradientDrawable();
-            closeBg.setColor(UI_PAPER);
-            closeBg.setStroke(dp(1), UI_BLUE);
-            closeAction.setBackground(closeBg);
-            closeAction.setOnClickListener(v -> dialog.dismiss());
-            LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(0, dp(42), 1f);
-            closeLp.rightMargin = dp(8);
-            actions.addView(closeAction, closeLp);
-            TextView copy = label(tr("import.copy_error_details"), 10, UI_PAPER, tfHan);
-            copy.setGravity(android.view.Gravity.CENTER);
-            android.graphics.drawable.GradientDrawable copyBg = new android.graphics.drawable.GradientDrawable();
-            copyBg.setColor(UI_BLUE);
-            copy.setBackground(copyBg);
-            copy.setOnClickListener(v -> {
-                try {
-                    // **The ref goes first.** It is the only line that leads
-                    // back to the D1 rows; a screenshot of the dialog is not
-                    // always possible, and a pasted body without it is a
-                    // report with no address.
-                    final String text = tr("settings.report_id") + DebugSink.REF
-                            + "\n\n" + shownTitle + "\n\n" + shownBody
-                            + "\n\nbuild=SpektraLab Android " + UpdateCheck.versionName(this)
-                            + "\n" + probe.describe();
-                    android.content.ClipboardManager cm =
-                            (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(android.content.ClipData.newPlainText("SpektraLab", text));
-                    copy.setText(tr("feedback.copied"));
-                } catch (Throwable t) {
-                    copy.setText(tr("import.could_not_copy_press_and"));
-                }
-            });
-            actions.addView(copy, new LinearLayout.LayoutParams(0, dp(42), 1.45f));
-            card.addView(actions, new LinearLayout.LayoutParams(-1, -2));
-
-            dialog.setContentView(card);
-            dialog.setCanceledOnTouchOutside(true);
-            dialog.show();
-            if (dialog.getWindow() != null) {
-                dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-                int width = Math.min(dp(358),
-                        getResources().getDisplayMetrics().widthPixels - dp(32));
-                dialog.getWindow().setLayout(width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-                dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-                dialog.getWindow().setDimAmount(0.30f);
-            }
-            popInCard(card);
-        });
-    }
+    private void showTextDialog(String title, String body, boolean report) { AppDialogs.showTextDialog(new AppDialogsHostImpl(this), title, body, report); }
 
     private int extractInt(String json, String key) {
         int idx = json.indexOf(key);
