@@ -59,9 +59,20 @@ branch were removed afterwards.
   worker's pixel buffer (1.7.0 uses a native pointer rather than a ByteBuffer).
 - Device golden remains `e60490499b9a94eb` for bands 0/128/512 after the
   worker re-port; smoke test passes.
-- **Not yet wired:** upstream's Activity still uses its own inline
-  implementations, so the workers compile but are not called. Replacing those
-  inline paths is a follow-up and must preserve the golden baseline.
+- **Worker integration (in progress):** `startBatchImport` and
+  `startBatchExport` now delegate to `BatchImportWorker` / `BatchExportWorker`.
+  These two are behaviourally equivalent to the 1.7.0 inline code (UI posting,
+  toasts, session close and pool trim; no 1.7.0-specific features).
+  Offline verification passes. Device re-verification was attempted but the
+  Orca AVD (`Medium_Phone_API_37.0`) stopped booting (package manager / adb
+  stayed offline after repeated cold starts); the last recorded device golden
+  for the same pixel paths remains `e60490499b9a94eb`. Re-run `device-golden.ps1`
+  once an emulator is available.
+- **Not yet integrated:** `ImportWorker`, `RawImportWorker`, `ExportWorker` and
+  `RenderWorker`. Upstream's corresponding inline paths gained 1.7.0 features
+  (`Fotufilm`, Ultra HDR, live clip, pointer-based pixel buffers) that our
+  1.6.2m-era workers do not have, so replacing them would regress the product.
+  They need re-implementation against the 1.7.0 APIs before wiring.
 
 ### Merge readiness (2026-11-22)
 
@@ -80,7 +91,8 @@ All Gate 5 checks pass on `feat/adopt-upstream-170`:
 
 Known follow-ups, not merge blockers:
 
-- The workers are compiled but not called by the Activity.
+- Only the two batch workers are called by the Activity; the four pixel-path
+  workers still await re-extraction against the 1.7.0 APIs (see Stage 2 above).
 - `version.json` names the locally built 1.7.0i APK; a fresh clone must use the
   source build (or cache a matching APK) because engine assets are gitignored
   upstream policy.
