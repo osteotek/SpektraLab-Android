@@ -40,6 +40,22 @@ branch were removed afterwards.
 - `-UsePrebuiltNative` now ships a stale 1.6.2m payload and must not be used
   for 1.7.0 builds until the new payload is captured and verified.
 
+### Stage 2 progress (2026-11-22)
+
+- Re-ported the device test hooks into upstream's MainActivity: `spk_band_rows`
+  / `spk_deterministic` / `spk_auto_film` intent extras, ACTION_VIEW image
+  import, `SPK_BAND_ROWS` env override, auto-film selection after import, and
+  a `SpektraLabHash` logcat line beside the existing preview hash.
+- **New 1.7.0 golden baseline: `e60490499b9a94eb`** for bands 0/128/512 —
+  banding invariance holds with the merged engine and FotuFilm build.
+- `device-smoke.ps1` passes; app installs, launches and renders on the emulator.
+- Still set aside (next Stage 2 slice): the six worker classes and `HostWorker`.
+  Upstream's 36k-line MainActivity contains its own inline implementations and
+  private nested `Look`/`Frame`/`CompareView`, so re-porting them means adapting
+  each worker to the 1.7.0 API, not just widening visibility. The `domain/`,
+  `data/`, `ui/` and verification layers are present and green but not yet
+  wired into upstream's Activity.
+
 ## 1. Verified starting state (2026-11-22)
 
 | Item | State |

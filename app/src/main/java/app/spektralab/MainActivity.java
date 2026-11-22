@@ -547,6 +547,44 @@ public class MainActivity extends Activity {
     /// Where `reportPreviousExit` left the file, if there was one this launch.
     private String lastCrashFile = null;
 
+    // Device-golden test hooks (re-ported from the 1.6.2m line).
+    static int testBandRows = 0;
+    static boolean testDeterministic = false;
+    static boolean testAutoFilm = false;
+
+    /** Re-ported 1.6.2m device test hooks: ACTION_VIEW import and band controls. */
+    private void handleGoldenIntent() {
+        final Intent intent = getIntent();
+        if (intent == null) return;
+        testBandRows = intent.getIntExtra("spk_band_rows", 0);
+        testDeterministic = intent.getBooleanExtra("spk_deterministic", false);
+        testAutoFilm = intent.getBooleanExtra("spk_auto_film", false);
+        if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
+            loadImage(intent.getData());
+            if (testAutoFilm) autoSelectFilmForGolden();
+        }
+    }
+
+    /** device-golden helper: wait for the imported frame, then pick the first film. */
+    private void autoSelectFilmForGolden() {
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        h.postDelayed(new Runnable() {
+            int tries = 0;
+            @Override public void run() {
+                if ((frames == null || frames.isEmpty() || currentFrame < 0)
+                        && ++tries < 40) { h.postDelayed(this, 500); return; }
+                if (frames == null || frames.isEmpty() || filmIds.isEmpty()) return;
+                for (int i = 0; i < filmIds.size(); ++i) {
+                    final String id = filmIds.get(i);
+                    if (!"original".equals(id) && !isFotuStock(id)) {
+                        selectSpkStock(id, i);
+                        return;
+                    }
+                }
+            }
+        }, 500);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         markFile("onCreate enter");
@@ -623,6 +661,7 @@ public class MainActivity extends Activity {
         // for seconds and read as a hung launch. One empty frame first, then
         // the photograph arrives.
         new android.os.Handler(android.os.Looper.getMainLooper()).post(this::restoreSessionState);
+        handleGoldenIntent();
 
         // Silent, and late enough not to compete with the first import. It only
         // speaks when there is a newer build than this one.
@@ -29184,7 +29223,8 @@ public class MainActivity extends Activity {
             // (`6a19bb88851e5304` both ways). It is the only lever that has
             // moved the peak at all; the pool trim and its keep budget did not
             // (1144 MiB at best, 1.7%).
-            SpektraLabEngine.setEnv("SPK_BAND_ROWS", "512");
+            SpektraLabEngine.setEnv("SPK_BAND_ROWS",
+                    testBandRows > 0 ? String.valueOf(testBandRows) : "512");
             // **The band ceiling, for the seam question only.** A frame wide
             // enough to need 37 bands shows 37 equally spaced lines on one GPU
             // family and none on another; raising this to the device's dispatch
@@ -34219,6 +34259,11 @@ public class MainActivity extends Activity {
                             + " copy=" + copied + " first=" + Integer.toHexString(pixels[0])
                             + " mid=" + Integer.toHexString(pixels[(h / 2) * w + w / 2])
                             + " jpegBytes=" + bo.size());
+                    // logcat hook for scripts/device-golden.ps1 (no network needed).
+                    android.util.Log.i("SpektraLabHash", "w=" + w + " h=" + h + " hash="
+                            + Long.toHexString(hsh) + " band=" + testBandRows + " copy=" + copied
+                            + " first=" + Integer.toHexString(pixels[0])
+                            + " mid=" + Integer.toHexString(pixels[(h / 2) * w + w / 2]));
                     DebugSink.bytes("preview", "p.jpg", bo.toByteArray(), "image/jpeg");
                     DebugSink.text("preview-timing", "jpeg_ms=" + (nowMs() - t0));
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34225", ignored); }
