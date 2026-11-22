@@ -8,7 +8,7 @@ on:
 
 jobs:
   offline:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -16,94 +16,20 @@ jobs:
           distribution: microsoft
           java-version: '17'
       - uses: android-actions/setup-android@v3
-      - name: Android platform 36
-        run: sdkmanager "platforms;android-36"
-      - name: Locale catalogs, version metadata, prebuilt payload
+      - name: Environment setup
         run: |
-          python app/build/check-locales.py
-          python app/build/check-version.py
-          python app/build/check-prebuilt.py
-          python app/build/test_build_tools.py
-          python app/build/test_checkers.py
-          python app/build/check-no-silent-catch.py
-          python app/build/check-package-rules.py
-      - name: Compile Java
-        shell: pwsh
-        run: |
-          $jar = "$env:ANDROID_HOME\platforms\android-36\android.jar"
-          $out = Join-Path $env:RUNNER_TEMP 'classes'
-          New-Item -ItemType Directory -Path $out -Force | Out-Null
-          $sources = Get-ChildItem app\src\main\java -Recurse -Filter *.java | ForEach-Object { $_.FullName }
-          & javac --release 17 -encoding UTF-8 -nowarn -classpath $jar -d $out @sources
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-      - name: Runnable pure-logic tests
-        shell: pwsh
-        run: |
-          $out = Join-Path $env:RUNNER_TEMP 'purelogic'
-          New-Item -ItemType Directory -Path $out -Force | Out-Null
-          $sources = @(
-            'app/src/main/java/app/spektralab/PixelBudget.java',
-            'app/src/main/java/app/spektralab/domain/JsonQuote.java',
-            'app/src/main/java/app/spektralab/AppFailure.java',
-            'app/src/test/java/app/spektralab/PureLogicTest.java')
-          & javac $sources -d $out
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-          & java -cp $out app.spektralab.PureLogicTest
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-
-          $domain = Join-Path $env:RUNNER_TEMP 'domain'
-          New-Item -ItemType Directory -Path $domain -Force | Out-Null
-          $sources = @(
-            'app/src/main/java/app/spektralab/domain/EngineApi.java',
-            'app/src/main/java/app/spektralab/domain/SessionApi.java',
-            'app/src/main/java/app/spektralab/domain/ImportPlanner.java',
-            'app/src/main/java/app/spektralab/domain/EditorState.java',
-            'app/src/main/java/app/spektralab/domain/RenderLookUseCase.java',
-            'app/src/main/java/app/spektralab/domain/RenderPreviewUseCase.java',
-            'app/src/main/java/app/spektralab/domain/PhotoRepository.java',
-            'app/src/main/java/app/spektralab/domain/AppPreferences.java',
-            'app/src/main/java/app/spektralab/domain/JsonFields.java',
-            'app/src/main/java/app/spektralab/domain/PixelHash.java',
-            'app/src/main/java/app/spektralab/domain/EdgeVerdict.java',
-            'app/src/main/java/app/spektralab/domain/ExportPlan.java',
-            'app/src/main/java/app/spektralab/domain/ExportSessionPlan.java',
-            'app/src/main/java/app/spektralab/domain/ExportController.java',
-            'app/src/main/java/app/spektralab/domain/ImportController.java',
-            'app/src/main/java/app/spektralab/domain/RenderController.java',
-            'app/src/main/java/app/spektralab/domain/JsonQuote.java',
-            'app/src/test/java/app/spektralab/testing/FakeSession.java',
-            'app/src/test/java/app/spektralab/testing/FakeAppPreferences.java',
-            'app/src/test/java/app/spektralab/testing/FakePhotoRepository.java',
-            'app/src/test/java/app/spektralab/testing/FakeEngine.java',
-            'app/src/test/java/app/spektralab/testing/DomainTest.java')
-          & javac $sources -d $domain
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-          & java -cp $domain app.spektralab.testing.DomainTest
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-      - name: Native header compile check
-        shell: pwsh
-        run: |
-          $clang = Get-ChildItem "$env:ANDROID_HOME\ndk" -Recurse -Filter clang++.exe |
-                   Where-Object FullName -like '*windows-x86_64*' | Select-Object -First 1
-          if ($clang) {
-            & $clang.FullName --target=aarch64-linux-android24 -std=c++20 `
-              -Iapp/src/main/cpp -c app/build/native-tests/view_adjust_test.cpp `
-              -o (Join-Path $env:RUNNER_TEMP 'view_adjust_test.o')
-            if ($LASTEXITCODE -ne 0) { exit 1 }
-            # export_metadata_test.cpp is compiled by scripts/verify.ps1 where
-            # libjpeg's generated jconfig.h is available; CI only has the NDK.
-          }
-
-  published-patch:
-    runs-on: ubuntu-latest
-    # The patch is known to be incomplete; keep this visible without blocking UI work.
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - name: Upstream engine at 445e314
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "platform-tools"
+          sudo apt-get update
+          sudo apt-get install -y libjpeg-dev
+      - name: Upstream engine at 445e314 (patch diagnostic + JNI compile)
         run: |
           git clone --filter=blob:none --no-checkout https://github.com/JamesQiu2005/SpektraLab.git upstream
           git -C upstream fetch --depth 1 origin 445e314e28b9b455d2457471fadaffd28c07270b
           git -C upstream checkout --detach FETCH_HEAD
-      - name: Check that the published patch can build the JNI
-        run: python3 app/build/check-patch.py upstream
+      - name: Offline verification
+        # One source of truth: scripts/verify.ps1 runs every check, including
+        # the C++ compile and RUN checks (g++ is on the ubuntu host).
+        shell: pwsh
+        run: |
+          $ndk = Join-Path $env:ANDROID_HOME 'ndk/28.2.13676358'
+          ./scripts/verify.ps1 -JavaHome $env:JAVA_HOME -AndroidSdkRoot $env:ANDROID_HOME -NdkPath $ndk -EngineRoot (Join-Path $PWD 'upstream')

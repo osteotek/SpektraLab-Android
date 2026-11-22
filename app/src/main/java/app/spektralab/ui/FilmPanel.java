@@ -9,8 +9,7 @@ import android.widget.TextView;
 
 /** The Film & Paper panel, built from injected strings, fonts and callbacks. */
 public final class FilmPanel {
-    public interface Host {
-        String text(String key);
+    public interface Host extends PanelHost {
         TextView label(String text, float sp, int color, Typeface typeface);
         LinearLayout sectionHead(String title, Runnable reset);
         void onMeterClick();

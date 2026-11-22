@@ -107,10 +107,8 @@ public final class DomainTest {
         check(prefs.getBoolean("dark", false), "preferences write/read round trip");
 
         String doc = "{\"auto_exposure_ev\": 0.0756, \"canvas_w\":4182}";
-        check(JsonFields.firstInt(doc, "canvas_w") == 4182, "integer field read");
         check(Math.abs(JsonFields.firstNumber(doc, "auto_exposure_ev") - 0.0756) < 1e-9,
                 "double field read with a leading space");
-        check(JsonFields.firstInt(doc, "missing") == -1, "missing integer is -1");
         check(Double.isNaN(JsonFields.firstNumber(doc, "missing")), "missing double is NaN");
         check(JsonFields.snippet(doc, "auto_exposure_ev", 24).startsWith("\"auto_exposure_ev\""),
                 "field snippet");
@@ -171,8 +169,6 @@ public final class DomainTest {
         ImportController imports = new ImportController(new FakePhotoRepository());
         String saved = imports.prepare("content://pick/1");
         check(saved != null && saved.startsWith("file:///copies/"), "import copies a picked URI");
-        check(imports.plan(4000, 2000, 1_000_000, 1000).width <= 1000,
-                "import plan honours the controller caps");
 
         FakeSession renderSession2 = new FakeSession();
         int[] dims2 = new RenderController().begin(renderSession2, state, "live", 800, true,

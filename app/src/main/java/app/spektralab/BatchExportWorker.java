@@ -1,55 +1,12 @@
 package app.spektralab;
 
 import static app.spektralab.AppLanguage.tr;
-import android.app.Activity;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Typeface;
-import android.net.Uri;
-import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.ScrollView;
-import android.widget.ProgressBar;
-import android.widget.SeekBar;
-import android.widget.TextView;
 import app.spektralab.engine.SpektraLabEngine;
-import app.spektralab.ui.UiPalette;
-import app.spektralab.ui.ScrubBar;
-import app.spektralab.domain.JsonFields;
-import app.spektralab.domain.JsonQuote;
-import app.spektralab.domain.ExportPlan;
-import app.spektralab.domain.PixelHash;
-import app.spektralab.domain.EdgeVerdict;
-import app.spektralab.ui.CompareView;
-import app.spektralab.ui.CurveView;
-import app.spektralab.ui.FilmCoverView;
-import app.spektralab.ui.ColorWheel;
-import app.spektralab.ui.CropOverlay;
-import app.spektralab.ui.RotateScale;
-import app.spektralab.ui.HistogramView;
-import app.spektralab.ui.RatioMark;
-import app.spektralab.ui.GuideView;
-import app.spektralab.ui.EdgeBackdrop;
-import app.spektralab.ui.Square;
-import app.spektralab.ui.ArrowView;
-import app.spektralab.ui.ToolGlyph;
-import app.spektralab.ui.CappedScroll;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /** Worker extracted from MainActivity; delegates Android/Activity access to host. */
-final class BatchExportWorker {
-    private final MainActivity host;
-
-    BatchExportWorker(MainActivity host) { this.host = host; }
+final class BatchExportWorker extends HostWorker {
+    BatchExportWorker(MainActivity host) { super(host); }
 
     void run(String format, String tier) {
         if (host.batchExportRunning) {
@@ -127,9 +84,7 @@ final class BatchExportWorker {
                     // the worker closed that session underneath (NPE in
                     // `exportJpeg`, E-9000). Closing it here, under the lock,
                     // makes `session != null` mean this frame and nothing else.
-                    synchronized (host.renderMutex) {
-                        if (host.session != null) { host.session.close(); host.session = null; }
-                    }
+                    host.closeSessionSafely();
                     // **Forced, even for the frame already on screen.** The
                     // shortcut `reopenFrame` takes (`index == currentFrame &&
                     // session != null`) leaves the first export on the session
@@ -138,8 +93,7 @@ final class BatchExportWorker {
                 }, 5000);
                 if (!host.pollUntil(() -> host.session != null, 180000)) {
                     ++failed;
-                    try { DebugSink.text("batch-export", "open failed " + index + " " + name); }
-                    catch (Throwable spkIgnored) { Diagnostics.ignored("get:14353", spkIgnored); }
+                    Diagnostics.log("batch-export", "open failed " + index + " " + name, "get:14353");
                     continue;
                 }
                 final java.util.concurrent.CountDownLatch done =
@@ -151,9 +105,7 @@ final class BatchExportWorker {
                 if (finished) ++ok; else ++failed;
                 // **Before the next frame asks for its own planes.**
                 host.uiWait(() -> {
-                    synchronized (host.renderMutex) {
-                        if (host.session != null) { host.session.close(); host.session = null; }
-                    }
+                    host.closeSessionSafely();
                 }, 5000);
                 try { if (host.engine != null) host.engine.trimPool(); } catch (Throwable spkIgnored) { Diagnostics.ignored("get:14369", spkIgnored); }
                 // **The next frame starts from zero.** The decoded raw cache

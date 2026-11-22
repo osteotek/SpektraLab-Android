@@ -106,7 +106,7 @@ bash app/build/build-engine.sh     # 引擎 TU（改过头文件会自动全量�
 bash app/build/build-native.sh     # 两个 JNI → .so
 bash app/build/build-libs.sh       # staging 依赖库 + SONAME 等长改名
 bash app/build/build-dex.sh        # javac → d8
-bash build-apk.sh                  # aapt2 + 签名 + 依赖闭包检查
+bash build-apk.sh                  # aapt + 签名 + 依赖闭包检查
 ```
 
 `build-libs.sh` 会把 `libjpeg.so.8` / `libz.so.1` 改名成 `libjpeg_8.so` / `libz_1.so`
@@ -123,7 +123,7 @@ bash build-apk.sh                  # aapt2 + 签名 + 依赖闭包检查
 | `app/build/` | 引擎对象、JNI、依赖库、dex 的构建脚本 |
 | `patches/engine-android.patch` | 对上游引擎的改动 |
 | `docs/` | 分块渲染设计（`tiling.md`）等 |
-| `build-apk.sh` | aapt2 + apksigner 打包 |
+| `build-apk.sh` | aapt + apksigner 打包 |
 
 ## 致谢与许可
 

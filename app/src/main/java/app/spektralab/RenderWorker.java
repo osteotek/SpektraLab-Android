@@ -1,55 +1,14 @@
 package app.spektralab;
 
 import static app.spektralab.AppLanguage.tr;
-import android.app.Activity;
-import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Typeface;
-import android.net.Uri;
-import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.ScrollView;
-import android.widget.ProgressBar;
-import android.widget.SeekBar;
-import android.widget.TextView;
 import app.spektralab.engine.SpektraLabEngine;
-import app.spektralab.ui.UiPalette;
-import app.spektralab.ui.ScrubBar;
-import app.spektralab.domain.JsonFields;
-import app.spektralab.domain.JsonQuote;
-import app.spektralab.domain.ExportPlan;
 import app.spektralab.domain.PixelHash;
-import app.spektralab.domain.EdgeVerdict;
-import app.spektralab.ui.CompareView;
-import app.spektralab.ui.CurveView;
-import app.spektralab.ui.FilmCoverView;
-import app.spektralab.ui.ColorWheel;
-import app.spektralab.ui.CropOverlay;
-import app.spektralab.ui.RotateScale;
-import app.spektralab.ui.HistogramView;
-import app.spektralab.ui.RatioMark;
-import app.spektralab.ui.GuideView;
-import app.spektralab.ui.EdgeBackdrop;
-import app.spektralab.ui.Square;
-import app.spektralab.ui.ArrowView;
-import app.spektralab.ui.ToolGlyph;
-import app.spektralab.ui.CappedScroll;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /** Worker extracted from MainActivity; delegates Android/Activity access to host. */
-final class RenderWorker {
-    private final MainActivity host;
-
-    RenderWorker(MainActivity host) { this.host = host; }
+final class RenderWorker extends HostWorker {
+    RenderWorker(MainActivity host) { super(host); }
 
     void run(int longEdge) {
         // The full-size pass owns the canvas from here. A live frame still in
@@ -66,8 +25,7 @@ final class RenderWorker {
         // Every branch says something. The foot is one thin line, too quiet to
         // carry "nothing happened"; failures need to be readable.
         if (host.session == null) {
-            try { DebugSink.text("render", "no session, lastImportError=" + host.lastImportError); }
-            catch (Throwable spkIgnored) { Diagnostics.ignored("renderImage:13656", spkIgnored); }
+            Diagnostics.log("render", "no session, lastImportError=" + host.lastImportError, "renderImage:13656");
             // **A frame in the strip means an import is on its way.** Coming
             // back from the background walks through here while `loadImage` is
             // still decoding -- there is a picture loading, so "还没有可渲染的
@@ -91,7 +49,7 @@ final class RenderWorker {
         if (host.rendering) {
             // One native result buffer for the whole process: two renders would
             // interleave on it and hand back another frame's dimensions.
-            try { DebugSink.text("render", "already rendering"); } catch (Throwable spkIgnored) { Diagnostics.ignored("renderImage:13680", spkIgnored); }
+            Diagnostics.log("render", "already rendering", "renderImage:13680");
             Probe.log("render", "queued film=" + host.filmStock + " pending=" + host.pendingRender);
             host.statusText.setText(tr("render.rendering"));
             // Not dropped: a tap that lands mid-render is the *last* choice the
@@ -124,8 +82,7 @@ final class RenderWorker {
         host.progressBar.setVisibility(View.VISIBLE);
         host.busyLabel.setVisibility(View.VISIBLE);
         host.statusText.setText(tr("render.rendering"));
-        try { DebugSink.text("render", "begin " + host.sourceWidth + "x" + host.sourceHeight); }
-        catch (Throwable spkIgnored) { Diagnostics.ignored("renderImage:13707", spkIgnored); }
+        Diagnostics.log("render", "begin " + host.sourceWidth + "x" + host.sourceHeight, "renderImage:13707");
 
         new Thread(() -> {
             try {
@@ -274,8 +231,7 @@ final class RenderWorker {
                 UiDispatcher.post(() -> {
                     if (renderedEpoch != host.renderEpoch
                             || host.currentFrame != renderedFrame || host.session == null) {
-                        try { DebugSink.text("render", "frame changed mid-render; dropped"); }
-                        catch (Throwable spkIgnored) { Diagnostics.ignored("edgeVerdictOfLine:13851", spkIgnored); }
+                        Diagnostics.log("render", "frame changed mid-render; dropped", "edgeVerdictOfLine:13851");
                         // **The overlay belongs to this generation too.**
                         //
                         // Returning here is what left the canvas saying

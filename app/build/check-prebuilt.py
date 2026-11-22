@@ -8,13 +8,16 @@ from source has been replaced by something untested.
 
 import hashlib
 import json
-from pathlib import Path
+import os
 import struct
 import sys
 
+# The embedded Windows Python does not add the script's directory to sys.path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_common import repo_root, report
 
-ROOT = Path(__file__).resolve().parents[2]
-PREBUILT = ROOT / 'app' / 'prebuilt'
+
+PREBUILT = repo_root() / 'app' / 'prebuilt'
 ARM64_E_MACHINE = 0xB7
 
 
@@ -23,8 +26,9 @@ def sha256(path):
 
 
 def main():
+    root = repo_root()
     manifest = json.loads((PREBUILT / 'sha256.json').read_text(encoding='utf-8'))
-    version = json.loads((ROOT / 'version.json').read_text(encoding='utf-8'))
+    version = json.loads((root / 'version.json').read_text(encoding='utf-8'))
     problems = []
 
     if manifest['apk'].lower() != version['releaseSha256'].lower():
@@ -47,14 +51,11 @@ def main():
         if machine != ARM64_E_MACHINE:
             problems.append(f'{name}: e_machine 0x{machine:x}, expected arm64 (0xb7)')
 
-    if problems:
-        print('check-prebuilt: the tracked native payload is broken:')
-        for problem in problems:
-            print('  - ' + problem)
-        return 1
-    print(f'check-prebuilt: {len(manifest["libs"])} arm64 libraries match the '
-          f'released APK ({version["versionName"]})')
-    return 0
+    return report(
+        'check-prebuilt: the tracked native payload is broken:',
+        problems,
+        f'check-prebuilt: {len(manifest["libs"])} arm64 libraries match the '
+        f'released APK ({version["versionName"]})')
 
 
 if __name__ == '__main__':

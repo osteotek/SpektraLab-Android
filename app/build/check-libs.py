@@ -4,18 +4,26 @@
 `libjpeg.so.8` and `libz.so.1` cannot travel under their own names -- the
 package installer only extracts entries under lib/ that end in `.so`, so they
 are shipped as `libjpeg_8.so` / `libz_1.so` and every DT_NEEDED that names them
-is rewritten in place (see build-libs.sh). Skipping that rewrite -- which is
-exactly what happens when a freshly built libspektrafilm_engine.so is copied
-into app/build/apk/lib by hand instead of through build-libs.sh -- ships a
-library that cannot load, and the app dies with E-9000 on the first import.
+is rewritten in place (build-libs.sh does this in the Termux build; the
+Windows CMake path builds the codecs with matching SONAMEs instead).
 
 This runs after staging, so the mistake is a build failure instead of a
 release. Exit code 1 means the APK would not have loaded.
+
+readelf is taken from $READELF when set (build-windows.ps1 passes the NDK's
+llvm-readelf), otherwise from readelf on PATH (Termux). Pass --hint to replace
+the generic remediation line with build-specific guidance.
 """
+import argparse
 import os
 import pathlib
 import subprocess
 import sys
+
+# The embedded Windows Python does not add the script's directory to sys.path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_common import report
+
 
 # What Android itself provides. Anything else has to be in lib/.
 PLATFORM = {
@@ -23,6 +31,8 @@ PLATFORM = {
     "libjnigraphics.so", "libvulkan.so", "libEGL.so", "libGLESv3.so",
     "libGLESv2.so", "libz.so", "libstdc++.so",
 }
+DEFAULT_HINT = ("rename versioned SONAMEs and rewrite their DT_NEEDED entries "
+                "so every dependency resolves inside lib/")
 
 
 def needed(path):
@@ -32,7 +42,7 @@ def needed(path):
             for line in out.splitlines() if "(NEEDED)" in line]
 
 
-def main(directory):
+def main(directory, hint=None):
     libs = {p.name: p for p in sorted(pathlib.Path(directory).glob("*.so"))}
     if not libs:
         print(f"check-libs: no .so under {directory}", file=sys.stderr)
@@ -43,18 +53,20 @@ def main(directory):
                    if n not in libs and n not in PLATFORM]
         if missing:
             broken[name] = missing
-    if broken:
-        print("check-libs: these libraries cannot load as packaged:",
-              file=sys.stderr)
-        for name, missing in broken.items():
-            print(f"  {name} needs {', '.join(missing)}", file=sys.stderr)
-        print("  -> stage through build-libs.sh (it renames and rewrites "
-              "libjpeg.so.8 / libz.so.1)", file=sys.stderr)
-        return 1
-    print(f"check-libs: {len(libs)} libraries, every DT_NEEDED resolves")
-    return 0
+    problems = [f"{name} needs {', '.join(missing)}"
+                for name, missing in broken.items()]
+    return report(
+        "check-libs: these libraries cannot load as packaged:",
+        problems,
+        f"check-libs: {len(libs)} libraries, every DT_NEEDED resolves",
+        stream=sys.stderr,
+        hint=hint or DEFAULT_HINT)
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1
-                  else "app/build/apk/lib/arm64-v8a"))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('directory', nargs='?',
+                        default='app/build/apk/lib/arm64-v8a')
+    parser.add_argument('--hint', help='build-specific remediation line')
+    args = parser.parse_args()
+    sys.exit(main(args.directory, args.hint))

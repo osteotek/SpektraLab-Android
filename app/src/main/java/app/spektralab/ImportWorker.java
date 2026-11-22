@@ -1,55 +1,14 @@
 package app.spektralab;
 
 import static app.spektralab.AppLanguage.tr;
-import android.app.Activity;
-import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.ScrollView;
-import android.widget.ProgressBar;
-import android.widget.SeekBar;
-import android.widget.TextView;
 import app.spektralab.engine.SpektraLabEngine;
-import app.spektralab.ui.UiPalette;
-import app.spektralab.ui.ScrubBar;
-import app.spektralab.domain.JsonFields;
-import app.spektralab.domain.JsonQuote;
-import app.spektralab.domain.ExportPlan;
-import app.spektralab.domain.PixelHash;
-import app.spektralab.domain.EdgeVerdict;
-import app.spektralab.ui.CompareView;
-import app.spektralab.ui.CurveView;
-import app.spektralab.ui.FilmCoverView;
-import app.spektralab.ui.ColorWheel;
-import app.spektralab.ui.CropOverlay;
-import app.spektralab.ui.RotateScale;
-import app.spektralab.ui.HistogramView;
-import app.spektralab.ui.RatioMark;
-import app.spektralab.ui.GuideView;
-import app.spektralab.ui.EdgeBackdrop;
-import app.spektralab.ui.Square;
-import app.spektralab.ui.ArrowView;
-import app.spektralab.ui.ToolGlyph;
-import app.spektralab.ui.CappedScroll;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /** Worker extracted from MainActivity; delegates Android/Activity access to host. */
-final class ImportWorker {
-    private final MainActivity host;
-
-    ImportWorker(MainActivity host) { this.host = host; }
+final class ImportWorker extends HostWorker {
+    ImportWorker(MainActivity host) { super(host); }
 
     void run(Uri uri) {
         CrashTrail.mark(host, "import:load " + uri);
@@ -85,9 +44,9 @@ final class ImportWorker {
                     + (sz == null ? "unknown" : sz[0] + "x" + sz[1])
                     + " need=" + (want >> 20) + "MB"
                     + " avail=" + (host.availableMemoryBytes() >> 20) + "MB");
-            try { DebugSink.text("import-size", (sz == null ? "unknown" : sz[0] + "x" + sz[1])
+            Diagnostics.log("import-size", (sz == null ? "unknown" : sz[0] + "x" + sz[1])
                     + " need=" + (want >> 20) + "MB avail=" + (host.availableMemoryBytes() >> 20) + "MB"
-                    + " native=" + host.importAtNativeSize); } catch (Throwable spkIgnored) { Diagnostics.ignored("sniffImageSize:11191", spkIgnored); }
+                    + " native=" + host.importAtNativeSize, "sniffImageSize:11191");
         } catch (Throwable spkIgnored) { Diagnostics.ignored("sniffImageSize:11192", spkIgnored); }
         // A new photograph starts at the two entry cards, never on a page
         // whose switch belonged to the frame before it.
@@ -140,7 +99,7 @@ final class ImportWorker {
         }
         if (host.testAutoFilm && host.filmStock == null) {
             for (String id : host.filmIds) {
-                if (!"original".equals(id)) { host.filmStock = id; break; }
+                if (!app.spektralab.domain.Defaults.ORIGINAL_ID.equals(id)) { host.filmStock = id; break; }
             }
         }
         CrashTrail.mark(host, "import:look");
@@ -148,23 +107,14 @@ final class ImportWorker {
             // Check if this is a RAW file by extension
             String fileName = host.getFileName(uri);
             CrashTrail.markNow(host, "import:name " + fileName);
-            final String lower = fileName == null ? "" : fileName.toLowerCase();
-            host.isRawFile = lower.endsWith(".rw2") || lower.endsWith(".raw")
-                    || lower.endsWith(".dng") || lower.endsWith(".arw")
-                    || lower.endsWith(".nef") || lower.endsWith(".cr2")
-                    || lower.endsWith(".cr3") || lower.endsWith(".orf")
-                    || lower.endsWith(".raf") || lower.endsWith(".pef")
-                    || lower.endsWith(".srw") || lower.endsWith(".x3f")
-                    || lower.endsWith(".rwl") || lower.endsWith(".3fr")
-                    || lower.endsWith(".mrw") || lower.endsWith(".erf");
+            host.isRawFile = app.spektralab.domain.RawFormats.isRaw(fileName);
             // A RAW container we know of but cannot open still beats decoding
             // its bytes as a JPEG and reporting a mystery.
-            final String[] knownButUnsupported = {".heic.raw", ".iiq", ".mos"};
-            for (String ext : knownButUnsupported) {
-                if (lower.endsWith(ext)) {
-                    host.showInAppToast(tr("import.e_1107_unsupported_format") + ext + tr("import.suffix"));
-                    return;
-                }
+            final String unsupported = app.spektralab.domain.RawFormats.knownUnsupported(fileName);
+            if (unsupported != null) {
+                host.showInAppToast(tr("import.e_1107_unsupported_format")
+                        + unsupported + tr("import.suffix"));
+                return;
             }
             
             if (host.isRawFile) {
@@ -212,9 +162,7 @@ final class ImportWorker {
             // is the SIGSEGV this device logs as `vkCmdCopyBuffer` against a
             // destroyed buffer, and it is what tapping an earlier thumbnail
             // while the shelf was still drawing looked like.
-            synchronized (host.renderMutex) {
-                if (host.session != null) { host.session.close(); host.session = null; }
-            }
+            host.closeSessionSafely();
             // **The old frame's planes go before the new one asks for its own.**
             // `spk_open` allocates the decoded source while the previous
             // session's pool is still resident. On a 16 GB phone a 32 MP pool
@@ -310,8 +258,8 @@ final class ImportWorker {
                 Bitmap scaled = Bitmap.createScaledBitmap(host.sourceBitmap, nw, nh, true);
                 if (scaled != host.sourceBitmap) host.sourceBitmap.recycle();
                 host.sourceBitmap = scaled;
-                try { DebugSink.text("import-scale", "k=" + k + " -> " + nw + "x" + nh
-                        + " avail=" + availBytes); } catch (Throwable spkIgnored) { Diagnostics.ignored("getHeight:11412", spkIgnored); }
+                Diagnostics.log("import-scale", "k=" + k + " -> " + nw + "x" + nh
+                        + " avail=" + availBytes, "getHeight:11412");
             }
             host.sourceWidth = host.sourceBitmap.getWidth();
             host.sourceHeight = host.sourceBitmap.getHeight();
@@ -333,9 +281,9 @@ final class ImportWorker {
             final long pixelBytes = (long) host.sourceWidth * host.sourceHeight * 3L * 4L;
             CrashTrail.mark(host, "import:pixels " + (pixelBytes >> 20) + "MB avail="
                     + (host.availableMemoryBytes() >> 20) + "MB");
-            try { DebugSink.text("import-pixels", host.sourceWidth + "x" + host.sourceHeight
+            Diagnostics.log("import-pixels", host.sourceWidth + "x" + host.sourceHeight
                     + " need=" + (pixelBytes >> 20) + "MB avail="
-                    + (host.availableMemoryBytes() >> 20) + "MB"); } catch (Throwable spkIgnored) { Diagnostics.ignored("getHeight:11436", spkIgnored); }
+                    + (host.availableMemoryBytes() >> 20) + "MB", "getHeight:11436");
             // **malloc, not allocateDirect.** The runtime caps direct-buffer
             // memory at the heap growth limit (512 MB on the phone that
             // reported this), and a 50 MP frame is 576 MB of float32, so the
@@ -390,9 +338,7 @@ final class ImportWorker {
             CrashTrail.mark(host, "import:engine");
             host.ensureEngine();
             CrashTrail.mark(host, "import:engine-ok");
-            synchronized (host.renderMutex) {
-                if (host.session != null) { host.session.close(); host.session = null; }
-            }
+            host.closeSessionSafely();
             host.session = host.engine.openSession(host.sourcePixels, host.sourceWidth, host.sourceHeight, 3);
             CrashTrail.mark(host, "import:session");
             host.applySessionParams();
@@ -436,7 +382,7 @@ final class ImportWorker {
                     + ": " + host.describe(t));
             host.lastImportError = host.describeImportFailure(t);
             host.showErrorDialog(tr("import.import_failed"), host.lastImportError);
-            try { DebugSink.text("import-failed", host.lastImportError); } catch (Throwable spkIgnored) { Diagnostics.ignored("max:11537", spkIgnored); }
+            Diagnostics.log("import-failed", host.lastImportError, "max:11537");
         }
       }
 }

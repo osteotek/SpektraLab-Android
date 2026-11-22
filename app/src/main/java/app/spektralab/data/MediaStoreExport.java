@@ -30,55 +30,44 @@ public final class MediaStoreExport {
         for (int attempt = 0; attempt < 2; ++attempt) {
             final String name = attempt == 0 ? baseName
                     : "SpektraLab_" + System.currentTimeMillis() + "_r" + ext;
-            final ContentValues v = new ContentValues();
-            v.put(MediaStore.Images.Media.DISPLAY_NAME, name);
-            v.put(MediaStore.Images.Media.MIME_TYPE, mime);
-            v.put(MediaStore.Images.Media.RELATIVE_PATH,
-                    Environment.DIRECTORY_PICTURES + "/SpektraLab");
-            v.put(MediaStore.Images.Media.IS_PENDING, 1);
-            Uri uri = null;
-            try { uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v); }
-            catch (Throwable t) { lastError = t; }
-            if (uri == null) continue;
             try {
-                copyInto(tmp, uri);
-                v.clear();
-                v.put(MediaStore.Images.Media.IS_PENDING, 0);
-                resolver.update(uri, v, null, null);
-                return uri;
-            } catch (Throwable t) {
-                lastError = t;
-                try { resolver.delete(uri, null, null); }
-                catch (Throwable e) { Diagnostics.ignored("MediaStoreExport:delete", e); }
-            }
+                final Uri uri = writeTo(tmp, MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        Environment.DIRECTORY_PICTURES, name, mime);
+                if (uri != null) return uri;
+            } catch (Throwable t) { lastError = t; }
         }
         if (Build.VERSION.SDK_INT >= 29) {
-            Uri uri = null;
             try {
-                final ContentValues v = new ContentValues();
-                v.put(MediaStore.MediaColumns.DISPLAY_NAME,
-                        "SpektraLab_" + System.currentTimeMillis() + ext);
-                v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
-                v.put(MediaStore.MediaColumns.RELATIVE_PATH,
-                        Environment.DIRECTORY_DOWNLOADS + "/SpektraLab");
-                v.put(MediaStore.MediaColumns.IS_PENDING, 1);
-                uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
-                if (uri != null) {
-                    copyInto(tmp, uri);
-                    v.clear();
-                    v.put(MediaStore.MediaColumns.IS_PENDING, 0);
-                    resolver.update(uri, v, null, null);
-                    return uri;
-                }
-            } catch (Throwable t) {
-                lastError = t;
-                if (uri != null) {
-                    try { resolver.delete(uri, null, null); }
-                    catch (Throwable e) { Diagnostics.ignored("MediaStoreExport:download-delete", e); }
-                }
-            }
+                final Uri uri = writeTo(tmp, MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                        Environment.DIRECTORY_DOWNLOADS,
+                        "SpektraLab_" + System.currentTimeMillis() + ext, mime);
+                if (uri != null) return uri;
+            } catch (Throwable t) { lastError = t; }
         }
         throw new IOException(SpkError.ALBUM_WRITE_PREFIX, lastError);
+    }
+
+    /** One insert/copy/publish attempt; null means the provider refused the insert. */
+    private Uri writeTo(File tmp, Uri collection, String directory, String name, String mime)
+            throws Throwable {
+        final ContentValues v = new ContentValues();
+        v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+        v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+        v.put(MediaStore.MediaColumns.RELATIVE_PATH, directory + "/SpektraLab");
+        v.put(MediaStore.MediaColumns.IS_PENDING, 1);
+        final Uri uri = resolver.insert(collection, v);
+        if (uri == null) return null;
+        try {
+            copyInto(tmp, uri);
+            v.clear();
+            v.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            resolver.update(uri, v, null, null);
+            return uri;
+        } catch (Throwable t) {
+            try { resolver.delete(uri, null, null); }
+            catch (Throwable e) { Diagnostics.ignored("MediaStoreExport:delete", e); }
+            throw t;
+        }
     }
 
     private void copyInto(File tmp, Uri uri) throws IOException {

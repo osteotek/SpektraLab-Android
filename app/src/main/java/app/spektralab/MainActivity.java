@@ -466,7 +466,7 @@ public class MainActivity extends Activity {
         // launch, and it alone was enough to fill the free D1 quota over a few
         // hundred users. It now goes into the in-memory ring, which is what a
         // report carries when something actually goes wrong.
-        try { DebugSink.text("app-start", "buildInfo=" + SpektraLabEngine.buildInfo()); } catch (Throwable spkIgnored) { Diagnostics.ignored("onCreate:424", spkIgnored); }
+        Diagnostics.log("app-start", "buildInfo=" + SpektraLabEngine.buildInfo(), "onCreate:424");
         
         buildUi();
         uiReady = true;
@@ -547,7 +547,6 @@ public class MainActivity extends Activity {
     private String[] STYLE_LABELS;
     private String[] CORNER_LABELS;
     private LinearLayout opticsPanel;
-    private boolean opticsUnlocked = false;
 
     // RFC-032/031, the two things the phone build never exposed: the rebate the
     // frame was cut from, and the date a point-and-shoot burned into it.
@@ -622,15 +621,6 @@ public class MainActivity extends Activity {
     }
 
     /** The gate whose frame is closest to `mm`, for the scale page's cards. */
-    private static String gateForMm(float mm) {
-        String best = EDGE_IDS[0];
-        float bestD = Float.MAX_VALUE;
-        for (int i = 0; i < EDGE_IDS.length; ++i) {
-            final float d = Math.abs(EDGE_MM[i] - mm);
-            if (d < bestD) { bestD = d; best = EDGE_IDS[i]; }
-        }
-        return best;
-    }
 
     private String gateLabelsFallback(String id) {
         for (int i = 0; i < EDGE_IDS.length; ++i) if (EDGE_IDS[i].equals(id)) return EDGE_LABELS[i];
@@ -638,16 +628,6 @@ public class MainActivity extends Activity {
     }
 
     /** Move the 尺度 page onto `mm`, highlight and all. */
-    private void setScaleMm(float mm) {
-        filmFormatMm = mm;
-        int best = 0;
-        for (int i = 0; i < FORMAT_MM.length; ++i) {
-            if (Math.abs(FORMAT_MM[i] - mm) < Math.abs(FORMAT_MM[best] - mm)) best = i;
-        }
-        formatIndex = best;
-        refreshFormatFoot();
-        rebuildFormatCards();
-    }
     private final List<String> edgeLabels = new ArrayList<>(), edgeIds = new ArrayList<>();
     private LinearLayout controls, panelHolder, filmCardStrip, brandRow, formatCardStrip;
     private HorizontalScrollView filmScroll, formatScroll;
@@ -698,7 +678,6 @@ public class MainActivity extends Activity {
      */
     private static final String PREFS_SESSION = "session";
     private static final String KEY_SESSION = "state";
-    private static final String KEY_THUMBS = "thumbs";
 
     // The Look codec is a pure data mapping; see LookCodec.java.
     private static org.json.JSONObject lookToJson(Look l) { return LookCodec.toJson(l); }
@@ -718,7 +697,7 @@ public class MainActivity extends Activity {
                         .putString(KEY_SESSION, json).apply();
             }
         } catch (Throwable t) {
-            try { DebugSink.text("session", "save failed: " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("toString:844", spkIgnored); }
+            Diagnostics.log("session", "save failed: " + t, "toString:844");
         }
     }
 
@@ -796,7 +775,7 @@ public class MainActivity extends Activity {
             if (filmStock != null && !restoredOriginal) renderImage();
             return true;
         } catch (Throwable t) {
-            try { DebugSink.text("session", "restore failed: " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("get:922", spkIgnored); }
+            Diagnostics.log("session", "restore failed: " + t, "get:922");
             return false;
         }
     }
@@ -963,7 +942,6 @@ public class MainActivity extends Activity {
      *  requests from re-arming the loop right after a frame lands. */
     private static final long LIVE_MIN_GAP_MS = 90;
     private final List<View> formatCards = new ArrayList<>();
-    private static final int CONTROLS_OPEN_DP = 298;
     private static final int CONTROLS_CLOSED_DP = 58;
     /** 反馈群：the one place a user can reach a human. Shown once per build. */
     private static final String QQ_GROUP = "1134320449";
@@ -1138,23 +1116,10 @@ public class MainActivity extends Activity {
         return t;
     }
 
-    private View hairline(int color) {
-        View v = new View(this);
-        v.setBackgroundColor(color);
-        return v;
-    }
 
     /** clamp(30px, 8.6vw, 39px) */
-    private float wordmarkSp() {
-        float w = getResources().getConfiguration().screenWidthDp;
-        return Math.max(30f, Math.min(39f, 0.086f * w));
-    }
 
     /** clamp(35px, 10.5vw, 48px) */
-    private float emptyTitleSp() {
-        float w = getResources().getConfiguration().screenWidthDp;
-        return Math.max(35f, Math.min(48f, 0.105f * w));
-    }
 
     private void applySystemInsets(final View root) {
         root.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -1219,8 +1184,7 @@ public class MainActivity extends Activity {
             @Override public void onRotateDelta(float total) { previewRotate(total); }
             @Override public void onRotateCommit(float total) { commitRotate(total); }
             @Override public void onRotateReset() {
-                try { DebugSink.text("rotate", "reset by double tap (was " + geometryRotation + ")"); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("onRotateReset:1364", spkIgnored); }
+                Diagnostics.log("rotate", "reset by double tap (was " + geometryRotation + ")", "onRotateReset:1364");
                 rotationBeforeDrag = geometryRotation;
                 geometryRotation = 0f;
                 rotationPending = true;
@@ -2370,83 +2334,22 @@ public class MainActivity extends Activity {
      *  grain and rebate. */
     Look defaultLook() {
         final Look look = new Look();
-        look.filmStock = null;
-        look.printStock = "kodak_portra_endura";
+        // Everything not listed here keeps the initializer declared in Look.
+        look.printStock = app.spektralab.domain.Defaults.PRINT_STOCK;
         look.printExposure = 1.0f;
         // A raw is scene-referred and has no exposure decision of its own; a
         // camera JPEG has already been metered once, by the camera, and
         // metering it again is how "import this photo" turned into a grey wash.
-        look.meterMethod = isRawFile ? "protect_highlights" : "";
+        look.meterMethod = isRawFile ? app.spektralab.domain.Defaults.METER : "";
         look.grainAmount = 1.0f;
         look.halationAmount = 1.0f;
         look.glareAmount = 1.0f;
-        look.highlightRoom = 0.0f;
-        look.shadowRoom = 0.0f;
-        look.halationBoost = 0.0f;
         look.halationScatter = 1.0f;
-        look.scatterRadius = 0.0f;
-        look.lensBlur = 0.0f;
-        look.viewVignette = 0.0f;
-        look.cameraEv = 0.0f;
-        look.wbPreset = 0;
         look.wbKelvin = 5500f;
-        look.wbTint = 0.0f;
-        look.wbMul = null;
-        look.geometryTurns = 0;
-        look.geometryRotation = 0.0f;
-        look.geometryCropW = 1.0f;
-        look.geometryCropH = 1.0f;
-        look.geometryCropX = 0.0f;
-        look.geometryCropY = 0.0f;
-        look.cropRatioIndex = -1;
-        look.geometryFlipH = false;
-        look.geometryFlipV = false;
-        look.yFilter = 0.0f;
-        look.mFilter = 0.0f;
         look.filterScale = 1.0f;
-        look.preflash = 0.0f;
         look.edgeFog = 1.0f;
-        look.edgeLeaks = 0.0f;
-        look.frameNumber = 0.0f;
-        look.halationOn = 1f;
-        look.grainOn = 1f;
-        look.couplersOn = 1f;
-        look.antihalationRemoved = 0f;
-        look.scannerWhite = 0f;
-        look.scannerBlack = 0f;
-        look.edrOn = 0f;
-        look.glareActive = 1f;
-        look.scannerLensBlur = 0f;
-        look.halationHeadroom = 4f;
-        look.densityGamma = 1f;
-        look.digitalIntermediate = false;
-        look.outputCctf = true;
-        look.hueCorrection = 1f;
-        look.shadowRolloff = 2f;
-        look.maxLift = 4f;
-        look.cameraFilter = "";
-        look.sceneNorm = "power";
-        look.edgeMode = "strip";
-        look.edgeGate = "auto";
-        look.edgeHoles = "white";
-        look.edgeCarrier = "none";
-        look.datePlacement = "frame";
-        look.dateCorner = "br";
-        look.dateStyle = "lcd";
-        look.dateInsetX = 3f;
-        look.dateInsetY = 2.4f;
-        look.edgeTextOn = true;
-        look.edgeFNumber = 0f;
-        look.dateSize = 1f;
-        look.dateEv = 3.5f;
-        look.dataText = "";
-        look.dateTextB = "";
-        look.cameraSeed = 1;
-        look.frameSeed = 1;
         look.filmFormatMm = FORMAT_MM[0];
-        look.overscanOn = false;
         look.overscanFormat = "135";
-        look.dateOn = false;
         return look;
     }
 
@@ -2667,8 +2570,7 @@ public class MainActivity extends Activity {
         }
         rebuildFrameChips();
         saveSessionState();
-        try { DebugSink.text("frame-strip", "removed " + index + ", now " + frames.size()); }
-        catch (Throwable spkIgnored) { Diagnostics.ignored("removeFrame:2929", spkIgnored); }
+        Diagnostics.log("frame-strip", "removed " + index + ", now " + frames.size(), "removeFrame:2929");
     }
 
     /** Re-open a frame from the strip. Same entry point the picker uses, so a
@@ -2813,13 +2715,6 @@ public class MainActivity extends Activity {
     }
 
     /** Is this touch inside the canvas rectangle? */
-    private boolean overCanvas(android.view.MotionEvent ev) {
-        if (canvasStage == null) return false;
-        final android.graphics.Rect r = new android.graphics.Rect();
-        if (!canvasStage.getGlobalVisibleRect(r)) return false;
-        final float x = ev.getRawX(), y = ev.getRawY();
-        return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-    }
 
     private static float spanOf(android.view.MotionEvent e) {
         return (float) Math.hypot(e.getX(0) - e.getX(1), e.getY(0) - e.getY(1));
@@ -2828,7 +2723,6 @@ public class MainActivity extends Activity {
     private View buildFilmPanel() {
         final app.spektralab.ui.FilmPanel built = app.spektralab.ui.FilmPanel.build(
                 this, new app.spektralab.ui.FilmPanel.Host() {
-                    @Override public String text(String key) { return tr(key); }
                     @Override public TextView label(String text, float sp, int color,
                                                      android.graphics.Typeface tf) {
                         return MainActivity.this.label(text, sp, color, tf);
@@ -2956,7 +2850,7 @@ public class MainActivity extends Activity {
         filmCardStrip.removeAllViews();
         filmCards.clear();
         filmCardImages.clear();
-        addFilmCard("original", tr("film.original"), -1);
+        addFilmCard(app.spektralab.domain.Defaults.ORIGINAL_ID, tr("film.original"), -1);
         for (int i = 0; i < filmIds.size(); ++i) {
             final String id = filmIds.get(i);
             if (!"all".equals(brandFilter) && !brandFilter.equals(brandOf(id))) continue;
@@ -2973,7 +2867,7 @@ public class MainActivity extends Activity {
     }
 
     private void addFilmCard(final String id, String text, final int index) {
-        final boolean original = "original".equals(id);
+        final boolean original = app.spektralab.domain.Defaults.ORIGINAL_ID.equals(id);
         boolean active = original ? showingOriginal
                 : (filmStock != null && !showingOriginal && id.equals(filmStock));
         LinearLayout card = new LinearLayout(this);
@@ -3061,7 +2955,7 @@ public class MainActivity extends Activity {
         for (View card : filmCards) {
             Object tag = card.getTag();
             String id = tag == null ? "" : tag.toString();
-            boolean active = "original".equals(id) ? showingOriginal
+            boolean active = app.spektralab.domain.Defaults.ORIGINAL_ID.equals(id) ? showingOriginal
                     : (filmStock != null && !showingOriginal && id.equals(filmStock));
             card.setBackground(cardBorder(active));
             android.view.ViewGroup group = (android.view.ViewGroup) card;
@@ -3077,7 +2971,7 @@ public class MainActivity extends Activity {
     }
 
     private void pickFilmCard(String id, int index) {
-        if ("original".equals(id)) {
+        if (app.spektralab.domain.Defaults.ORIGINAL_ID.equals(id)) {
             toggleOriginal();
             return;
         }
@@ -3158,7 +3052,7 @@ public class MainActivity extends Activity {
      *  takes a colour film. Anything within a kind is the user's to try -- the
      *  film's declared paper is already selected for them when they pick it. */
     private static boolean paperFitsFilm(String paper, boolean filmIsMonochrome) {
-        final boolean paperIsMonochrome = "ilford_multigrade_iv_rc".equals(paper);
+        final boolean paperIsMonochrome = app.spektralab.domain.Defaults.MONO_PRINT_STOCK.equals(paper);
         return filmIsMonochrome == paperIsMonochrome;
     }
 
@@ -3264,7 +3158,6 @@ public class MainActivity extends Activity {
     private LinearLayout buildViewPanel() {
         final app.spektralab.ui.ViewPanel built = app.spektralab.ui.ViewPanel.build(
                 this, new app.spektralab.ui.ViewPanel.Host() {
-                    @Override public String text(String key) { return tr(key); }
                     @Override public TextView label(String text, float sp, int color,
                                                      android.graphics.Typeface tf) {
                         return MainActivity.this.label(text, sp, color, tf);
@@ -3351,11 +3244,7 @@ public class MainActivity extends Activity {
             // thread for that long, and then rebuilds the pipeline on the UI
             // thread right as the render finishes. `renderImage` sends the same
             // delta (with the stock) on the render thread, under the lock, once.
-            if (uiReady && session != null) {
-                showingOriginal = false;
-                setOriginalVisual(false);
-                renderImage();
-            }
+            if (canInteract()) leaveOriginalAndRender();
         });
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
@@ -3387,11 +3276,7 @@ public class MainActivity extends Activity {
                     redecodeWithWhiteBalance();
                     return;
                 }
-                if (uiReady && session != null) {
-                    showingOriginal = false;
-                    setOriginalVisual(false);
-                    renderImage();
-                }
+                if (canInteract()) leaveOriginalAndRender();
             }
         });
         box.addView(bar, new LinearLayout.LayoutParams(-1, dp(32)));
@@ -3557,11 +3442,7 @@ public class MainActivity extends Activity {
                 @Override public void onCommit() {
                     pushViewAdjust();
                     applyParams();
-                    if (uiReady && session != null) {
-                        showingOriginal = false;
-                        setOriginalVisual(false);
-                        renderImage();
-                    }
+                    if (canInteract()) leaveOriginalAndRender();
                 }
             });
         page.addView(colorWheel, new LinearLayout.LayoutParams(-1, dp(196)));
@@ -3627,11 +3508,7 @@ public class MainActivity extends Activity {
                 @Override public void onLive() { requestLivePreview(); }
                 @Override public void onCommit() {
                     pushViewCurves();
-                    if (uiReady && session != null) {
-                        showingOriginal = false;
-                        setOriginalVisual(false);
-                        renderImage();
-                    }
+                    if (canInteract()) leaveOriginalAndRender();
                 }
             });
         page.addView(curveView, new LinearLayout.LayoutParams(-1, dp(150)));
@@ -3658,11 +3535,7 @@ public class MainActivity extends Activity {
                         apply.accept(Math.max(lo, Math.min(hi, v)));
                         refreshViewPanel();
                         applyParams();
-                        if (uiReady && session != null) {
-                            showingOriginal = false;
-                            setOriginalVisual(false);
-                            renderImage();
-                        }
+                        if (canInteract()) leaveOriginalAndRender();
                     } catch (Throwable spkIgnored) { Diagnostics.ignored("trim:4620", spkIgnored); }
                 })
                 .setNegativeButton(tr("editor.cancel"), null)
@@ -3864,7 +3737,6 @@ public class MainActivity extends Activity {
         final app.spektralab.ui.OpticsPanel.Result built =
                 app.spektralab.ui.OpticsPanel.build(this,
                         new app.spektralab.ui.OpticsPanel.Host() {
-                            @Override public String text(String key) { return tr(key); }
                             @Override public TextView label(String text, float sp, int color,
                                                              android.graphics.Typeface tf) {
                                 return MainActivity.this.label(text, sp, color, tf);
@@ -3886,11 +3758,7 @@ public class MainActivity extends Activity {
                                 }
                             }
                             @Override public void onKnobCommit() {
-                                if (uiReady && session != null) {
-                                    showingOriginal = false;
-                                    setOriginalVisual(false);
-                                    renderImage();
-                                }
+                                if (canInteract()) leaveOriginalAndRender();
                             }
                             @Override public void onReset() { resetOpticsPanel(); }
                         }, tfHan, tfBody, getResources().getDisplayMetrics().density);
@@ -3953,11 +3821,7 @@ public class MainActivity extends Activity {
                 () -> edrOn > 0.5f,
                 on -> {
                     edrOn = on ? 1f : 0f;
-                    if (uiReady && session != null) {
-                        showingOriginal = false;
-                        setOriginalVisual(false);
-                        renderImage();
-                    }
+                    if (canInteract()) leaveOriginalAndRender();
                 });
         hueOwnMark = new Square(this, UiPalette.BLUE, UiPalette.toggleOff());
         toggleCell(gridTop, tr("print.film_hue"), tr("print.keep_film_colors"), hueOwnMark,
@@ -3975,11 +3839,7 @@ public class MainActivity extends Activity {
                         return;
                     }
                     hueCorrection = on ? 0f : 1f;
-                    if (uiReady && session != null) {
-                        showingOriginal = false;
-                        setOriginalVisual(false);
-                        renderImage();
-                    }
+                    if (canInteract()) leaveOriginalAndRender();
                 });
         panel.addView(gridTop, new LinearLayout.LayoutParams(-1, dp(46)));
 
@@ -3990,7 +3850,7 @@ public class MainActivity extends Activity {
                     cameraFilter = id;
                     tv.setText(labelOf(FILTER_LABELS, FILTER_IDS, id));
                     applyParams();
-                    if (uiReady && session != null) { showingOriginal = false; setOriginalVisual(false); renderImage(); }
+                    if (canInteract()) leaveOriginalAndRender();
                 }));
         // **What the canvas is drawn in.** Not a look parameter: it never
         // reaches a file, and two exports of the same frame in different
@@ -4001,7 +3861,7 @@ public class MainActivity extends Activity {
                 final int index = labels.indexOf(picked);
                 if (index >= 0) previewSpace = SPACES[index];
                 tv.setText(previewSpace);
-                if (uiReady && session != null) { applyParams(); renderImage(); }
+                if (canInteract()) { applyParams(); renderImage(); }
             });
         });
         choiceCell(gridBottom, tr("print.protection_basis"), labelOf(NORM_LABELS, NORM_IDS, sceneNorm), tv ->
@@ -4009,7 +3869,7 @@ public class MainActivity extends Activity {
                     sceneNorm = id;
                     tv.setText(labelOf(NORM_LABELS, NORM_IDS, id));
                     applyParams();
-                    if (uiReady && session != null) { showingOriginal = false; setOriginalVisual(false); renderImage(); }
+                    if (canInteract()) leaveOriginalAndRender();
                 }));
         // **A gap, not two borders flush together.** Each cell carries its own
         // 1 dp outline; stacked, the two rows met in a 2 dp line that read as
@@ -4210,18 +4070,6 @@ public class MainActivity extends Activity {
     }
 
     /** JSON escaping for the two free-text date fields. */
-    private static String esc(String s) {
-        if (s == null || s.isEmpty()) return "";
-        StringBuilder out = new StringBuilder(s.length() + 8);
-        for (int i = 0; i < s.length(); ++i) {
-            final char c = s.charAt(i);
-            if (c == '"') out.append('\\').append('"');
-            else if (c == '\\') out.append('\\').append('\\');
-            else if (c < 0x20) out.append(' ');
-            else out.append(c);
-        }
-        return out.toString();
-    }
 
     /** One text field, in the same sheet shape as the pickers. */
     private void askText(String title, String initial, java.util.function.Consumer<String> onDone) {
@@ -4396,7 +4244,6 @@ public class MainActivity extends Activity {
         final app.spektralab.ui.SimplePanels.Compose built =
                 app.spektralab.ui.SimplePanels.compose(this,
                         new app.spektralab.ui.SimplePanels.ComposeHost() {
-                    @Override public String text(String key) { return tr(key); }
                     @Override public TextView label(String text, float sp, int color,
                                                      android.graphics.Typeface tf) {
                         return MainActivity.this.label(text, sp, color, tf);
@@ -4940,11 +4787,7 @@ public class MainActivity extends Activity {
         geoSnapValid = true;
         pendingGeometry = true;
         applyParams();
-        if (uiReady && session != null) {
-            showingOriginal = false;
-            setOriginalVisual(false);
-            renderImage();
-        }
+        if (canInteract()) leaveOriginalAndRender();
     }
 
     /**
@@ -4993,7 +4836,6 @@ public class MainActivity extends Activity {
         final app.spektralab.ui.SimplePanels.Format built =
                 app.spektralab.ui.SimplePanels.format(this,
                         new app.spektralab.ui.SimplePanels.Host() {
-                    @Override public String text(String key) { return tr(key); }
                     @Override public TextView label(String text, float sp, int color,
                                                      android.graphics.Typeface tf) {
                         return MainActivity.this.label(text, sp, color, tf);
@@ -5160,7 +5002,6 @@ public class MainActivity extends Activity {
         final app.spektralab.ui.SimplePanels.Edge built =
                 app.spektralab.ui.SimplePanels.edge(this,
                         new app.spektralab.ui.SimplePanels.EdgeHost() {
-                    @Override public String text(String key) { return tr(key); }
                     @Override public TextView label(String text, float sp, int color,
                                                      android.graphics.Typeface tf) {
                         return MainActivity.this.label(text, sp, color, tf);
@@ -5263,7 +5104,6 @@ public class MainActivity extends Activity {
                 + " " + labelOf(PLACE_LABELS, PLACE_IDS, datePlacement);
     }
 
-    private static int jsonInt(String json, String key) { return JsonFields.firstInt(json, key); }
 
     private static String fmt1(float v) {
         return String.format(java.util.Locale.US, "%.1f", v);
@@ -5273,11 +5113,7 @@ public class MainActivity extends Activity {
     private void buildEdgePages() {
         final java.util.function.Consumer<Void> redraw = v -> {
             applyParams();
-            if (uiReady && session != null) {
-                showingOriginal = false;
-                setOriginalVisual(false);
-                renderImage();
-            }
+            if (canInteract()) leaveOriginalAndRender();
         };
 
         edgePage = new LinearLayout(this);
@@ -5494,12 +5330,6 @@ public class MainActivity extends Activity {
 
     
 
-    private ScrollView scrollOf(View content) {
-        final ScrollView scroll = new ScrollView(this);
-        scroll.setVerticalScrollBarEnabled(false);
-        scroll.addView(content, new android.widget.FrameLayout.LayoutParams(-1, -2));
-        return scroll;
-    }
 
     private View pageHead(String title) {
         LinearLayout head = new LinearLayout(this);
@@ -5568,15 +5398,6 @@ public class MainActivity extends Activity {
         return false;
     }
 
-    private static void setEnabledDeep(View view, boolean enabled) {
-        if (view == null) return;
-        view.setEnabled(enabled);
-        view.setAlpha(enabled ? 1f : 0.38f);
-        if (view instanceof android.view.ViewGroup) {
-            android.view.ViewGroup group = (android.view.ViewGroup) view;
-            for (int i = 0; i < group.getChildCount(); ++i) setEnabledDeep(group.getChildAt(i), enabled);
-        }
-    }
 
     /**
      * Put the picture in a gate: label, frame length, crop, the switch, and the
@@ -6343,29 +6164,62 @@ public class MainActivity extends Activity {
         }, 1800);
     }
 
-    void showFeedbackGroup(final boolean auto) {
-        if (isFinishing()) return;
-        final android.content.SharedPreferences p = getSharedPreferences(PROMO_PREFS, MODE_PRIVATE);
+    /** The paper-card shell shared by the feedback and error sheets. */
+    private static final class Sheet {
+        final android.app.Dialog dialog;
+        final LinearLayout card;
+        Sheet(android.app.Dialog dialog, LinearLayout card) {
+            this.dialog = dialog; this.card = card;
+        }
+    }
+
+    private Sheet newSheet(String kicker, float kickerSpacing) {
         final android.app.Dialog dialog = newDialog();
-        LinearLayout card = new LinearLayout(this);
+        final LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackgroundColor(UiPalette.PAPER);
-        View cap = new View(this);
+        final View cap = new View(this);
         cap.setBackgroundColor(UiPalette.BLUE);
         card.addView(cap, new LinearLayout.LayoutParams(-1, dp(3)));
-
-        LinearLayout head = new LinearLayout(this);
+        final LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         head.setPadding(dp(16), 0, dp(16), 0);
-        head.addView(mixedLabel(tr("feedback.feedback_community"), 8, UiPalette.BLUE),
-                new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label(tr("crash.close"), 9, UiPalette.MUTED, tfHan);
+        final TextView kickerView = mixedLabel(kicker, 8, UiPalette.BLUE);
+        kickerView.setLetterSpacing(kickerSpacing);
+        head.addView(kickerView, new LinearLayout.LayoutParams(0, -2, 1f));
+        final TextView close = label(tr("crash.close"), 9, UiPalette.MUTED, tfHan);
         close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
         close.setPadding(dp(12), dp(14), 0, dp(14));
         close.setOnClickListener(v -> dialog.dismiss());
         head.addView(close);
         card.addView(head, new LinearLayout.LayoutParams(-1, dp(42)));
+        return new Sheet(dialog, card);
+    }
+
+    private void showSheet(Sheet sheet, float dimAmount) {
+        sheet.dialog.setContentView(sheet.card);
+        sheet.dialog.setCanceledOnTouchOutside(true);
+        sheet.dialog.show();
+        if (sheet.dialog.getWindow() != null) {
+            sheet.dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(0x00000000));
+            final int width = Math.min(dp(358),
+                    getResources().getDisplayMetrics().widthPixels - dp(32));
+            sheet.dialog.getWindow().setLayout(width,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            sheet.dialog.getWindow().addFlags(
+                    android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            sheet.dialog.getWindow().setDimAmount(dimAmount);
+        }
+    }
+
+    private void showFeedbackGroup(final boolean auto) {
+        if (isFinishing()) return;
+        final android.content.SharedPreferences p = getSharedPreferences(PROMO_PREFS, MODE_PRIVATE);
+        final Sheet sheet = newSheet(tr("feedback.feedback_community"), 0f);
+        final android.app.Dialog dialog = sheet.dialog;
+        final LinearLayout card = sheet.card;
 
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
@@ -6475,16 +6329,7 @@ public class MainActivity extends Activity {
             card.addView(mute, new LinearLayout.LayoutParams(-1, dp(30)));
         }
 
-        dialog.setContentView(card);
-        dialog.setCanceledOnTouchOutside(true);
-        dialog.show();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            int width = Math.min(dp(358), getResources().getDisplayMetrics().widthPixels - dp(32));
-            dialog.getWindow().setLayout(width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            dialog.getWindow().setDimAmount(0.32f);
-        }
+        showSheet(sheet, 0.32f);
         // Shown counts as seen: the point is that a new build mentions it once.
         p.edit().putInt(PROMO_SEEN_CODE, UpdateCheck.versionCode(this)).apply();
     }
@@ -6496,7 +6341,7 @@ public class MainActivity extends Activity {
             cm.setPrimaryClip(android.content.ClipData.newPlainText(labelText, text));
             return true;
         } catch (Throwable t) {
-            try { DebugSink.text("clipboard", String.valueOf(t)); } catch (Throwable spkIgnored) { Diagnostics.ignored("copyToClipboard:8198", spkIgnored); }
+            Diagnostics.log("clipboard", String.valueOf(t), "copyToClipboard:8198");
             return false;
         }
     }
@@ -6968,11 +6813,7 @@ public class MainActivity extends Activity {
         final boolean dropped = refreshEdgeFormats(true);
         saveLookIntoFrames();
         if (session != null) applyParams();
-        if (uiReady && session != null) {
-            showingOriginal = false;
-            setOriginalVisual(false);
-            renderImage();
-        }
+        if (canInteract()) leaveOriginalAndRender();
         showInAppToast(dropped || rebateClosed ? done + tr("editor.film_border_off") : done);
     }
 
@@ -7040,11 +6881,7 @@ public class MainActivity extends Activity {
 
     private void onEdgeChanged() {
         applyParams();
-        if (uiReady && session != null) {
-            showingOriginal = false;
-            setOriginalVisual(false);
-            renderImage();
-        }
+        if (canInteract()) leaveOriginalAndRender();
     }
 
     /**
@@ -7117,7 +6954,7 @@ public class MainActivity extends Activity {
                         }
                     }
                     if (thumb == null) continue;
-                    try { DebugSink.text("prefetch-timing", id + " " + ms + " ms"); } catch (Throwable spkIgnored) { Diagnostics.ignored("currentTimeMillis:8863", spkIgnored); }
+                    Diagnostics.log("prefetch-timing", id + " " + ms + " ms", "currentTimeMillis:8863");
                     UiDispatcher.post(() -> {
                         if (generation != prefetchGeneration) return;
                         filmThumbs.put(id, thumb);
@@ -7202,9 +7039,9 @@ public class MainActivity extends Activity {
                 // beside the same frame on Endura, and the paper was the only
                 // variable. A card is "this film, on the paper you are using".
                 final String targetPaper = filmTargetPrints.get(stock);
-                final String cardPaper = "ilford_multigrade_iv_rc".equals(targetPaper)
+                final String cardPaper = app.spektralab.domain.Defaults.MONO_PRINT_STOCK.equals(targetPaper)
                         ? targetPaper
-                        : (printStock == null ? "kodak_portra_endura" : printStock);
+                        : (app.spektralab.domain.Defaults.effectivePrintStock(printStock));
                 applyParams(stock, cardPaper, PREFETCH_LONG_EDGE);
                 // `live` honours preview_long_edge (800 here); `preview` is a
                 // fixed 3400 px and made every card an export-sized print.
@@ -7222,7 +7059,7 @@ public class MainActivity extends Activity {
                 if (small != full) full.recycle();
                 return small;
             } catch (Throwable t) {
-                try { DebugSink.text("prefetch", "render " + stock + ": " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("round:8968", spkIgnored); }
+                Diagnostics.log("prefetch", "render " + stock + ": " + t, "round:8968");
                 return null;
             } finally {
                 // Nothing is put back. The card left its own film on the
@@ -7519,11 +7356,7 @@ public class MainActivity extends Activity {
                 // whole set). Send on release: one JNI call per gesture, not
                 // one per hundredth of a stop.
                 applyParams();
-                if (uiReady && session != null) {
-                    showingOriginal = false;
-                    setOriginalVisual(false);
-                    renderImage();
-                }
+                if (canInteract()) leaveOriginalAndRender();
             }
         });
         // **32 dp, and the same 32 as everywhere else.** It was 44 here, which
@@ -7668,7 +7501,6 @@ public class MainActivity extends Activity {
     }
 
     private void setOpticsUnlocked(boolean unlocked) {
-        opticsUnlocked = unlocked;
         if (opticsPanel == null) return;
         // **Dimmed is not the same as disabled.** Alpha alone left every row
         // tappable: 配光, EDR, 保留胶片原色, 镜头滤镜, 预览色域, 保护基准 and the
@@ -8021,9 +7853,7 @@ public class MainActivity extends Activity {
                 + tr("import.recommended_for_available_memory_about")
                 + String.format(java.util.Locale.US, "%.1f", capPixels / 1e6) + " MP"
                 + (overscanOn ? tr("import.includes_space_for_the_film") : "") + ".";
-        showActionSheet(tr("import.choose_import_size"), budgetMessage, new String[]{
-                tr("import.full_size") + w + "×" + h, tr("import.resize_to_2") + sw + "×" + sh, tr("editor.cancel")
-        }, which -> {
+        showSizeChoice(budgetMessage, w, h, sw, sh, which -> {
             if (which == 0) {
                 importAtNativeSize = true;
                 loadImage(uri);
@@ -8032,6 +7862,15 @@ public class MainActivity extends Activity {
                 loadImage(uri);
             }
         });
+    }
+
+    /** The size-choice sheet both import paths share; 0 = full, 1 = resized. */
+    private void showSizeChoice(String message, int w, int h, int sw, int sh,
+                                java.util.function.IntConsumer onPick) {
+        showActionSheet(tr("import.choose_import_size"), message, new String[]{
+                tr("import.full_size") + w + "×" + h,
+                tr("import.resize_to_2") + sw + "×" + sh,
+                tr("editor.cancel")}, onPick);
     }
 
     /**
@@ -8060,9 +7899,7 @@ public class MainActivity extends Activity {
                 + tr("import.recommended_for_available_memory_about")
                 + String.format(java.util.Locale.US, "%.1f", capPixels / 1e6) + " MP"
                 + (overscanOn ? tr("import.includes_space_for_the_film") : "") + ".";
-        showActionSheet(tr("import.choose_import_size"), message, new String[]{
-                tr("import.full_size") + w + "×" + h, tr("import.resize_to_2") + sw + "×" + sh, tr("editor.cancel")
-        }, which -> {
+        showSizeChoice(message, w, h, sw, sh, which -> {
             if (which == 0) {
                 importAtNativeSize = true;
                 loadRawImage(uri);
@@ -8127,7 +7964,7 @@ public class MainActivity extends Activity {
                 return new int[]{bounds.outWidth, bounds.outHeight};
             }
         } catch (Throwable t) {
-            try { DebugSink.text("decode", "sniff " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("sniffImageSize:10547", spkIgnored); }
+            Diagnostics.log("decode", "sniff " + t, "sniffImageSize:10547");
         }
         return null;
     }
@@ -8164,7 +8001,7 @@ public class MainActivity extends Activity {
             try {
                 synchronized (renderMutex) { json = e.probeCanary(DeviceProbe.CANARY_NEED_BYTES); }
             } catch (Throwable t) {
-                try { DebugSink.text("canary", "threw: " + describe(t)); } catch (Throwable spkIgnored) { Diagnostics.ignored("startCanaryProbe:10584", spkIgnored); }
+                Diagnostics.log("canary", "threw: " + describe(t), "startCanaryProbe:10584");
             }
             final String result = json;
             final long budget = maxImportPixels();
@@ -8186,8 +8023,7 @@ public class MainActivity extends Activity {
             // there is nothing to ask. Build it.
             try { ensureEngine(); }
             catch (Throwable t) {
-                try { DebugSink.text("device-profile", "engine create failed: " + describe(t)); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("probeNow:10607", spkIgnored); }
+                Diagnostics.log("device-profile", "engine create failed: " + describe(t), "probeNow:10607");
             }
         }
         if (!probe.valid && engine != null) {
@@ -8195,11 +8031,9 @@ public class MainActivity extends Activity {
                 final String json = engine.deviceProfile();
                 probe = DeviceProbe.parse(json);
                 rememberDevice();
-                try { DebugSink.text("device-profile", "re-read " + probe.describe() + "\n" + json); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("deviceProfile:10616", spkIgnored); }
+                Diagnostics.log("device-profile", "re-read " + probe.describe() + "\n" + json, "deviceProfile:10616");
             } catch (Throwable t) {
-                try { DebugSink.text("device-profile", "re-read failed: " + describe(t)); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("deviceProfile:10619", spkIgnored); }
+                Diagnostics.log("device-profile", "re-read failed: " + describe(t), "deviceProfile:10619");
             }
         }
         return probe;
@@ -8224,8 +8058,7 @@ public class MainActivity extends Activity {
         try {
             getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).edit().putInt(DEBUG_SIM_MIB, mib).apply();
         } catch (Throwable spkIgnored) { Diagnostics.ignored("setDebugStorageLimitMib:10643", spkIgnored); }
-        try { DebugSink.text("debug-cap", "simulated storage range = " + mib + " MiB (0 = off)"); }
-        catch (Throwable spkIgnored) { Diagnostics.ignored("setDebugStorageLimitMib:10645", spkIgnored); }
+        Diagnostics.log("debug-cap", "simulated storage range = " + mib + " MiB (0 = off)", "setDebugStorageLimitMib:10645");
     }
 
     private int debugBandCap() {
@@ -8238,16 +8071,14 @@ public class MainActivity extends Activity {
         try {
             getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).edit().putInt(DEBUG_BAND_CAP, elements).apply();
         } catch (Throwable spkIgnored) { Diagnostics.ignored("setDebugBandCap:10657", spkIgnored); }
-        try { DebugSink.text("debug-cap", "band element cap = " + elements + " (0 = engine default 2^21)"); }
-        catch (Throwable spkIgnored) { Diagnostics.ignored("setDebugBandCap:10659", spkIgnored); }
+        Diagnostics.log("debug-cap", "band element cap = " + elements + " (0 = engine default 2^21)", "setDebugBandCap:10659");
     }
 
     private void setDebugPixelCapMp(int mp) {
         try {
             getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).edit().putInt(DEBUG_CAP_MP, mp).apply();
         } catch (Throwable spkIgnored) { Diagnostics.ignored("setDebugPixelCapMp:10665", spkIgnored); }
-        try { DebugSink.text("debug-cap", "pixel ceiling override = " + mp + " MP (0 = off)"); }
-        catch (Throwable spkIgnored) { Diagnostics.ignored("setDebugPixelCapMp:10667", spkIgnored); }
+        Diagnostics.log("debug-cap", "pixel ceiling override = " + mp + " MP (0 = off)", "setDebugPixelCapMp:10667");
     }
 
     /**
@@ -8432,12 +8263,6 @@ public class MainActivity extends Activity {
         return label.toString();
     }
 
-    private int getStatusBarHeight() {
-        int result = 0;
-        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
-        if (resourceId > 0) result = getResources().getDimensionPixelSize(resourceId);
-        return result;
-    }
 
     /**
      * Tap: the gallery, which is where phone photos and JPEGs are.
@@ -8497,20 +8322,17 @@ public class MainActivity extends Activity {
                 Probe.log("picker", "try " + intent.getAction());
                 startActivityForResult(intent, requestCode);
                 Probe.log("picker", "ok " + intent.getAction());
-                try { DebugSink.text("picker", "launched " + intent.getAction()); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("launchFirstResolvable:10931", spkIgnored); }
+                Diagnostics.log("picker", "launched " + intent.getAction(), "launchFirstResolvable:10931");
                 return true;
             } catch (android.content.ActivityNotFoundException missing) {
                 // This ROM has no handler for this action; try the next one.
                 Probe.log("picker", "missing " + intent.getAction());
-                try { DebugSink.text("picker", "unresolvable " + intent.getAction()); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("launchFirstResolvable:10937", spkIgnored); }
+                Diagnostics.log("picker", "unresolvable " + intent.getAction(), "launchFirstResolvable:10937");
             } catch (Throwable t) {
                 // A provider that vanished between the check and the launch, a
                 // SecurityException, or a picker that throws from its own
                 // onCreate. Next one.
-                try { DebugSink.text("picker", intent.getAction() + " failed: " + t); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("launchFirstResolvable:10943", spkIgnored); }
+                Diagnostics.log("picker", intent.getAction() + " failed: " + t, "launchFirstResolvable:10943");
             }
         }
         return false;
@@ -8621,7 +8443,7 @@ public class MainActivity extends Activity {
             }
         }
         if (picked.isEmpty()) {
-            try { DebugSink.text("picker", "RESULT_OK with no data"); } catch (Throwable spkIgnored) { Diagnostics.ignored("getUri:11045", spkIgnored); }
+            Diagnostics.log("picker", "RESULT_OK with no data", "getUri:11045");
             showInAppToast(tr("import.the_picker_did_not_return"));
             return;
         }
@@ -8725,7 +8547,6 @@ new ImportWorker(this).run(uri);
     // point where a decode stops being a photograph and starts being a pano.
     static final int IMPORT_LONG_EDGE = 12000;
     /** Used when the profile cannot be read at all. */
-    private static final int IMPORT_PIXEL_FALLBACK = 16490040;
 
     SpektraLabEngine ensureEngine() throws Exception {
         if (engine == null) {
@@ -8792,8 +8613,7 @@ new ImportWorker(this).run(uri);
             probe = DeviceProbe.parse(profileJson);
             rememberDevice();
             CrashTrail.markNow(this, "engine:probe " + (probe != null && probe.valid));
-            try { DebugSink.text("device-profile", probe.describe() + "\n" + engine.deviceProfile()); }
-            catch (Throwable spkIgnored) { Diagnostics.ignored("deviceProfile:11629", spkIgnored); }
+            Diagnostics.log("device-profile", probe.describe() + "\n" + engine.deviceProfile(), "deviceProfile:11629");
             // A simulated limit is a claim about a device this one is not, so
             // the canary -- which measures the *real* driver and would raise the
             // range back to 2 GiB -- is not run against it.
@@ -9014,7 +8834,7 @@ new ImportWorker(this).run(uri);
                           + " ev=" + ev + means);
             } catch (Throwable spkIgnored) { Diagnostics.ignored("getHeight:11848", spkIgnored); }
         } catch (Throwable t) {
-            try { DebugSink.text("raw-view", "export failed: " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("getHeight:11850", spkIgnored); }
+            Diagnostics.log("raw-view", "export failed: " + t, "getHeight:11850");
         } finally {
             try { SpektraLabEngine.setSourceDisplayEv(0, false); } catch (Throwable spkIgnored) { Diagnostics.ignored("getHeight:11852", spkIgnored); }
             try { SpektraLabEngine.setSourceToneCurve(null); } catch (Throwable spkIgnored) { Diagnostics.ignored("getHeight:11853", spkIgnored); }
@@ -9081,8 +8901,7 @@ new RawImportWorker(this).run(uri);
         // failure would hide the queue behind a stack of sheets; the line is
         // recorded, the queue moves on, and the summary at the end counts it.
         if (batchExportRunning) {
-            try { DebugSink.text("batch-error", title + " | " + body); }
-            catch (Throwable spkIgnored) { Diagnostics.ignored("showTextDialog:12304", spkIgnored); }
+            Diagnostics.log("batch-error", title + " | " + body, "showTextDialog:12304");
             return;
         }
         final String shownTitle = (title == null || title.isEmpty()) ? tr("import.error") : title;
@@ -9092,27 +8911,9 @@ new RawImportWorker(this).run(uri);
         // to copy anything, and it costs one write instead of sixty-four.
         if (report) reportFailure(shownTitle, shownBody);
         UiDispatcher.post(() -> {
-            final android.app.Dialog dialog = newDialog();
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setBackgroundColor(UiPalette.PAPER);
-            View cap = new View(this);
-            cap.setBackgroundColor(UiPalette.BLUE);
-            card.addView(cap, new LinearLayout.LayoutParams(-1, dp(3)));
-
-            LinearLayout head = new LinearLayout(this);
-            head.setOrientation(LinearLayout.HORIZONTAL);
-            head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            head.setPadding(dp(16), 0, dp(16), 0);
-            TextView kicker = mixedLabel(tr("import.error_details"), 8, UiPalette.BLUE);
-            kicker.setLetterSpacing(0.08f);
-            head.addView(kicker, new LinearLayout.LayoutParams(0, -2, 1f));
-            TextView close = label(tr("crash.close"), 9, UiPalette.MUTED, tfHan);
-            close.setPaintFlags(close.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            close.setPadding(dp(12), dp(14), 0, dp(14));
-            close.setOnClickListener(v -> dialog.dismiss());
-            head.addView(close);
-            card.addView(head, new LinearLayout.LayoutParams(-1, dp(42)));
+            final Sheet sheet = newSheet(tr("import.error_details"), 0.08f);
+            final android.app.Dialog dialog = sheet.dialog;
+            final LinearLayout card = sheet.card;
 
             ScrollView scroll = new ScrollView(this);
             LinearLayout bodyBox = new LinearLayout(this);
@@ -9178,33 +8979,10 @@ new RawImportWorker(this).run(uri);
             actions.addView(copy, new LinearLayout.LayoutParams(0, dp(42), 1.45f));
             card.addView(actions, new LinearLayout.LayoutParams(-1, -2));
 
-            dialog.setContentView(card);
-            dialog.setCanceledOnTouchOutside(true);
-            dialog.show();
-            if (dialog.getWindow() != null) {
-                dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-                int width = Math.min(dp(358),
-                        getResources().getDisplayMetrics().widthPixels - dp(32));
-                dialog.getWindow().setLayout(width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-                dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-                dialog.getWindow().setDimAmount(0.30f);
-            }
+            showSheet(sheet, 0.30f);
         });
     }
 
-    private int extractInt(String json, String key) {
-        int idx = json.indexOf(key);
-        if (idx < 0) return 0;
-        idx += key.length();
-        int end = json.indexOf(",", idx);
-        if (end < 0) end = json.indexOf("}", idx);
-        if (end < 0) return 0;
-        try {
-            return Integer.parseInt(json.substring(idx, end).trim());
-        } catch (Exception e) {
-            return 0;
-        }
-    }
     
     String getFileName(Uri uri) {
         String result = null;
@@ -9257,16 +9035,16 @@ new RawImportWorker(this).run(uri);
                     while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
                 }
                 if (expected > 0 && tempFile.length() != expected) {
-                    try { DebugSink.text("import", "copy short: " + tempFile.length()
-                            + " of " + expected + " for " + fileName); } catch (Throwable spkIgnored) { Diagnostics.ignored("getFilePathFromUri:12480", spkIgnored); }
+                    Diagnostics.log("import", "copy short: " + tempFile.length()
+                            + " of " + expected + " for " + fileName, "getFilePathFromUri:12480");
                     tempFile.delete();
                     return null;
                 }
-                try { DebugSink.text("import", "copied " + tempFile.length() + " -> "
-                        + tempFile.getAbsolutePath()); } catch (Throwable spkIgnored) { Diagnostics.ignored("getFilePathFromUri:12485", spkIgnored); }
+                Diagnostics.log("import", "copied " + tempFile.length() + " -> "
+                        + tempFile.getAbsolutePath(), "getFilePathFromUri:12485");
                 return tempFile.getAbsolutePath();
             } catch (Exception e) {
-                try { DebugSink.text("import", "copy failed: " + e); } catch (Throwable spkIgnored) { Diagnostics.ignored("getFilePathFromUri:12488", spkIgnored); }
+                Diagnostics.log("import", "copy failed: " + e, "getFilePathFromUri:12488");
                 return null;
             }
         } else if (uri.getScheme().equals("file")) {
@@ -9285,70 +9063,10 @@ new RawImportWorker(this).run(uri);
      * sideways "at random".
      */
     /** The TIFF/EXIF orientation of a file on disk (raw containers included). */
-    private int orientationOfPath(String path) {
-        int fromPlatform = -1;
-        try {
-            fromPlatform = new android.media.ExifInterface(path).getAttributeInt(
-                    android.media.ExifInterface.TAG_ORIENTATION,
-                    android.media.ExifInterface.ORIENTATION_NORMAL);
-        } catch (Throwable t) {
-            try { DebugSink.text("exif", "path: " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("orientationOfPath:12514", spkIgnored); }
-        }
-        if (fromPlatform > 0) return fromPlatform;
-        // ExifInterface does not open every raw container: RW2 writes 0x55
-        // where TIFF writes 42, and the platform reader refuses it outright on
-        // some builds. IFD0's tag 0x0112 is four bytes away from a header we
-        // can read ourselves.
-        return tiffOrientation(path);
-    }
 
     /** TAG_ORIENTATION out of a TIFF-style container, magic 42 or Panasonic's 0x55. */
-    private int tiffOrientation(String path) {
-        java.io.RandomAccessFile file = null;
-        try {
-            file = new java.io.RandomAccessFile(path, "r");
-            if (file.length() < 16) return -1;
-            final byte[] head = new byte[8];
-            file.readFully(head);
-            final boolean little = head[0] == 0x49 && head[1] == 0x49;
-            final int magic = shortAt(head, 2, little);
-            if (magic != 42 && magic != 0x55) return -1;
-            final long ifd = longAt(head, 4, little);
-            if (ifd <= 0 || ifd > file.length() - 2) return -1;
-            file.seek(ifd);
-            final byte[] count = new byte[2];
-            file.readFully(count);
-            final int entries = shortAt(count, 0, little);
-            if (entries <= 0 || entries > 512) return -1;
-            final byte[] table = new byte[entries * 12];
-            file.readFully(table);
-            for (int i = 0; i < entries; ++i) {
-                final int base = i * 12;
-                if (shortAt(table, base, little) != 0x0112) continue;      // Orientation
-                if (shortAt(table, base + 2, little) != 3) continue;       // SHORT
-                return shortAt(table, base + 8, little);
-            }
-        } catch (Throwable t) {
-            return -1;
-        } finally {
-            if (file != null) try { file.close(); } catch (Throwable spkIgnored) { Diagnostics.ignored("shortAt:12553", spkIgnored); }
-        }
-        return -1;
-    }
 
-    private static int shortAt(byte[] b, int at, boolean little) {
-        final int a = b[at] & 0xFF, c = b[at + 1] & 0xFF;
-        return little ? (c << 8 | a) : (a << 8 | c);
-    }
 
-    private static long longAt(byte[] b, int at, boolean little) {
-        long v = 0;
-        for (int i = 0; i < 4; ++i) {
-            final int idx = little ? at + 3 - i : at + i;
-            v = (v << 8) | (b[idx] & 0xFF);
-        }
-        return v;
-    }
 
     private int readOrientation(Uri uri) {
         try (InputStream in = openUri(uri)) {
@@ -9386,7 +9104,7 @@ new RawImportWorker(this).run(uri);
             try (InputStream head = openUri(uri)) {
                 if (head != null) BitmapFactory.decodeStream(head, null, bounds);
             } catch (Throwable t) {
-                try { DebugSink.text("decode", "sniff " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("decodeImport:12608", spkIgnored); }
+                Diagnostics.log("decode", "sniff " + t, "decodeImport:12608");
             }
             if (bounds.outWidth > 0 && bounds.outHeight > 0) {
                 int sample = 1;
@@ -9397,17 +9115,15 @@ new RawImportWorker(this).run(uri);
                 try (InputStream stream = openUri(uri)) {
                     Bitmap decoded = BitmapFactory.decodeStream(stream, null, opts);
                     if (decoded != null) return decoded;
-                    try { DebugSink.text("decode", "null at sample " + sample); }
-                    catch (Throwable spkIgnored) { Diagnostics.ignored("decodeImport:12620", spkIgnored); }
+                    Diagnostics.log("decode", "null at sample " + sample, "decodeImport:12620");
                 } catch (Throwable t) {
-                    try { DebugSink.text("decode", "stream " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("decodeImport:12622", spkIgnored); }
+                    Diagnostics.log("decode", "stream " + t, "decodeImport:12622");
                 }
             } else {
-                try { DebugSink.text("decode", "no bounds " + bounds.outWidth + "x" + bounds.outHeight); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("decodeImport:12626", spkIgnored); }
+                Diagnostics.log("decode", "no bounds " + bounds.outWidth + "x" + bounds.outHeight, "decodeImport:12626");
             }
         } catch (Throwable t) {
-            try { DebugSink.text("decode", "outer " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("decodeImport:12629", spkIgnored); }
+            Diagnostics.log("decode", "outer " + t, "decodeImport:12629");
         }
         return decodeViaImageDecoder(uri, capPixels, edgeCap);
     }
@@ -9438,11 +9154,11 @@ new RawImportWorker(this).run(uri);
                         }
                         decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
                     });
-            try { DebugSink.text("decode", "imagedecoder " + decoded.getWidth() + "x"
-                    + decoded.getHeight()); } catch (Throwable spkIgnored) { Diagnostics.ignored("max:12661", spkIgnored); }
+            Diagnostics.log("decode", "imagedecoder " + decoded.getWidth() + "x"
+                    + decoded.getHeight(), "max:12661");
             return decoded;
         } catch (Throwable t) {
-            try { DebugSink.text("decode", "imagedecoder " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("max:12664", spkIgnored); }
+            Diagnostics.log("decode", "imagedecoder " + t, "max:12664");
             return null;
         }
     }
@@ -9453,7 +9169,7 @@ new RawImportWorker(this).run(uri);
      * process die on the Honor report instead of saying 内存不足.
      */
     String describeImportFailure(Throwable t) {
-        try { DebugSink.text("import-error", String.valueOf(t)); } catch (Throwable spkIgnored) { Diagnostics.ignored("describeImportFailure:12675", spkIgnored); }
+        Diagnostics.log("import-error", String.valueOf(t), "describeImportFailure:12675");
         if (t instanceof OutOfMemoryError) {
             // **Never tell the user to bring a smaller picture.** That turns our
             // own allocation into their composition problem, and the frame that
@@ -9469,8 +9185,8 @@ new RawImportWorker(this).run(uri);
 
     Bitmap applyExifRotation(Uri uri, Bitmap bitmap) {
         final int orientation = readOrientation(uri);
-        try { DebugSink.text("exif", "orientation=" + orientation + " bitmap="
-                + bitmap.getWidth() + "x" + bitmap.getHeight()); } catch (Throwable spkIgnored) { Diagnostics.ignored("readOrientation:12692", spkIgnored); }
+        Diagnostics.log("exif", "orientation=" + orientation + " bitmap="
+                + bitmap.getWidth() + "x" + bitmap.getHeight(), "readOrientation:12692");
         return rotateForOrientation(bitmap, orientation);
     }
 
@@ -9639,7 +9355,7 @@ new RawImportWorker(this).run(uri);
     }
 
     void applyParams(String stock, int longEdge) {
-        applyParams(stock, printStock == null ? "kodak_portra_endura" : printStock, longEdge);
+        applyParams(stock, app.spektralab.domain.Defaults.effectivePrintStock(printStock), longEdge);
     }
 
     /**
@@ -9711,11 +9427,7 @@ new RawImportWorker(this).run(uri);
         undoLast = previous;
         refreshUndoPill();
         applyParams();
-        if (uiReady && session != null) {
-            showingOriginal = false;
-            setOriginalVisual(false);
-            renderImage();
-        }
+        if (canInteract()) leaveOriginalAndRender();
     }
 
     /** A new photograph starts its own history. */
@@ -9928,7 +9640,7 @@ new RawImportWorker(this).run(uri);
         // calibrated EDR tone map" -- and the frame never opens at all. The
         // switch stays where the user put it; it simply cannot apply here.
         kv.put("extended_dynamic_range",
-                b(edrOn > 0.5f && !"ilford_multigrade_iv_rc".equals(paper)));
+                b(edrOn > 0.5f && !app.spektralab.domain.Defaults.MONO_PRINT_STOCK.equals(paper)));
         kv.put("camera_filter", q(cameraFilter));
         kv.put("scene_latitude_active", b(sceneLatitudeActive()));
         kv.put("scene_latitude_norm", q(sceneNorm));
@@ -10044,7 +9756,7 @@ new RawImportWorker(this).run(uri);
         // parameter tree and then rendered with the old `pb_`: the date's size,
         // corner, style and exposure did nothing until the film was re-picked.
         // Sending it costs one profile read; not sending it costs the control.
-        applyParams(stock, printStock == null ? "kodak_portra_endura" : printStock, longEdge);
+        applyParams(stock, app.spektralab.domain.Defaults.effectivePrintStock(printStock), longEdge);
     }
 
     /**
@@ -10164,7 +9876,7 @@ new RawImportWorker(this).run(uri);
         final long now = System.currentTimeMillis();
         if (now - lastLiveLog < 1000) return;
         lastLiveLog = now;
-        try { DebugSink.text("live", what); } catch (Throwable spkIgnored) { Diagnostics.ignored("currentTimeMillis:13411", spkIgnored); }
+        Diagnostics.log("live", what, "currentTimeMillis:13411");
     }
 
     private void requestLivePreview() {
@@ -10275,7 +9987,7 @@ new RawImportWorker(this).run(uri);
         final int gen = liveGeneration.get();
         final int fullGen = fullGeneration.get();
         final int frame = currentFrame;
-        final String paper = printStock == null ? "kodak_portra_endura" : printStock;
+        final String paper = app.spektralab.domain.Defaults.effectivePrintStock(printStock);
         Bitmap bmp = null;
         long liveHash = 0;
         int[] liveBins = null;
@@ -10320,13 +10032,12 @@ new RawImportWorker(this).run(uri);
                 // array that already exists, never a Bitmap).
                 if (histogram != null && (++liveHistCounter % 3) == 0)
                     liveBins = HistogramView.computeBins(livePixels, w, h);
-                try { DebugSink.text("live", "frame " + w + "x" + h + " "
+                Diagnostics.log("live", "frame " + w + "x" + h + " "
                         + (System.currentTimeMillis() - liveStart) + " ms "
-                        + Long.toHexString(liveHash)); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("copyArgbRange:13562", spkIgnored); }
+                        + Long.toHexString(liveHash), "copyArgbRange:13562");
             } catch (Throwable t) {
                 try { s.renderEnd(); } catch (Throwable spkIgnored) { Diagnostics.ignored("copyArgbRange:13564", spkIgnored); }
-                try { DebugSink.text("live", "fail " + describe(t)); } catch (Throwable spkIgnored) { Diagnostics.ignored("copyArgbRange:13565", spkIgnored); }
+                Diagnostics.log("live", "fail " + describe(t), "copyArgbRange:13565");
                 return;
             }
         }
@@ -10359,8 +10070,8 @@ new RawImportWorker(this).run(uri);
             // The other half of the comparison: `frame` says what was produced,
             // this says what the canvas was handed. If they disagree the loss is
             // between the two, not in the render.
-            try { DebugSink.text("live", "canvas " + out.getWidth() + "x" + out.getHeight()
-                    + " " + Long.toHexString(hash)); } catch (Throwable spkIgnored) { Diagnostics.ignored("copyArgbRange:13599", spkIgnored); }
+            Diagnostics.log("live", "canvas " + out.getWidth() + "x" + out.getHeight()
+                    + " " + Long.toHexString(hash), "copyArgbRange:13599");
         });
     }
 
@@ -10392,9 +10103,9 @@ new RawImportWorker(this).run(uri);
                 // would hand the GPU memory that is being freed.
                 long freed;
                 synchronized (renderMutex) { freed = engine.trimPool(); }
-                try { DebugSink.text("pool-trim",
+                Diagnostics.log("pool-trim",
                         "after render: total was " + (total >> 20) + " MB, freed "
-                                + (freed >> 20) + " MB"); } catch (Throwable spkIgnored) { Diagnostics.ignored("toString:13633", spkIgnored); }
+                                + (freed >> 20) + " MB", "toString:13633");
             }
         } catch (Throwable spkIgnored) { Diagnostics.ignored("toString:13635", spkIgnored); }
     }
@@ -10532,6 +10243,23 @@ new RenderWorker(this).run(longEdge);
     volatile boolean batchExportRunning = false;
     volatile boolean batchExportAbort = false;
 
+    /** True when the canvas has a live session the UI may act on. */
+    private boolean canInteract() { return uiReady && session != null; }
+
+    /** Leave the original view and redraw the current grade. */
+    private void leaveOriginalAndRender() {
+        showingOriginal = false;
+        setOriginalVisual(false);
+        renderImage();
+    }
+
+    /** Close the preview session under the render lock; nothing to do when absent. */
+    void closeSessionSafely() {
+        synchronized (renderMutex) {
+            if (session != null) { session.close(); session = null; }
+        }
+    }
+
     /** Take the grant, or keep a copy that survives a restart. Null on failure. */
     Uri persistOrCopy(Uri uri) {
         try {
@@ -10540,18 +10268,6 @@ new RenderWorker(this).run(longEdge);
             return uri;
         } catch (Throwable spkIgnored) { Diagnostics.ignored("persistOrCopy:14160", spkIgnored); }
         return privateCopy(uri);
-    }
-
-    private static boolean isRawName(String name) {
-        final String lower = name == null ? "" : name.toLowerCase(java.util.Locale.US);
-        return lower.endsWith(".rw2") || lower.endsWith(".raw")
-                || lower.endsWith(".dng") || lower.endsWith(".arw")
-                || lower.endsWith(".nef") || lower.endsWith(".cr2")
-                || lower.endsWith(".cr3") || lower.endsWith(".orf")
-                || lower.endsWith(".raf") || lower.endsWith(".pef")
-                || lower.endsWith(".srw") || lower.endsWith(".x3f")
-                || lower.endsWith(".rwl") || lower.endsWith(".3fr")
-                || lower.endsWith(".mrw") || lower.endsWith(".erf");
     }
 
     private Bitmap systemThumb(Uri uri) {
@@ -10572,7 +10288,7 @@ new RenderWorker(this).run(longEdge);
         }
         String name = getFileName(uri);
         if (name == null || name.isEmpty()) name = "photo";
-        final Frame frame = new Frame(uri, isRawName(name), name);
+        final Frame frame = new Frame(uri, app.spektralab.domain.RawFormats.isRaw(name), name);
         frame.look = defaultLook();
         frame.thumb = systemThumb(uri);
         frames.add(frame);
@@ -10595,7 +10311,7 @@ new BatchImportWorker(this).run(uris);
         UiDispatcher.post(() -> {
             try { r.run(); }
             catch (Throwable t) {
-                try { DebugSink.text("uiWait", describe(t)); } catch (Throwable spkIgnored) { Diagnostics.ignored("CountDownLatch:14241", spkIgnored); }
+                Diagnostics.log("uiWait", describe(t), "CountDownLatch:14241");
             } finally { latch.countDown(); }
         });
         try { latch.await(ms, java.util.concurrent.TimeUnit.MILLISECONDS); }
@@ -10673,7 +10389,7 @@ new BatchExportWorker(this).run(format, tier);
             DebugSink.text("vk-log", "bytes=" + len + " from=" + start + "\n"
                     + new String(buf, java.nio.charset.StandardCharsets.UTF_8));
         } catch (Throwable t) {
-            try { DebugSink.text("vk-log", "read failed: " + t); } catch (Throwable spkIgnored) { Diagnostics.ignored("uploadVkLog:14466", spkIgnored); }
+            Diagnostics.log("vk-log", "read failed: " + t, "uploadVkLog:14466");
         }
     }
 
@@ -10720,9 +10436,6 @@ new BatchExportWorker(this).run(format, tier);
         } catch (Throwable ignored) { return ""; }
     }
 
-    private static void putExif(android.media.ExifInterface out, String tag, String value) {
-        if (value != null && !value.trim().isEmpty() && !"null".equals(value)) out.setAttribute(tag, value);
-    }
 
     /** {make, model, datetime, shutter, aperture, iso, focal} for a RAW frame. */
     String[] sourceExifForExport() {

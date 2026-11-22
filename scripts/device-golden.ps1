@@ -3,6 +3,7 @@
 param(
     [Parameter(Mandatory)][string]$Apk,
     [Parameter(Mandatory)][string]$Serial,
+    [string]$BuildHome = "$env:LOCALAPPDATA\SpektraLabBuild",
     [string]$Image = '/sdcard/Download/spk_test.png',
     [string]$Package = 'app.spektralab.test',
     [string]$Activity = 'app.spektralab.test/app.spektralab.MainActivity',
@@ -11,39 +12,35 @@ param(
     [int]$TimeoutSeconds = 120
 )
 $ErrorActionPreference = 'Stop'
-$adb = "$env:LOCALAPPDATA\SpektraLabBuild\sdk\platform-tools\adb.exe"
-if (!(Test-Path $adb)) { throw "adb not found: $adb" }
-if (!(Test-Path $Apk)) { throw "APK not found: $Apk" }
+. (Join-Path $PSScriptRoot 'device-common.ps1')
 
-function Adb([string[]]$arguments) { & $adb -s $Serial @arguments }
+Test-DeviceInputs -Apk $Apk -Serial $Serial -RequireSerial
+Resolve-Adb -BuildHome $BuildHome -Serial $Serial
 
-Adb @('install', '-r', $Apk) | Out-Host
-if ($LASTEXITCODE -ne 0) { throw 'adb install failed' }
+Install-TestApk $Apk
 # The test image is pushed into shared storage; grant the test package access
 # so a file:// ACTION_VIEW can actually be opened on API 33+.
-Adb @('shell', 'pm', 'grant', $Package, 'android.permission.READ_MEDIA_IMAGES')
+Invoke-Adb @('shell', 'pm', 'grant', $Package, 'android.permission.READ_MEDIA_IMAGES')
 
 $results = @()
 foreach ($band in $Bands) {
-    Adb @('shell', 'am', 'force-stop', $Package)
+    Stop-App $Package
     Start-Sleep -Seconds 2
-    Adb @('logcat', '-c')
-    $intent = @('shell', 'am', 'start',
-        '-a', 'android.intent.action.VIEW',
+    Reset-Logcat
+    $intent = @('-a', 'android.intent.action.VIEW',
         '-d', "file://$Image",
         '-t', 'image/png',
         '-n', $Activity,
         '--ei', 'spk_band_rows', "$band",
         '--ez', 'spk_deterministic', 'true',
         '--ez', 'spk_auto_film', 'true')
-    Adb $intent | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw "launch failed for band=$band" }
+    Start-App $intent -ErrorMessage "launch failed for band=$band"
 
     $hash = $null
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline -and !$hash) {
         Start-Sleep -Seconds 2
-        $line = Adb @('logcat', '-d', '-s', 'SpektraLabHash:I') |
+        $line = Invoke-Adb @('logcat', '-d', '-s', 'SpektraLabHash:I') |
                 Select-String 'SpektraLabHash' | Select-Object -Last 1
         if ($line -and $line.Line -match 'hash=([0-9a-f]+)') { $hash = $Matches[1] }
     }

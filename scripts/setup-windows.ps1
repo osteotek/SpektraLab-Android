@@ -6,6 +6,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
+. (Join-Path $PSScriptRoot 'common.ps1')
 
 function Get-Archive($Name, $Url, $Marker, $Destination = $BuildHome) {
     if (Test-Path (Join-Path $Destination $Marker)) { return }
@@ -21,7 +22,7 @@ function Get-Archive($Name, $Url, $Marker, $Destination = $BuildHome) {
 
 if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'This setup uses Windows x64 tools.' }
 New-Item -ItemType Directory -Force $BuildHome | Out-Null
-$BuildHome = (Resolve-Path $BuildHome).Path
+$BuildHome = Resolve-BuildHome $BuildHome
 Get-Archive jdk.zip 'https://aka.ms/download-jdk/microsoft-jdk-17-windows-x64.zip' 'jdk-17*\bin\javac.exe'
 Get-Archive cmake.zip 'https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-windows-x86_64.zip' 'cmake-3.31.8-windows-x86_64\bin\cmake.exe'
 Get-Archive ninja.zip 'https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-win.zip' 'ninja.exe'
@@ -51,7 +52,7 @@ if (!$head) {
 } elseif ($head -ne $revision) {
     throw "Unexpected commit in $engine ($head); expected $revision."
 }
-$env:JAVA_HOME = (Get-ChildItem "$BuildHome\jdk-17*" -Directory | Sort-Object Name -Descending | Select-Object -First 1).FullName
+$env:JAVA_HOME = Get-Jdk17 $BuildHome
 $sdk = Join-Path $BuildHome sdk
 New-Item -ItemType Directory -Force $sdk | Out-Null
 $manager = Join-Path $BuildHome 'android-tools\cmdline-tools\bin\sdkmanager.bat'

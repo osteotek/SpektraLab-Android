@@ -8,12 +8,16 @@
 
 Runs: locale catalog validation, `version.json` consistency, prebuilt payload
 hashes, packaging unit tests, checker unit tests, full `javac` compile, the
-JVM-runnable `PureLogicTest`, and compile checks for the two C++ test files.
-With `-EngineRoot <upstream checkout>` it also verifies the engine patch and
-compiles the JNI against the published header (using a shim for the APIs the
-patch does not declare).
+JVM-runnable `PureLogicTest`, NDK cross-compile checks and host-C++20 compile
++ **run** steps for the two C++ test files. On a Windows host with no native
+C++ compiler the run steps print `SKIP` while the compile checks still run;
+CI (ubuntu, g++ available) executes the assertions.
 
-CI runs the same checks in `.github/workflows/verify.yml`.
+CI uses the same script with explicit paths:
+`pwsh ./scripts/verify.ps1 -JavaHome ... -AndroidSdkRoot ... -NdkPath ...`.
+`-SkipNative` omits the C++ checks; `-EngineRoot <upstream checkout>` adds the
+engine-patch check and a shimmed JNI compile, which are diagnostics by default
+and hard failures with `-StrictEngine` (see `source-build.md`).
 
 ## 2. What each test covers
 
@@ -24,8 +28,8 @@ CI runs the same checks in `.github/workflows/verify.yml`.
 | `app/build/check-no-silent-catch.py` | runnable Python | no silent `catch (Throwable/Exception)` blocks in app code |
 | `app/src/test/.../PureLogicTest.java` | runnable JVM | budget maths, JSON quoting, failure classification |
 | `app/src/test/.../DomainTest.java` | runnable JVM | import planning, render use-case call order, engine/session fakes |
-| `native-tests/view_adjust_test.cpp` | compile + device/Linux run | neutral pass, monotone curves, levels |
-| `native-tests/export_metadata_test.cpp` | compile + device/Linux run | EXIF round trip |
+| `native-tests/view_adjust_test.cpp` | NDK compile + host run | neutral pass, monotone curves, levels |
+| `native-tests/export_metadata_test.cpp` | NDK compile + host run | EXIF round trip |
 
 ## 3. Device smoke test (opt-in)
 

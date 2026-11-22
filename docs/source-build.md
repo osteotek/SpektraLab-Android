@@ -38,7 +38,16 @@ python app/build/check-patch.py <upstream-engine-checkout>
 The script parses the patch, resolves every added `#include`, and compares the
 `spk_*` calls in `app/src/main/cpp/*.cpp` against the patched public header.
 It exits non-zero with an itemised list when the source tree cannot build the
-JNI. CI runs it in report-only mode so the gap stays visible.
+JNI.
+
+`scripts/verify.ps1 -EngineRoot <checkout>` runs that check together with the
+shimmed JNI compile. Both are **diagnostic by default**: a failure prints
+`WARN  ... (known blocker; see docs/source-build.md)` and does not fail the
+offline suite; CI relies on this so the gap stays visible without blocking
+Java/UI work. Pass `-StrictEngine` to promote both failures to hard `FAIL`s,
+which is the explicit gate to use when changing native code. The final
+`All offline checks passed.` line is still printed with a `WARN` summary when
+an engine check was skipped this way.
 
 ## What to do about it
 

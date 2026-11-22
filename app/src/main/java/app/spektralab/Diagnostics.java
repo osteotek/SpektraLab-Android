@@ -9,6 +9,12 @@ public final class Diagnostics {
         catch (Throwable ignored) { }
     }
 
+    /** Best-effort diagnostic text; a failed write never interrupts the caller. */
+    public static void log(String tag, String message, String where) {
+        try { DebugSink.text(tag, message); }
+        catch (Throwable t) { ignored(where, t); }
+    }
+
     static String brief(Throwable t) {
         if (t == null) return "null";
         final StringBuilder b = new StringBuilder();

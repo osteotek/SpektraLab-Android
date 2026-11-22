@@ -8,8 +8,7 @@ import android.widget.TextView;
 
 /** Stateless scaffolds for the Format, Border and Compose panels. */
 public final class SimplePanels {
-    public interface Host {
-        String text(String key);
+    public interface Host extends PanelHost {
         TextView label(String text, float sp, int color, Typeface typeface);
         LinearLayout sectionHead(String title, Runnable reset);
         void onReset();

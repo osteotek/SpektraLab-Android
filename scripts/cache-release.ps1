@@ -9,10 +9,12 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 
-$root = (Resolve-Path "$PSScriptRoot\..").Path
-$version = Get-Content -LiteralPath "$root\version.json" -Raw | ConvertFrom-Json
+. (Join-Path $PSScriptRoot 'common.ps1')
+$root = Resolve-RepoRoot
+$version = Read-Version $root
 New-Item -ItemType Directory -Path $BuildHome -Force | Out-Null
-$target = Join-Path (Resolve-Path $BuildHome).Path $version.releaseApk
+$BuildHome = Resolve-BuildHome $BuildHome
+$target = Join-Path $BuildHome $version.releaseApk
 
 function Test-Cache($path) {
     if (!(Test-Path -LiteralPath $path)) { return $false }

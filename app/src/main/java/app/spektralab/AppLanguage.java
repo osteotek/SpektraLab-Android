@@ -19,7 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /** The editor's language, independent of the system language and engine settings. */
-final class AppLanguage {
+public final class AppLanguage {
     private static final String ENGLISH = "en";
     private static final String ASSET_DIR = "locales";
     private static final String PREFS = "ui";
@@ -70,7 +70,7 @@ final class AppLanguage {
                 : new ArrayList<>(catalogs.values());
     }
 
-    static String tr(String key) {
+    public static String tr(String key) {
         final Language language = selected;
         final String value = language.strings.get(key);
         if (value != null) return value;

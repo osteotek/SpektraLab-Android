@@ -10,8 +10,7 @@ import java.util.List;
 
 /** The Optics panel: a state-free scaffold whose pages are supplied by the host. */
 public final class ViewPanel {
-    public interface Host {
-        String text(String key);
+    public interface Host extends PanelHost {
         TextView label(String text, float sp, int color, Typeface typeface);
         LinearLayout sectionHead(String title, Runnable reset);
         void onCategory(int page);

@@ -28,8 +28,12 @@ shift 3
 
 # version.json is the single source of truth. A release must be announced with
 # the identity it was built with; a typo here used to ship a mismatched update.json.
-EXPECTED_CODE=$(python3 -c 'import json; print(json.load(open("version.json", encoding="utf-8"))["versionCode"])')
-EXPECTED_NAME=$(python3 -c 'import json; print(json.load(open("version.json", encoding="utf-8"))["versionName"])')
+IDENTITY=$(python3 app/build/check-version.py --identity) || {
+  echo "could not read the release identity from version.json" >&2
+  exit 2
+}
+EXPECTED_CODE=${IDENTITY%% *}
+EXPECTED_NAME=${IDENTITY#* }
 if [ "$CODE" != "$EXPECTED_CODE" ] || [ "$NAME" != "$EXPECTED_NAME" ]; then
   echo "version.json says $EXPECTED_NAME ($EXPECTED_CODE), refusing to announce $NAME ($CODE)" >&2
   exit 2

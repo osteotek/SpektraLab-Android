@@ -7,19 +7,6 @@ import org.json.JSONObject;
 public final class PresetStore {
     private PresetStore() {}
 
-static org.json.JSONArray load(android.content.Context c) {
-        final String raw = c.getSharedPreferences("presets", android.content.Context.MODE_PRIVATE).getString("list", "[]");
-        try {
-            return new org.json.JSONArray(raw);
-        } catch (Throwable t) {
-            return new org.json.JSONArray();
-        }
-    }
-
-    static void save(android.content.Context c, org.json.JSONArray list) {
-        c.getSharedPreferences("presets", android.content.Context.MODE_PRIVATE).edit().putString("list", list.toString()).apply();
-    }
-
 /**
      * The keys a share may leave out when they hold the engine's default.
      *

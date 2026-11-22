@@ -31,6 +31,9 @@ class CheckerTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def copy_checker(self, name):
+        # checkers import app/build/check_common.py; the fixture needs it too.
+        shutil.copyfile(CHECKERS / 'check_common.py',
+                        self.root / 'app/build' / 'check_common.py')
         src = CHECKERS / name
         dst = self.root / 'app/build' / name
         shutil.copyfile(src, dst)
@@ -72,6 +75,22 @@ class CheckerTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn('versionCode', result.stdout)
 
+    def test_version_checker_rejects_a_hardcoded_release_apk_name(self):
+        script = self.copy_checker('check-version.py')
+        self.fixture_version()
+        (self.root / 'app/src/main/AndroidManifest.xml').write_text(
+            'android:versionCode="385"\nandroid:versionName="1.6.2m">\n', encoding='utf-8')
+        (self.root / 'update.json').write_text(json.dumps({
+            'latest_version_code': 385, 'latest_version_name': '1.6.2m'}), encoding='utf-8')
+        (self.root / 'README.md').write_text('`1.6.2m (385)`', encoding='utf-8')
+        # The script is otherwise correct: it must still fail on the baked-in name.
+        (self.root / 'scripts/build-windows.ps1').write_text(
+            '$version = Get-Content version.json | ConvertFrom-Json\n'
+            "$apk = 'SpektraLab-1.6.2m-arm64-v8a.apk'\n", encoding='utf-8')
+        result = self.run_checker(script)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('hardcoded release APK name', result.stdout)
+
     def test_prebuilt_checker_detects_a_corrupted_library(self):
         script = self.copy_checker('check-prebuilt.py')
         self.fixture_version(sha='0' * 64)
@@ -85,14 +104,14 @@ class CheckerTest(unittest.TestCase):
         elf[4] = 2
         elf[18:20] = (0xB7).to_bytes(2, 'little')
         (self.root / 'app/prebuilt/arm64-v8a/libengine.so').write_bytes(elf)
-        good = self.run_checker(script)
-        self.assertEqual(good.returncode, 1)  # hash mismatch is expected here
+        mismatch = self.run_checker(script)
+        self.assertEqual(mismatch.returncode, 1)  # hash mismatch is expected here
         (self.root / 'app/prebuilt/sha256.json').write_text(json.dumps({
             'apk': '0' * 64,
             'libs': {'libengine.so': __import__('hashlib').sha256(elf).hexdigest()}}),
             encoding='utf-8')
-        good = self.run_checker(script)
-        self.assertEqual(good.returncode, 0, good.stdout)
+        fixed = self.run_checker(script)
+        self.assertEqual(fixed.returncode, 0, fixed.stdout)
 
     def test_prebuilt_checker_rejects_a_non_arm64_binary(self):
         script = self.copy_checker('check-prebuilt.py')

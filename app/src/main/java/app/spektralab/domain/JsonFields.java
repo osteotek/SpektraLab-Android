@@ -4,18 +4,6 @@ package app.spektralab.domain;
 public final class JsonFields {
     private JsonFields() {}
 
-    public static int firstInt(String json, String key) {
-        if (json == null) return -1;
-        final String needle = "\"" + key + "\":";
-        final int at = json.indexOf(needle);
-        if (at < 0) return -1;
-        int i = skipSpace(json, at + needle.length());
-        final int start = i;
-        while (i < json.length() && (json.charAt(i) == '-' || Character.isDigit(json.charAt(i)))) ++i;
-        try { return Integer.parseInt(json.substring(start, i)); }
-        catch (Throwable t) { return -1; }
-    }
-
     public static double firstNumber(String json, String key) {
         if (json == null) return Double.NaN;
         final String needle = "\"" + key + "\":";

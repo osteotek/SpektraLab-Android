@@ -4,11 +4,16 @@
 A swallowed exception is how this app used to lose whole failure classes.
 Every catch must at least log through Diagnostics.ignored() or DebugSink.
 """
-from pathlib import Path
+import os
 import re
 import sys
 
-ROOT = Path(__file__).resolve().parents[2]
+# The embedded Windows Python does not add the script's directory to sys.path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_common import repo_root, report
+
+
+ROOT = repo_root()
 PATTERN = re.compile(r'catch\s*\(\s*(?:Throwable|Exception)\s+\w+\s*\)\s*\{\s*\}')
 # These classes swallow only failures of the logging/reporting path itself;
 # logging the failure there would recurse.
@@ -30,13 +35,11 @@ def main():
         for match in PATTERN.finditer(text):
             line = text.count('\n', 0, match.start()) + 1
             problems.append(f'{path.relative_to(ROOT).as_posix()}:{line}')
-    if problems:
-        print('check-no-silent-catch: ' + str(len(problems)) + ' silent catch block(s):')
-        for entry in problems[:40]:
-            print('  ' + entry)
-        return 1
-    print('check-no-silent-catch: every catch block does something')
-    return 0
+    return report(
+        f'check-no-silent-catch: {len(problems)} silent catch block(s):',
+        problems[:40],
+        'check-no-silent-catch: every catch block does something',
+        prefix='  ')
 
 
 if __name__ == '__main__':

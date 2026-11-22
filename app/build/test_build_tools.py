@@ -76,5 +76,40 @@ class PackagingTest(unittest.TestCase):
                 self.assertEqual(z.read('classes.dex'), b'dex' * 100)
 
 
+    def test_pack_drop_prefix_and_locale_injection(self):
+        """The Termux build-apk.sh path uses these options instead of its old inline ZIP code."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            stage = root / 'stage'
+            (stage / 'dex').mkdir(parents=True)
+            (stage / 'lib/arm64-v8a').mkdir(parents=True)
+            (stage / 'dex/classes.dex').write_bytes(b'dex' * 10)
+            (stage / 'lib/arm64-v8a/libengine.so').write_bytes(b'so' * 10)
+            locales = root / 'locales'
+            locales.mkdir()
+            (locales / 'en.json').write_text('{}', encoding='utf-8')
+            src = stage / 'resources.apk'
+            with zipfile.ZipFile(src, 'w') as z:
+                z.writestr('classes.dex', b'stub')
+                z.writestr('assets/resources/DI/huge.cube', b'x' * 100)
+                z.writestr('assets/locales/en.json', b'stale')
+                z.writestr('assets/resources/a.bin', b'a' * 100)
+            out = stage / 'out.apk'
+            apk_contents.pack(
+                src, stage,
+                drop_prefixes=['classes.dex', 'assets/locales/', 'assets/resources/DI/'],
+                inject_locales=locales, output=out)
+            with zipfile.ZipFile(out) as z:
+                names = z.namelist()
+                self.assertNotIn('assets/resources/DI/huge.cube', names)
+                self.assertEqual(z.read('assets/locales/en.json'), b'{}')
+                self.assertEqual(z.read('classes.dex'), b'dex' * 10)
+                self.assertIn('lib/arm64-v8a/libengine.so', names)
+                for name in ('classes.dex', 'assets/locales/en.json',
+                             'lib/arm64-v8a/libengine.so'):
+                    self.assertEqual(z.getinfo(name).compress_type,
+                                     zipfile.ZIP_DEFLATED)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

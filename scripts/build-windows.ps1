@@ -13,15 +13,19 @@ param(
     [ValidateRange(1, 64)][int]$Jobs = 8
 )
 $ErrorActionPreference = 'Stop'
+# Every native tool below (javac, jar, d8, aapt2, apksigner, readelf via Python,
+# cmake, git) is governed by this preference plus the Stop action preference.
+# Do not add ad-hoc $LASTEXITCODE checks: a non-zero exit already throws.
 $PSNativeCommandUseErrorActionPreference = $true
+. (Join-Path $PSScriptRoot 'common.ps1')
 
-$root = (Resolve-Path "$PSScriptRoot\..").Path
+$root = Resolve-RepoRoot
 if (!$OutputDirectory) { $OutputDirectory = "$root\app\build" }
 if (!(Test-Path "$BuildHome\sdk\build-tools\36.0.0\aapt2.exe")) {
     throw 'Run scripts/setup-windows.ps1 first.'
 }
-$BuildHome = (Resolve-Path $BuildHome).Path
-$ndk = "$BuildHome\sdk\ndk\28.2.13676358"
+$BuildHome = Resolve-BuildHome $BuildHome
+$ndk = Get-Ndk -SdkRoot "$BuildHome\sdk"
 $tools = "$BuildHome\sdk\build-tools\36.0.0"
 $jar = "$BuildHome\sdk\platforms\android-36\android.jar"
 $cmake = "$BuildHome\cmake-3.31.8-windows-x86_64\bin\cmake.exe"
@@ -92,16 +96,15 @@ $nativeArgs = $nativeArgs -replace '\\', '/'
 return $native
 }
 
-$env:JAVA_HOME = (Get-ChildItem "$BuildHome\jdk-17*" -Directory | Sort-Object Name -Descending | Select-Object -First 1).FullName
+$env:JAVA_HOME = Get-Jdk17 $BuildHome
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 # version.json is the single source of truth for the release identity.
-$version = Get-Content -LiteralPath "$root\version.json" -Raw | ConvertFrom-Json
+$version = Read-Version $root
 if ($UseReleaseNative) {
     $release = & "$root\scripts\cache-release.ps1" -BuildHome $BuildHome
     Write-Host "Using v$($version.versionName) release native libraries and assets; C++ changes are not included."
 } elseif ($UsePrebuiltNative) {
     & $python "$root\app\build\check-prebuilt.py"
-    if ($LASTEXITCODE -ne 0) { throw 'Prebuilt native payload failed verification.' }
     Write-Host 'Using the tracked prebuilt arm64 payload; no APK download.'
 } else {
     $native = Build-Native
@@ -145,7 +148,8 @@ try {
         Copy-Item "$main\locales\*.json" "$stage\assets\locales"
     }
     $env:READELF = "$ndk\toolchains\llvm\prebuilt\windows-x86_64\bin\llvm-readelf.exe"
-    & $python "$root\app\build\check-libs.py" $abiDir
+    & $python "$root\app\build\check-libs.py" $abiDir `
+        --hint 'Windows CMake build: check the staged .so SONAMEs and DT_NEEDED, or rebuild the codecs with this toolchain.'
 
     $sources = Get-ChildItem "$main\java" -Recurse -Filter '*.java' |
         ForEach-Object { '"' + $_.FullName.Replace('\', '/') + '"' }

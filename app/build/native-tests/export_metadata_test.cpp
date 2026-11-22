@@ -4,11 +4,9 @@
 
 #include <cstdio>
 
-static int failures = 0;
+#include "test_util.hpp"
 
-static void check(bool ok, const char* what) {
-    if (!ok) { std::fprintf(stderr, "FAIL: %s\n", what); ++failures; }
-}
+using spk_test::check;
 
 int main() {
     spk_export::SourceExif src;
@@ -43,10 +41,5 @@ int main() {
     check(parsed.shutter > 0.0039 && parsed.shutter < 0.0041, "shutter is rational");
     check(parsed.aperture > 2.79 && parsed.aperture < 2.81, "aperture is rational");
 
-    if (failures) {
-        std::fprintf(stderr, "%d export_metadata check(s) failed\n", failures);
-        return 1;
-    }
-    std::puts("export_metadata: all checks passed");
-    return 0;
+    return spk_test::report("export_metadata");
 }

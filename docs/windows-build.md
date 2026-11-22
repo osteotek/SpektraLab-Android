@@ -115,3 +115,36 @@ verified end-to-end because the matching Android engine source is missing.
   `zipalign` for 16 KiB native-library alignment, and `apksigner` to sign and
   verify. The build also checks the native library's ELF dependencies before
   publishing the APK.
+
+## Native dependency check
+
+`app/build/check-libs.py <lib-dir>` verifies every `DT_NEEDED` of each staged
+`.so` resolves inside the APK (or is provided by Android). It has two
+invocation conventions:
+
+- **Termux:** `readelf` on `PATH`; call
+  `python3 app/build/check-libs.py app/build/apk/lib/arm64-v8a`.
+- **Windows CMake staging:** `build-windows.ps1` sets `READELF` to the NDK's
+  `llvm-readelf.exe` and passes a build-specific `--hint`:
+  `python check-libs.py <abi-dir> --hint "..."`.
+
+`READELF` always takes precedence over `readelf` on `PATH`. The failure message
+is generic on purpose: the exact rename/rewrite step depends on how the codecs
+were built (`build-libs.sh` on Termux, matching CMake SONAMEs on Windows).
+
+## Manual release (scripts/announce.sh)
+
+`scripts/announce.sh` is the **manual release tool**; it is deliberately not
+wired into CI. It writes `update.json`, commits and pushes it, purges jsDelivr,
+uploads the APK and announcement to the worker's KV (when `CF_TOKEN` is set),
+and creates a GitHub Release with `gh` if available:
+
+```bash
+CF_TOKEN=xxxx ./scripts/announce.sh 385 1.6.2m path/to/SpektraLab-1.6.2m-arm64-v8a.apk "note" "note"
+DRY_RUN=1 ./scripts/announce.sh 385 1.6.2m - "note"   # print the plan only
+```
+
+The version arguments are checked against `version.json` through
+`app/build/check-version.py --identity` before anything is written, so a typo
+cannot publish an `update.json` that disagrees with the built APK. The script
+never stores the token in the repository.

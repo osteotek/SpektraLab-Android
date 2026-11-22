@@ -13,8 +13,4 @@ public final class ImportController {
         if (uri == null) return null;
         return photos.persist(uri);
     }
-
-    public ImportPlanner.Plan plan(int width, int height, int capPixels, int edgeCap) {
-        return ImportPlanner.plan(width, height, capPixels, edgeCap);
-    }
 }

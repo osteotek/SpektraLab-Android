@@ -15,14 +15,9 @@
 #include <cstdio>
 #include <string>
 
-static int failures = 0;
+#include "test_util.hpp"
 
-static void check(bool ok, const char* what) {
-    if (!ok) {
-        std::fprintf(stderr, "FAIL: %s\n", what);
-        ++failures;
-    }
-}
+using spk_test::check;
 
 int main() {
     using spk_adjust::ViewAdjust;
@@ -63,10 +58,5 @@ int main() {
     spk_adjust::apply_pixel(white, 0, 0, 1, 1, levels);
     check(black[0] <= 0.0 && white[0] <= 1.0, "levels must clamp their range");
 
-    if (failures) {
-        std::fprintf(stderr, "%d view_adjust check(s) failed\n", failures);
-        return 1;
-    }
-    std::puts("view_adjust: all checks passed");
-    return 0;
+    return spk_test::report("view_adjust");
 }

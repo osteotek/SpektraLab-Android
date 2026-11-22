@@ -1,55 +1,18 @@
 package app.spektralab;
 
 import static app.spektralab.AppLanguage.tr;
-import android.app.Activity;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.ScrollView;
-import android.widget.ProgressBar;
-import android.widget.SeekBar;
-import android.widget.TextView;
 import app.spektralab.engine.SpektraLabEngine;
-import app.spektralab.ui.UiPalette;
-import app.spektralab.ui.ScrubBar;
-import app.spektralab.domain.JsonFields;
-import app.spektralab.domain.JsonQuote;
 import app.spektralab.domain.ExportPlan;
-import app.spektralab.domain.PixelHash;
-import app.spektralab.domain.EdgeVerdict;
-import app.spektralab.ui.CompareView;
-import app.spektralab.ui.CurveView;
-import app.spektralab.ui.FilmCoverView;
-import app.spektralab.ui.ColorWheel;
-import app.spektralab.ui.CropOverlay;
-import app.spektralab.ui.RotateScale;
-import app.spektralab.ui.HistogramView;
-import app.spektralab.ui.RatioMark;
-import app.spektralab.ui.GuideView;
-import app.spektralab.ui.EdgeBackdrop;
-import app.spektralab.ui.Square;
-import app.spektralab.ui.ArrowView;
-import app.spektralab.ui.ToolGlyph;
-import app.spektralab.ui.CappedScroll;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /** Worker extracted from MainActivity; delegates Android/Activity access to host. */
-final class ExportWorker {
-    private final MainActivity host;
-
-    ExportWorker(MainActivity host) { this.host = host; }
+final class ExportWorker extends HostWorker {
+    ExportWorker(MainActivity host) { super(host); }
 
     void run(String format, String tier, final Runnable onDone) {
         CrashTrail.mark(host, "export:begin");
@@ -443,8 +406,7 @@ final class ExportWorker {
                             return;
                         }
                         if (fresh != null) {
-                            try { DebugSink.text("export", "fresh session for tier=" + tier); }
-                            catch (Throwable spkIgnored) { Diagnostics.ignored("availableMemoryBytes:15219", spkIgnored); }
+                            Diagnostics.log("export", "fresh session for tier=" + tier, "availableMemoryBytes:15219");
                         } else if (keepSuspended && keep != null) {
                             // **The export is about to run on the session we just
                             // suspended.** Every branch that builds a fresh session is
@@ -458,8 +420,7 @@ final class ExportWorker {
                             // Give the planes back before the export asks for them.
                             try { keep.resume(); } catch (Throwable spkIgnored) { Diagnostics.ignored("availableMemoryBytes:15231", spkIgnored); }
                             keepSuspended = false;
-                            try { DebugSink.text("export", "no fresh session; preview resumed"); }
-                            catch (Throwable spkIgnored) { Diagnostics.ignored("availableMemoryBytes:15234", spkIgnored); }
+                            Diagnostics.log("export", "no fresh session; preview resumed", "availableMemoryBytes:15234");
                         }
                         try {
                             // Everything the preview drew with, re-stated: a
@@ -693,9 +654,8 @@ final class ExportWorker {
                                         ncc, w, h, tier, host.overscanOn) + "\n" + host.reportHead());
                         } catch (Throwable spkIgnored) { Diagnostics.ignored("writeExportFile:15469", spkIgnored); }
                     } else if (ncc >= 0) {
-                        try { DebugSink.text("export-selfcheck", String.format(
-                                java.util.Locale.US, "canvas NCC %.3f", ncc)); }
-                        catch (Throwable spkIgnored) { Diagnostics.ignored("writeExportFile:15473", spkIgnored); }
+                        Diagnostics.log("export-selfcheck", String.format(
+                                java.util.Locale.US, "canvas NCC %.3f", ncc), "writeExportFile:15473");
                     }
                 }
                 {
@@ -783,7 +743,7 @@ final class ExportWorker {
                 final String msg = host.describe(e);
                 DebugSink.text("failure", AppFailure.of(AppFailure.Stage.EXPORT, e).stage
                         + ": " + msg);
-                try { DebugSink.text("export-error", "tier=" + tier + " " + msg); } catch (Throwable spkIgnored) { Diagnostics.ignored("describe:15561", spkIgnored); }
+                Diagnostics.log("export-error", "tier=" + tier + " " + msg, "describe:15561");
                 host.uploadExportProgress(tmp);
                 host.uploadVkLog();
                 UiDispatcher.post(() -> {

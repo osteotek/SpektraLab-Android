@@ -9,35 +9,16 @@ python3 "$ROOT/app/build/check-locales.py"
 cp "$ROOT/app/src/main/AndroidManifest.xml" "$STAGE/AndroidManifest.xml"
 cd "$STAGE"
 aapt package -f -m -M AndroidManifest.xml -S res -A assets -I "$SDK/platforms/android-36/android.jar" -F "$OUT" >/dev/null
-python3 - <<'PY'
-from pathlib import Path
-import zipfile, os
-root=Path.home()/'SpektraLab-apk'
-src=root/'app/build/SpektraLab-debug.apk'
-out=root/'app/build/SpektraLab-complete.apk'
-lib=root/'app/build/apk/lib/arm64-v8a'
-with zipfile.ZipFile(src) as a, zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
-    skipped = 0
-    for i in a.infolist():
-        if i.filename=='classes.dex' or i.filename.startswith('assets/locales/'): continue
-        # Two 7.4 MB .cube tables for a DI view this app has no path to: the
-        # JNI never calls spk_export_di / spk_render_digital_intermediate, and
-        # the engine opens them lazily by name. 3.3 MB compressed, 18% of the
-        # download, for a screen no one can reach. Dropped.
-        if i.filename.startswith('assets/resources/DI/'):
-            skipped += 1
-            continue
-        z.writestr(i,a.read(i.filename))
-    if skipped:
-        print('skip DI tables:', skipped)
-    for f in sorted((root/'app/src/main/locales').glob('*.json')):
-        z.write(f, 'assets/locales/'+f.name)
-    z.write(root/'app/build/dex/classes.dex','classes.dex')
-    for f in sorted(lib.iterdir()):
-        if f.is_file():
-            print('pack',f.name,f.stat().st_size)
-            z.write(f,'lib/arm64-v8a/'+f.name)
-PY
+# The DI LUTs are two 7.4 MB tables for a view the app has no path to (the JNI
+# never calls spk_export_di / spk_render_digital_intermediate). Dropping them
+# saves ~3.3 MB compressed. All ZIP choices live in apk-contents.py.
+python3 "$ROOT/app/build/apk-contents.py" pack "$STAGE" "$OUT" \
+  --drop-prefix classes.dex \
+  --drop-prefix assets/locales/ \
+  --drop-prefix assets/resources/DI/ \
+  --inject-locales "$ROOT/app/src/main/locales" \
+  --dex-dir "$ROOT/app/build/dex" \
+  --output "$TMP"
 # v1 as well as v2/v3: apksigner skips JAR signing at minSdk 24 by default,
 # and a few OEM installers still refuse a v2-only package.
 # Release signing is opt-in via env: RELEASE_KEYSTORE / RELEASE_STOREPASS / RELEASE_KEYALIAS.

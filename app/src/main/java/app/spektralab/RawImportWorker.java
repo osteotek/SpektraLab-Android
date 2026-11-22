@@ -1,55 +1,13 @@
 package app.spektralab;
 
 import static app.spektralab.AppLanguage.tr;
-import android.app.Activity;
-import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.ScrollView;
-import android.widget.ProgressBar;
-import android.widget.SeekBar;
-import android.widget.TextView;
 import app.spektralab.engine.SpektraLabEngine;
-import app.spektralab.ui.UiPalette;
-import app.spektralab.ui.ScrubBar;
-import app.spektralab.domain.JsonFields;
-import app.spektralab.domain.JsonQuote;
-import app.spektralab.domain.ExportPlan;
-import app.spektralab.domain.PixelHash;
-import app.spektralab.domain.EdgeVerdict;
-import app.spektralab.ui.CompareView;
-import app.spektralab.ui.CurveView;
-import app.spektralab.ui.FilmCoverView;
-import app.spektralab.ui.ColorWheel;
-import app.spektralab.ui.CropOverlay;
-import app.spektralab.ui.RotateScale;
-import app.spektralab.ui.HistogramView;
-import app.spektralab.ui.RatioMark;
-import app.spektralab.ui.GuideView;
-import app.spektralab.ui.EdgeBackdrop;
-import app.spektralab.ui.Square;
-import app.spektralab.ui.ArrowView;
-import app.spektralab.ui.ToolGlyph;
-import app.spektralab.ui.CappedScroll;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /** Worker extracted from MainActivity; delegates Android/Activity access to host. */
-final class RawImportWorker {
-    private final MainActivity host;
-
-    RawImportWorker(MainActivity host) { this.host = host; }
+final class RawImportWorker extends HostWorker {
+    RawImportWorker(MainActivity host) { super(host); }
 
     void run(Uri uri) {
         // Read once, on the UI thread, before the decode starts: the worker
@@ -140,9 +98,7 @@ final class RawImportWorker {
                     // inside `renderBegin` when this thread gets here, and
                     // closing a session out from under it is a native crash,
                     // not an exception.
-                    synchronized (host.renderMutex) {
-                        if (host.session != null) { host.session.close(); host.session = null; }
-                    }
+                    host.closeSessionSafely();
                     Probe.log("import", "pre avail=" + Probe.mb(host.availableMemoryBytes())
                             + " cap=" + host.maxImportPixels() + " native=" + host.importAtNativeSize
                             + " pool=" + Probe.pool(host.engine));
@@ -165,7 +121,7 @@ final class RawImportWorker {
                         filmField, host.printStock, host.printExposure
                     );
                     
-                    try { DebugSink.text("open-params", "path=" + filePath + "\n" + params); } catch (Throwable spkIgnored) { Diagnostics.ignored("maxImportPixels:12002", spkIgnored); }
+                    Diagnostics.log("open-params", "path=" + filePath + "\n" + params, "maxImportPixels:12002");
                     // The cap comes from the device, not from a constant: a
                     // plane is 12 B/px and a binding may not exceed the GPU's
                     // maxStorageBufferRange. Two limits apply, whichever is
@@ -174,7 +130,7 @@ final class RawImportWorker {
                     final boolean nativeSize = host.importAtNativeSize;
                     host.importAtNativeSize = false;                   // one import only
                     if (nativeSize) {
-                        try { DebugSink.text("import-mode", "native size, no cap"); } catch (Throwable spkIgnored) { Diagnostics.ignored("maxImportPixels:12011", spkIgnored); }
+                        Diagnostics.log("import-mode", "native size, no cap", "maxImportPixels:12011");
                     }
                     host.rawFilePath = filePath;
                     host.importCapPixels = nativeSize ? 0 : host.maxImportPixels();
@@ -251,8 +207,7 @@ final class RawImportWorker {
                         // A session that opened but produced no source frame is
                         // a bug, and it has to say so rather than look like a
                         // photo that failed to load.
-                        try { DebugSink.text("raw-view", "no source frame for the canvas"); }
-                        catch (Throwable spkIgnored) { Diagnostics.ignored("getDimensions:12089", spkIgnored); }
+                        Diagnostics.log("raw-view", "no source frame for the canvas", "getDimensions:12089");
                         UiDispatcher.post(() -> host.statusText.setText(tr("import.raw_loaded_but_the_original")));
                     }
                     if (hasPreview) {
@@ -380,7 +335,7 @@ final class RawImportWorker {
                     int h = dims[1];
                     host.sourceWidth = w;
                     host.sourceHeight = h;
-                    try { DebugSink.text("raw-dims", "w=" + w + " h=" + h); } catch (Throwable spkIgnored) { Diagnostics.ignored("round:12217", spkIgnored); }
+                    Diagnostics.log("raw-dims", "w=" + w + " h=" + h, "round:12217");
 
                     // **The session's own size, not `rawSourceSize()`.** That
                     // legacy query answers {0,0} on purpose -- its comment says

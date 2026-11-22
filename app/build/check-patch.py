@@ -14,8 +14,13 @@ contains `engine/`).  No files are modified.
 """
 
 from pathlib import Path
+import os
 import re
 import sys
+
+# The embedded Windows Python does not add the script's directory to sys.path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_common import repo_root, report
 
 
 DIFF = re.compile(r'^diff --git a/(.+?) b/(.+)$', re.M)
@@ -65,7 +70,7 @@ def main(engine_root, patch_path):
     patched_header = (root / header).read_text(encoding='utf-8') if (root / header).is_file() else ''
     declared = set(SPK_CALL.findall(patched_header))
     declared.update(SPK_CALL.findall('\n'.join(added_lines(patch, header))))
-    jni_dir = Path(__file__).resolve().parents[1] / 'src' / 'main' / 'cpp'
+    jni_dir = repo_root() / 'app' / 'src' / 'main' / 'cpp'
     used = set()
     for cpp in sorted(jni_dir.glob('*.cpp')):
         used.update(SPK_CALL.findall(cpp.read_text(encoding='utf-8')))
@@ -73,19 +78,16 @@ def main(engine_root, patch_path):
     for name in missing:
         problems.append(f'JNI calls {name}() but the patched public header does not declare it')
 
-    if problems:
-        print('check-patch: the published source tree cannot build the JNI:')
-        for problem in problems:
-            print('  - ' + problem)
-        print('  -> add the missing files/declarations to patches/engine-android.patch')
-        return 1
-    print(f'check-patch: {len(targets)} patched files, {len(used)} JNI spk_* calls all declared')
-    return 0
+    return report(
+        'check-patch: the published source tree cannot build the JNI:',
+        problems,
+        f'check-patch: {len(targets)} patched files, {len(used)} JNI spk_* calls all declared',
+        hint='-> add the missing files/declarations to patches/engine-android.patch')
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         raise SystemExit('usage: check-patch.py <upstream-engine-root> [patch-file]')
     patch_file = sys.argv[2] if len(sys.argv) > 2 else (
-        str(Path(__file__).resolve().parents[2] / 'patches' / 'engine-android.patch'))
+        str(repo_root() / 'patches' / 'engine-android.patch'))
     sys.exit(main(sys.argv[1], patch_file))
