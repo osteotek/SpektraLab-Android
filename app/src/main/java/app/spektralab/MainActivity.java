@@ -42,6 +42,7 @@ import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
+import app.spektralab.ui.panels.PresetDialogs;
 import app.spektralab.ui.panels.PickerSheets;
 import app.spektralab.ui.panels.SettingsDialogs;
 import app.spektralab.ui.panels.PrintEdge;
@@ -1971,8 +1972,8 @@ public class MainActivity extends Activity implements
         }
     }
 
-    static final class Look {
-        String filmStock;
+    public static final class Look {
+        public String filmStock;
         String printStock;
         float printExposure, grainAmount, halationAmount, glareAmount, filmFormatMm;
         String meterMethod;
@@ -2124,9 +2125,9 @@ public class MainActivity extends Activity implements
          *  private copy the user re-picks, and the look must survive that. */
         Uri uri;
         final boolean raw;
-        String name;
+        public String name;
         Bitmap thumb;
-        Look look = new Look();
+        public Look look = new Look();
         /**
          * Whether this frame was left on 原图.
          *
@@ -2135,7 +2136,7 @@ public class MainActivity extends Activity implements
          * because `look.filmStock` was all that was remembered -- "来回切换
          * 缩略图，照片会自己变回上一次选择的胶片".
          */
-        boolean original = true;
+        public boolean original = true;
         /**
          * The motion clip of a live photo, carved out of the source at import
          * (`filesDir/import/live/*.mp4`), or null.
@@ -21564,7 +21565,7 @@ public class MainActivity extends Activity implements
     // Sharing it is text on purpose: no FileProvider, no MIME the other app has
     // to understand, and the receiver can paste it back or read it.
 
-    private org.json.JSONArray presetList() {
+    org.json.JSONArray presetList() {
         final String raw = getSharedPreferences("presets", MODE_PRIVATE).getString("list", "[]");
         try {
             return new org.json.JSONArray(raw);
@@ -21573,7 +21574,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void storePresetList(org.json.JSONArray list) {
+    void storePresetList(org.json.JSONArray list) {
         getSharedPreferences("presets", MODE_PRIVATE).edit().putString("list", list.toString()).apply();
     }
 
@@ -21674,7 +21675,7 @@ public class MainActivity extends Activity implements
         return id;
     }
 
-    private Look copyLook(Look src) {
+    Look copyLook(Look src) {
         if (src == null) return null;
         try {
             return lookFromJson(lookToJson(src));
@@ -21683,139 +21684,9 @@ public class MainActivity extends Activity implements
         }
     }
 
-    void showPresetsPanel() {
-        final org.json.JSONArray list = presetList();
-        final android.app.Dialog dialog = new android.app.Dialog(this);
-        LinearLayout sheet = new LinearLayout(this);
-        sheet.setOrientation(LinearLayout.VERTICAL);
-        sheet.setBackgroundColor(UI_PAPER);
-        View cap = new View(this);
-        cap.setBackgroundColor(UI_BLUE);
-        sheet.addView(cap, new LinearLayout.LayoutParams(-1, dp(3)));
+    void showPresetsPanel() { PresetDialogs.showPresetsPanel(new PresetDialogsHostImpl(this)); }
 
-        LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.HORIZONTAL);
-        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.setPadding(dp(16), 0, dp(16), 0);
-        head.addView(label(tr("preset.presets"), 12, UI_INK, tfHan),
-                new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView close = label(tr("crash.close"), 9, UI_MUTED, tfHan);
-        close.setPadding(dp(12), dp(14), 0, dp(14));
-        close.setOnClickListener(v -> dialog.dismiss());
-        head.addView(close);
-        sheet.addView(head, new LinearLayout.LayoutParams(-1, dp(54)));
-
-        TextView note = label(tr("preset.presets_store_film_exposure_optics"),
-                8.5f, UI_MUTED, tfHan);
-        note.setPadding(dp(16), 0, dp(16), dp(10));
-        sheet.addView(note);
-
-        LinearLayout rows = new LinearLayout(this);
-        rows.setOrientation(LinearLayout.VERTICAL);
-        if (list.length() == 0) {
-            TextView empty = label(tr("preset.no_presets_yet_edit_a"), 9, UI_MUTED, tfHan);
-            empty.setPadding(dp(16), dp(12), dp(16), dp(12));
-            rows.addView(empty);
-        }
-        // **Above the user's list, because it is not a look of theirs.**
-        LinearLayout builtin = new LinearLayout(this);
-        builtin.setOrientation(LinearLayout.HORIZONTAL);
-        builtin.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        builtin.setPadding(dp(16), 0, dp(10), 0);
-        LinearLayout builtinText = new LinearLayout(this);
-        builtinText.setOrientation(LinearLayout.VERTICAL);
-        builtinText.addView(label(tr("ui170.266"), 10, UI_INK, tfHan));
-        builtinText.addView(label(tr("ui170.267"), 8, UI_MUTED, tfHan));
-        builtin.addView(builtinText, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView builtinApply = label(tr("preset.apply"), 8.5f, UI_BLUE, tfHan);
-        builtinApply.setPadding(dp(12), dp(12), dp(8), dp(12));
-        builtinApply.setOnClickListener(v -> {
-            dialog.dismiss();
-            applyDesktopBaseline();
-        });
-        builtin.addView(builtinApply);
-        rows.addView(builtin, new LinearLayout.LayoutParams(-1, dp(46)));
-        View builtinRule = new View(this);
-        builtinRule.setBackgroundColor(UI_LINE);
-        rows.addView(builtinRule, new LinearLayout.LayoutParams(-1, dp(1)));
-
-        for (int i = 0; i < list.length(); ++i) {
-            final org.json.JSONObject p = list.optJSONObject(i);
-            final int removeAt = i;
-            if (p == null) continue;
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(16), 0, dp(10), 0);
-            TextView name = label(p.optString("name", tr("preset.preset")), 10, UI_INK, tfHan);
-            name.setSingleLine(true);
-            name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            row.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
-
-            TextView apply = label(tr("preset.apply"), 8.5f, UI_BLUE, tfHan);
-            apply.setPadding(dp(8), dp(12), dp(8), dp(12));
-            apply.setOnClickListener(v -> {
-                dialog.dismiss();
-                applyPreset(p);
-            });
-            row.addView(apply);
-
-            TextView share = label(tr("editor.share"), 8.5f, UI_MUTED, tfHan);
-            share.setPadding(dp(8), dp(12), dp(8), dp(12));
-            share.setOnClickListener(v -> sharePreset(p));
-            row.addView(share);
-
-            TextView del = label(tr("preset.delete"), 8.5f, UI_MUTED, tfHan);
-            del.setPadding(dp(8), dp(12), dp(4), dp(12));
-            del.setOnClickListener(v -> {
-                final org.json.JSONArray next = new org.json.JSONArray();
-                for (int k = 0; k < list.length(); ++k) {
-                    if (k == removeAt) continue;
-                    final org.json.JSONObject q = list.optJSONObject(k);
-                    if (q != null) next.put(q);
-                }
-                storePresetList(next);
-                dialog.dismiss();
-                showPresetsPanel();
-            });
-            row.addView(del);
-            rows.addView(row, new LinearLayout.LayoutParams(-1, dp(46)));
-        }
-        sheet.addView(cappedScroll(rows, 300), new LinearLayout.LayoutParams(-1, -2));
-
-        LinearLayout foot = new LinearLayout(this);
-        foot.setOrientation(LinearLayout.HORIZONTAL);
-        foot.setPadding(dp(10), dp(6), dp(10), dp(10));
-        TextView save = label(tr("preset.save_current_settings"), 8.5f, UI_BLUE, tfHan);
-        save.setGravity(android.view.Gravity.CENTER);
-        save.setOnClickListener(v -> {
-            dialog.dismiss();
-            saveCurrentPreset();
-        });
-        foot.addView(save, new LinearLayout.LayoutParams(0, dp(34), 1f));
-        TextView pull = label(tr("preset.import_from_clipboard"), 8.5f, UI_INK, tfHan);
-        pull.setGravity(android.view.Gravity.CENTER);
-        pull.setOnClickListener(v -> {
-            dialog.dismiss();
-            importPresetFromClipboard();
-        });
-        foot.addView(pull, new LinearLayout.LayoutParams(0, dp(34), 1f));
-        TextView push = label(tr("preset.share_current_settings"), 8.5f, UI_INK, tfHan);
-        push.setGravity(android.view.Gravity.CENTER);
-        push.setOnClickListener(v -> {
-            dialog.dismiss();
-            shareCurrentLook();
-        });
-        foot.addView(push, new LinearLayout.LayoutParams(0, dp(34), 1f));
-        sheet.addView(foot, new LinearLayout.LayoutParams(-1, dp(50)));
-
-        dialog.setContentView(sheet);
-        dialog.setCanceledOnTouchOutside(true);
-        showBottomSheet(dialog, sheet);
-        SheetDialogs.presentBottom(dialog, sheet, this);
-    }
-
-    private void saveCurrentPreset() {
+    void saveCurrentPreset() {
         if (frames.isEmpty() || filmStock == null) {
             showInAppToast(tr("preset.import_a_photo_and_choose"));
             return;
@@ -21853,7 +21724,7 @@ public class MainActivity extends Activity implements
      * <p>It touches those three fields and nothing else: film, paper, exposure,
      * optics, composition and the edge are the frame's own and stay as they are.
      */
-    private void applyDesktopBaseline() {
+    void applyDesktopBaseline() {
         edrOn = 0f;
         highlightRoom = 0f;
         shadowRoom = 0f;
@@ -21868,7 +21739,7 @@ public class MainActivity extends Activity implements
         showInAppToast(tr("ui170.268"));
     }
 
-    private void applyPreset(org.json.JSONObject p) {
+    void applyPreset(org.json.JSONObject p) {
         final org.json.JSONObject look = p == null ? null : p.optJSONObject("look");
         if (look == null) {
             showInAppToast(tr("preset.this_preset_is_empty"));
@@ -21885,7 +21756,7 @@ public class MainActivity extends Activity implements
         applyForeignLook(l, tr("preset.applied_preset") + p.optString("name", "") + "」");
     }
 
-    private void sharePreset(org.json.JSONObject p) {
+    void sharePreset(org.json.JSONObject p) {
         if (p == null) return;
         try {
             final org.json.JSONObject out = new org.json.JSONObject();
@@ -21900,7 +21771,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void shareCurrentLook() {
+    void shareCurrentLook() {
         if (frames.isEmpty() || filmStock == null) {
             showInAppToast(tr("preset.import_a_photo_and_choose"));
             return;
@@ -21931,7 +21802,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void importPresetFromClipboard() {
+    void importPresetFromClipboard() {
         try {
             final android.content.ClipboardManager cm = (android.content.ClipboardManager)
                     getSystemService(android.content.Context.CLIPBOARD_SERVICE);
@@ -21978,81 +21849,12 @@ public class MainActivity extends Activity implements
      * used to be 4. Every chip is still its own tap; this is the road for the
      * ordinary case of "I imported twelve RAW and want eight of them gone".
      */
-    private void showBatchDeleteSheet() {
-        if (batchExportRunning) {
-            showInAppToast(tr("editor.wait_for_batch_export_to_2"));
-            return;
-        }
-        if (frames.size() < 2) {
-            showInAppToast(tr("preset.there_is_only_one_photo"));
-            return;
-        }
-        final String[] labels = new String[frames.size()];
-        for (int i = 0; i < frames.size(); ++i) {
-            final Frame f = frames.get(i);
-            labels[i] = (f.name == null || f.name.isEmpty() ? tr("preset.photo") + (i + 1) : f.name);
-        }
-        showMultiChoiceSheet(tr("preset.remove_which_photos"),
-                tr("preset.removes_photos_and_their_edits"),
-                labels, picked -> {
-                    final java.util.ArrayList<Integer> indices =
-                            new java.util.ArrayList<>(picked);
-                    java.util.Collections.sort(indices, (a, b) -> b - a);
-                    for (int i = 0; i < indices.size(); ++i) removeFrame(indices.get(i));
-                    showInAppToast(tr("preset.removed") + indices.size() + tr("preset.photos"));
-                });
-    }
+    void showBatchDeleteSheet() { PresetDialogs.showBatchDeleteSheet(new PresetDialogsHostImpl(this)); }
 
-    private void showApplyLookSheet(final int sourceIndex) {
-        if (sourceIndex < 0 || sourceIndex >= frames.size()) return;
-        final java.util.ArrayList<Integer> targets = new java.util.ArrayList<>();
-        for (int i = 0; i < frames.size(); ++i) {
-            if (i != sourceIndex) targets.add(i);
-        }
-        if (targets.isEmpty()) {
-            showInAppToast(tr("preset.there_are_no_other_photos"));
-            return;
-        }
-        final String[] labels = new String[targets.size()];
-        for (int i = 0; i < targets.size(); ++i) {
-            final int index = targets.get(i);
-            final Frame f = frames.get(index);
-            labels[i] = (f.name == null || f.name.isEmpty() ? tr("preset.photo") + (index + 1) : f.name);
-        }
-        final String srcName = frames.get(sourceIndex).name == null
-                ? tr("preset.current_photo") : frames.get(sourceIndex).name;
-        showMultiChoiceSheet(tr("preset.apply_these_settings_to"), 
-                tr("preset.copies_the_current_film_exposure")
-                        + tr("preset.original_files_are_not_changed"),
-                labels, picked -> {
-                    saveLookIntoFrames();
-                    final Look src = copyLook(frames.get(sourceIndex).look);
-                    if (src == null) {
-                        showInAppToast(tr("preset.this_photo_has_no_settings"));
-                        return;
-                    }
-                    int n = 0;
-                    for (int k : picked) {
-                        final int index = targets.get(k);
-                        frames.get(index).look = copyLook(src);
-                        // **A copied Look is a picture that has been printed.**
-                        // `Frame.original` says tr("ui170.269"), and the
-                        // copy path left it alone -- so a target that had never
-                        // picked a film opened on the original, drew no film at
-                        // all, and the whole operation looked like it had done
-                        // nothing (tr("ui170.270")). Keeping the flag
-                        // is only right when the source itself has no film.
-                        frames.get(index).original = (src.filmStock == null);
-                        ++n;
-                    }
-                    saveSessionState();
-                    rebuildFrameChips();
-                    showInAppToast(tr("preset.applied_to") + n + tr("preset.photos_changes_appear_when_opened"));
-                });
-    }
+    void showApplyLookSheet(final int sourceIndex) { PresetDialogs.showApplyLookSheet(new PresetDialogsHostImpl(this), sourceIndex); }
 
     /** A bottom sheet with checkboxes; `onDone` gets the picked indices. */
-    private void showMultiChoiceSheet(String title, String note, String[] labels,
+    void showMultiChoiceSheet(String title, String note, String[] labels,
                                       final java.util.function.Consumer<java.util.List<Integer>> onDone) {
         final android.app.Dialog dialog = new android.app.Dialog(this);
         final LinearLayout sheet = SheetDialogs.sheetRoot(this, this);
