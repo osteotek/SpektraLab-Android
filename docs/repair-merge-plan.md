@@ -1,8 +1,10 @@
 # Plan: merge `feat/source-build-repair` and upstream engine work into `feat/windows-debug-builds`
 
-**Status: plan only.** No branch, patch or build file is changed by this document.
-Research was done with a throwaway worktree and a dry-run merge; that worktree
-and its temporary branch were removed afterwards.
+**Status: COMPLETE.** The repair work and the 1.7.0 upstream adoption were both
+merged, the branches consolidated into `master`, and all other branches deleted.
+A full native build from the merged tree is verified pixel-identical — see
+[`docs/source-build.md`](source-build.md). The notes below are the historical
+merge plan.
 
 ## 1. Verified starting state (2026-11-22)
 

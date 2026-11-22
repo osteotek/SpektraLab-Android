@@ -20,15 +20,15 @@ Baseline measured at `1.6.2m (385)` on branch `feat/windows-debug-builds`:
 
 ## Phase 0 — blockers
 
-### [ ] P0.1 — Publish the complete engine source
+### [x] P0.1 — Publish the complete engine source
 
-- **Problem:** the public patch cannot build the shipped native library.
-- **Evidence:** `check-patch.py` reports missing `engine/src/pipeline/tiling.hpp`
-  (included by five patched translation units), 14 undeclared `spk_*` APIs, and
-  missing raw-I/O types (`spk::io::write_dng`, `RawDecodeCache`,
-  `read_dng_display_profile`, five `RawMetadata` fields). See `source-build.md`.
-- **Change:** publish the matching engine tree, or extend the patch with the
-  header, declarations, and implementations. External to this repository.
+- **Problem (resolved):** the public patch could not build the shipped native
+  library: missing `engine/src/pipeline/tiling.hpp`, undeclared `spk_*` APIs and
+  missing raw-I/O types.
+- **Resolution:** the patch now supplies `tiling.hpp`, all JNI `spk_*` APIs and
+  the private `spk::io` surface. `check-patch.py` passes with zero unresolved
+  includes and zero undeclared calls; a full NDK/CMake build produces a
+  pixel-identical APK. See `source-build.md`.
 - **Verification:** `python app/build/check-patch.py <upstream>` exits 0 and a
   clean checkout builds `libspektrafilm_engine.so` in CI.
 - **Progress (2026-11-22):** the source-build repair and upstream engine work

@@ -230,7 +230,7 @@ if ($EngineRoot) {
     else { Report-Engine 'check-patch' $false }
 
     if (!$SkipNative) {
-        Write-Host '== JNI compile against upstream (shimmed missing APIs) =='
+        Write-Host '== JNI compile against engine (missing APIs shimmed as needed) =='
         $eng = Join-Path $EngineRoot 'engine'
         $hostTag = if ($__spkIsWindows) { 'windows-x86_64' } else { 'linux-x86_64' }
         $sysroot = Join-Path $ndk "toolchains/llvm/prebuilt/$hostTag/sysroot"
@@ -242,6 +242,21 @@ if ($EngineRoot) {
                   "-I$(Join-Path $eng 'src/core')", "-I$(Join-Path $eng 'src/pipeline')",
                   "-I$(Join-Path $eng 'src/io')", "-I$(Join-Path $eng 'src/gpu')",
                   "-I$include", "-I$jpeg", "-I$jpegSrc", "-include$shim")
+        # Only shim APIs that this engine header truly lacks. A complete patched
+        # tree declares them all, and redeclaring them here would be a compile
+        # error (conflicting return types / ambiguous overloads).
+        $headerPath = Join-Path $eng 'include/spektrafilm/spk_engine.h'
+        if (Test-Path $headerPath) {
+            $headerText = Get-Content -Raw $headerPath
+            $shimText = Get-Content -Raw $shim
+            $shimNames = [regex]::Matches($shimText, '\b(spk_[a-z0-9_]+)\s*\(') |
+                ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+            foreach ($name in $shimNames) {
+                if ($headerText -notmatch ([regex]::Escape($name) + '\s*\(')) {
+                    $incs += ('-DSPK_SHIM_' + $name.ToUpperInvariant())
+                }
+            }
+        }
         if ($clang) {
             & $clang @incs -c (Src 'app/src/main/cpp/spektralab_jni.cpp') -o (Join-Path ([IO.Path]::GetTempPath()) 'spk_jni_check.o')
             Report-Engine 'spektralab_jni.cpp compile' ($LASTEXITCODE -eq 0)

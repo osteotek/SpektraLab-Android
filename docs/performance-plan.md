@@ -313,12 +313,11 @@ of the shared native result slot (`g_result`). The facade's static `RENDER_LOCK`
 covers individual calls; it is not a transaction that protects a result from
 another session's begin/end. Keep cleanup on failure and serialize session
 close/suspend with users of that session. Changing JNI, RAW internals, shaders
-or Vulkan dispatch requires matching engine source and assets: the public patch
-against `445e314` lacks `tiling.hpp` and newer C APIs (see
-[source-build.md](source-build.md)). Release-native and prebuilt-native modes
-do not compile those edits. The shipped engine has Vulkan batching symbols;
-don't infer its dispatch behavior from the partial patch. Do not open a native
-optimization change until a matching source-built APK passes smoke and the
+or Vulkan dispatch requires matching engine source and assets: use the default
+full native build path (see [source-build.md](source-build.md)) so those edits
+are actually compiled. Release-native and prebuilt-native modes do not compile
+them. Gate every native optimization on `-StrictEngine` plus a source-built APK
+golden check (bands 0/128/512), and the
 same-device pixel/export comparisons against the shipped baseline.
 
 ## Before/after acceptance matrix

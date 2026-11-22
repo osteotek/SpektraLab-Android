@@ -67,26 +67,29 @@ and does not have Internet permission. If reinstalling local builds with the sam
 unpacked resources can remain cached; use a fresh test install when changing
 shaders or profile assets.
 
-## Full native build: missing source
+## Full native build
 
-The public patch applies to upstream `445e314`, but that combination does
-not compile: patched files include `engine/src/pipeline/tiling.hpp`, which
-is in neither the upstream tree nor the patch. In addition, the JNI uses
-newer engine APIs absent from the patched `spk_engine.h`, including
-`spk_trim_pool`, `spk_suspend_session`, and `spk_set_output_linear`.
-This mismatch affects the Termux build too; installing more tools will not fix it.
+The default build path is the full source build — it needs no external engine
+checkout, prebuilt libraries or downloaded release APK:
 
-For native development, obtain a complete matching Android engine tree from
-the maintainer. The Windows source-build path accepts a **fully patched**
-checkout containing `engine/`:
+```powershell
+.\scripts\build-windows.ps1
+```
+
+It clones/uses upstream `445e314`, applies the now self-contained
+`patches/engine-android.patch` (which supplies `engine/src/pipeline/tiling.hpp`
+and the JNI APIs), builds the engine with the Android NDK/CMake, and writes
+`app/build/SpektraLab-windows-debug.apk` (~19.8 MB). See
+[`docs/source-build.md`](source-build.md) for the verification record.
+
+A custom patched engine checkout can still be supplied:
 
 ```powershell
 .\scripts\build-windows.ps1 -EngineCheckout C:\path\to\matching-engine
 ```
 
-Native objects are cached under `-BuildHome`; a successful source build
-writes `app/build/SpektraLab-windows-debug.apk`. This route has not been
-verified end-to-end because the matching Android engine source is missing.
+To hard-gate native changes, run
+`scripts/verify.ps1 -StrictEngine -EngineRoot <patched-engine-checkout>`.
 
 ## How the repository fits together
 

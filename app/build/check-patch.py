@@ -2,9 +2,10 @@
 """Check that the published engine patch can actually produce the shipped JNI.
 
 The README tells a user to clone upstream 445e314, apply patches/engine-android.patch,
-and build.  That instruction was wrong for months: the patch references a header it
-does not add (tiling.hpp) and calls public spk_* APIs it never declares.  This check
-turns that silent failure into a build-time error.
+and build.  That instruction used to be wrong: the patch referenced a header it did
+not add (tiling.hpp) and called public spk_* APIs it never declared.  The patch is now
+self-contained, and this check guards against regressing that property by resolving
+every added #include and comparing JNI spk_* calls against the patched public header.
 
 Usage:
     python app/build/check-patch.py <upstream-engine-root> [patch-file]

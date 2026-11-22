@@ -1,7 +1,28 @@
-# Source-build repair plan — make the engine patch self-contained
+# Source-build repair plan - make the engine patch self-contained
 
-**Status: plan only.** No patch, C++, build-tooling or CI files are changed by
-this document.
+**Status: COMPLETE (2026-11-22).** The published patch now applies to a clean
+`445e314` checkout and produces a native payload that builds the current JNI.
+
+## Completion summary
+
+- `engine/src/pipeline/tiling.hpp` and the `dispatch_tiled` helper were
+  reconstructed from the patch's own call sites and added to
+  `patches/engine-android.patch`.
+- The ten previously undeclared `spk_*` APIs (including `spk_trim_pool` and
+  `spk_probe_canary`) are now declared and implemented in the patch.
+- The private `spk::io` surface used by the JNI (`write_dng`, `RawDecodeCache`,
+  `read_dng_display_profile`, capture metadata fields) was implemented in
+  `engine/src/io`.
+- The engine patch is pinned to **LibRaw 0.22.2**; `scripts/build-windows.ps1`
+  applies the local HE-sniff and camera-table patches before configuring.
+- `app/build/check-patch.py` reports zero unresolved includes and zero
+  undeclared `spk_*` calls. `scripts/verify.ps1 -StrictEngine -EngineRoot ...`
+  passes both the patch check and the shimmed JNI compile.
+- A full native build produced `SpektraLab-windows-debug.apk` (19.8 MB) whose
+  device golden hashes on bands 0/128/512 were all `e60490499b9a94eb` —
+  pixel-identical to the release/prebuilt payloads.
+
+The research notes below are kept as the historical record.
 
 ## 1. Goal and boundaries
 
