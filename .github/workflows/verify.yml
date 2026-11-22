@@ -64,7 +64,7 @@ jobs:
       - name: Install build tools
         shell: pwsh
         run: ./scripts/setup-windows.ps1 -AcceptAndroidLicenses
-      - name: Build release-signed APK from source
+      - name: Build release-signed full APK from source (with Fotufilm)
         shell: pwsh
         env:
           KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -79,6 +79,7 @@ jobs:
               -ReleaseKeystore $keystore `
               -ReleaseStorePass $env:STOREPASS `
               -ReleaseKeyAlias $env:KEYALIAS `
+              -WithFotufilm `
               -OutputDirectory (Join-Path $env:RUNNER_TEMP 'apk')
           } finally {
             Remove-Item -LiteralPath $keystore -Force -ErrorAction SilentlyContinue
@@ -86,6 +87,6 @@ jobs:
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: SpektraLab-release-signed
-          path: ${{ runner.temp }}/apk/SpektraLab-release-signed.apk
+          name: SpektraLab-release-signed-with-fotufilm
+          path: ${{ runner.temp }}/apk/SpektraLab-release-signed-with-fotufilm.apk
           if-no-files-found: error

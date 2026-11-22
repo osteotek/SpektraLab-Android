@@ -155,8 +155,9 @@ never stores the token in the repository.
 ## CI release signing
 
 `.github/workflows/verify.yml` has a `release` job that builds the app from
-source and uploads `SpektraLab-release-signed.apk` on every push (and on
-same-repository PRs). It needs these repository secrets:
+source and uploads `SpektraLab-release-signed-with-fotufilm.apk` on every push (and on
+same-repository PRs). The release job passes `-WithFotufilm`, so the CI
+artifact is the full two-engine build (~34 MB). It needs these repository secrets:
 
 | Secret | Purpose |
 |---|---|
