@@ -142,21 +142,25 @@ physical-device equivalence baseline was recorded.
   resolved by keeping our banded dispatch, `host_storage` exclusion, `out->owner` &&
   half-size decode while adding upstream's device-loss, memory-pressure and
   precision changes. Desktop-only conflicts were resolved with the upstream side.
-- **`61aee26d`/`c59d0c2a` (LibRaw master) and `b5467e83` (ARW6 overlay) were
-  reverted.** They require LibRaw `42f89c16` and an overlay absent from this
-  fork's pinned LibRaw 0.22.2; keeping them broke the NDK CMake configure. This
-  dependency upgrade is a separate workstream.
-- Final patch: **89 engine sections**, applies cleanly to `445e314`, passes
+- **LibRaw upgrade merged in a later step.** `b5467e83`, `61aee26d` and
+  `c59d0c2a` were initially reverted because this fork pinned LibRaw 0.22.2.
+  They were then reapplied after fetching the pinned master source
+  `42f89c16` with `engine/setup-libraw.ps1 -DependencyDirectory $BuildHome`.
+  `scripts/build-windows.ps1` now points at `LibRaw-42f89c16…` and no longer
+  applies the obsolete 0.22.2 HE-sniff/camera-table patches; the verified master
+  tree already carries those fixes. Our half-size decode hint was kept, and the
+  removed `supported_compression()` guard was deleted from `raw_decoder.cpp`.
+- Final patch: **113 engine sections**, applies cleanly to `445e314`, passes
   `check-patch.py`, and the NDK/CMake build of `libspektrafilm_engine.so`
   succeeds. No pixel-equivalence claim is made because Phase 0 was skipped.
 
 **Phase 5 (offline portion) complete:** `scripts/verify.ps1 -EngineRoot <clean
 445e314 checkout>` passes every check including locales, version, prebuilt payload,
 checkers, JVM tests, C++ compile checks, `check-patch.py` and the JNI compile. A
-side-by-side APK built from the merged engine is 18.4 MB, signed and verified;
-it installs and launches on the emulator with no fatal log. Device golden and
-export-metadata comparison remain unrun because Phase 0 was skipped and no
-physical device is attached.
+side-by-side APK built from the merged engine with the upgraded LibRaw is 18.6 MB,
+signed and verified; it installs and launches on the emulator with no fatal log.
+Device golden and export-metadata comparison remain unrun because Phase 0 was
+skipped and no physical device is attached.
 
 ### Phase 3 — Reconcile the memory work (`3fbd9bd3`)
 

@@ -1,8 +1,18 @@
 diff --git a/engine/CMakeLists.txt b/engine/CMakeLists.txt
-index 3b27b95..620a836 100644
+index 3b27b95..6dbab5c 100644
 --- a/engine/CMakeLists.txt
 +++ b/engine/CMakeLists.txt
-@@ -16,6 +16,15 @@
+@@ -8,7 +8,8 @@
+ #   SPEKTRALAB_VULKAN_HEADERS   Khronos Vulkan-Headers include dir (default:
+ #                               build/deps/Vulkan-Headers/include, else the
+ #                               system's / $VULKAN_SDK's)
+-#   SPEKTRALAB_LIBRAW_SOURCE    LibRaw 0.22.2 source tree (RAW decode)
++#   SPEKTRALAB_LIBRAW_SOURCE    LibRaw master snapshot source tree (RAW decode;
++#                               the pin is in cmake/LibRaw.cmake)
+ # The Vulkan loader is never linked: engine/third_party/volk opens it at run
+ # time. glslangValidator compiles the kernels to SPIR-V at build time.
+ # macOS normally builds the engine with build.sh/Xcode (Metal). For parity
+@@ -16,6 +17,15 @@
  # through MoltenVK: every source then takes the portable (non-Apple) path,
  # selected by SPK_VULKAN_BACKEND, so the Mac can grade Vulkan against Metal on
  # identical input. Off Apple nothing changes.
@@ -18,7 +28,7 @@ index 3b27b95..620a836 100644
  option(SPEKTRALAB_VULKAN_ON_APPLE "Build the Vulkan backend on macOS (MoltenVK), for parity tests" OFF)
  if(NOT APPLE OR SPEKTRALAB_VULKAN_ON_APPLE)
      set(SPEKTRALAB_PORTABLE_BACKEND ON)
-@@ -140,7 +149,7 @@ if(SPEKTRALAB_PORTABLE_BACKEND)
+@@ -140,7 +150,7 @@ if(SPEKTRALAB_PORTABLE_BACKEND)
              spk_couplers_correction spk_spectral_epilogue
              spk_print_exposure spk_cam16ucs_compress
              spk_cctf_encode_matrix spk_to_rgba16
@@ -27,7 +37,7 @@ index 3b27b95..620a836 100644
              spk_grain_layers spk_grain_layer_one spk_grain_simple
              spk_lognormal_field spk_rng_probe spk_mul spk_glare_add
              spk_reduce_max spk_boost spk_highlight_headroom spk_bw_correct spk_edr spk_cctf_decode
-@@ -260,6 +269,9 @@ if(SPEKTRALAB_PORTABLE_BACKEND)
+@@ -260,6 +270,9 @@ if(SPEKTRALAB_PORTABLE_BACKEND)
                  add_test(NAME spk_raw_decoder_errors COMMAND spk_raw_decoder_errors
                      "${CMAKE_CURRENT_BINARY_DIR}/raw-errors")
                  add_executable(spk_raw_metadata_link tests/raw_metadata_link.cpp)
@@ -37,7 +47,7 @@ index 3b27b95..620a836 100644
                  target_link_libraries(spk_raw_metadata_link PRIVATE spk_libraw)
                  add_test(NAME spk_raw_metadata_link COMMAND spk_raw_metadata_link)
                  add_executable(spk_raw_headroom tests/raw_headroom.cpp)
-@@ -302,7 +314,7 @@ if(SPEKTRALAB_PORTABLE_BACKEND)
+@@ -302,7 +315,7 @@ if(SPEKTRALAB_PORTABLE_BACKEND)
              add_test(NAME spk_vulkan_smoke
                  COMMAND spk_vulkan_smoke "${vulkan_resource_dir}")
  
@@ -47,9 +57,18 @@ index 3b27b95..620a836 100644
                  target_include_directories(spk_vulkan_${probe} PRIVATE
                      "${CMAKE_CURRENT_SOURCE_DIR}/include"
 diff --git a/engine/LINUX_WINDOWS.md b/engine/LINUX_WINDOWS.md
-index 7b6035c..51d9b51 100644
+index 7b6035c..f6fd9ff 100644
 --- a/engine/LINUX_WINDOWS.md
 +++ b/engine/LINUX_WINDOWS.md
+@@ -26,7 +26,7 @@ All pinned and verified, fetched into the gitignored `build/deps` by
+ 
+ | | version | licence | how it is used |
+ |---|---|---|---|
+-| LibRaw | 0.22.2 (zip SHA-256 or git commit + tree id) | LGPL-2.1 (of LGPL/CDDL) | built from source, linked statically |
++| LibRaw | master `42f89c16`, 0.23.0-Snapshot202611 (zip SHA-256 + tree id, or git commit + tree id; every file checked by CMake) | LGPL-2.1 (of LGPL/CDDL) | built from source, linked statically |
+ | Vulkan-Headers | vulkan-sdk-1.4.341.0 | Apache-2.0 OR MIT | compile time only |
+ | volk | vendored, `third_party/volk` | MIT | loads `libvulkan.so.1` / `vulkan-1.dll` at run time -- no SDK import library, and a machine without a driver gets an error message, not a loader failure |
+ | stb_image / stb_image_write / stb_truetype | vendored, `third_party/stb` | public domain / MIT | JPEG/PNG decode, PNG/JPEG encode, deflate |
 @@ -218,11 +218,15 @@ backend builds natively on macOS with `-DSPEKTRALAB_VULKAN_ON_APPLE=ON`
  `SPK_VULKAN_BACKEND`; off by default, and nothing changes off Apple):
  
@@ -157,11 +176,58 @@ index 0000000..0cc05e9
 +回收预览库存的代价是后续小尺寸输出可能重新分配部分scratch；未宣称提速。
 +Windows Vulkan已实测；macOS/Metal和Linux未完成本里程碑运行验证。
 +本提交不包含RAW解码接受范围调整、No Film协议/float shader或前端改动。
+diff --git a/engine/PORT_NOTES.md b/engine/PORT_NOTES.md
+index e097cf2..85f01a4 100644
+--- a/engine/PORT_NOTES.md
++++ b/engine/PORT_NOTES.md
+@@ -7,7 +7,7 @@ Brief: phases 0 (coverage) -> 1 (Linux build + `spektralab-host`) ->
+ ## Build recipe (Linux)
+ 
+ ```
+-engine/setup-deps.sh                      # LibRaw 0.22.2 + Vulkan-Headers into build/deps (verified pins)
++engine/setup-deps.sh                      # LibRaw (master 42f89c16) + Vulkan-Headers into build/deps (verified pins)
+ cmake -S . -B build/linux -G Ninja -DCMAKE_BUILD_TYPE=Release \
+       -DSPEKTRALAB_BUILD_NATIVE_RAW=ON -DSPEKTRALAB_REQUIRE_VULKAN=ON
+ ninja -C build/linux && (cd build/linux && ctest)
 diff --git a/engine/WINDOWS.md b/engine/WINDOWS.md
-index 037b74d..bfbe7b0 100644
+index 037b74d..33eb26c 100644
 --- a/engine/WINDOWS.md
 +++ b/engine/WINDOWS.md
-@@ -73,6 +73,73 @@ failure; without it, CMake can build only the portable core. The wrapper
+@@ -40,14 +40,18 @@ $deps = Join-Path (Split-Path (Get-Location) -Parent) 'deps'
+ & .\engine\setup-libraw.ps1 -DependencyDirectory $deps
+ & .\engine\build-windows.ps1 `
+     -BuildDirectory $build `
+-    -LibRawSourceDirectory (Join-Path $deps 'LibRaw-0.22.2')
++    -LibRawSourceDirectory (Join-Path $deps 'LibRaw-42f89c165763272a5482a254c446337f8048e0df')
+ ```
+ 
+-`setup-libraw.ps1` downloads and verifies a fixed official source archive; it
+-does not install a system-wide library. CMake itself does not download it.
+-The wrapper builds, deploys adjacent MinGW runtime DLLs, runs CTest, and writes
+-`toolchain.json` containing source, shader, dependency and executable hashes.
+-A failed run records failure instead of leaving an old success manifest.
++`setup-libraw.ps1` downloads and verifies the source archive of the pinned
++LibRaw master commit (`0.23.0-Snapshot202611`, `engine/third_party/libraw-pin/`)
++and does not install a system-wide library. Nothing is overlaid any more; CMake
++and the setup script reject any other or locally patched LibRaw tree
++(`RAW-SUPPORT-20261117.md`).
++CMake itself does not download it. The wrapper builds, deploys adjacent MinGW
++runtime DLLs, runs CTest, and writes `toolchain.json` containing source,
++shader, dependency and executable hashes. A failed run records failure instead
++of leaving an old success manifest.
+ 
+ The wrapper defaults to this checkout's `build/windows` directory. Use a
+ different `-BuildDirectory` when preserving an earlier baseline or building
+@@ -64,7 +68,7 @@ Useful options:
+ | `-Compiler`, `-MakeExecutable` | Select the MinGW compiler and make program |
+ | `-CMakeExecutable`, `-CTestExecutable` | Select the configure/build and test tools |
+ | `-VulkanIncludeDirectory`, `-VulkanLibrary`, `-GlslangExecutable` | Select Vulkan development tools explicitly |
+-| `-LibRawSourceDirectory` | Use an already extracted, verified LibRaw 0.22.2 tree |
++| `-LibRawSourceDirectory` | Use an already extracted, verified tree of the pinned LibRaw commit |
+ 
+ Direct CMake configuration supports `SPEKTRALAB_BUILD_NATIVE_RAW`,
+ `SPEKTRALAB_BUILD_DESKTOP` and `SPEKTRALAB_LIBRAW_SOURCE`.
+@@ -73,6 +77,73 @@ failure; without it, CMake can build only the portable core. The wrapper
  always requires Vulkan. Generated SPIR-V and binaries stay in the build
  directory; tracked baked resources do not need regeneration.
  
@@ -235,7 +301,7 @@ index 037b74d..bfbe7b0 100644
  ### TypeScript desktop shell
  
  The current Windows/Linux editor is the Tauri application under `desktop/`;
-@@ -125,10 +192,10 @@ the disk-I/O tradeoff and regression commands.
+@@ -125,10 +196,10 @@ the disk-I/O tradeoff and regression commands.
  
  ## Reproduce the local gates
  
@@ -250,11 +316,155 @@ index 037b74d..bfbe7b0 100644
  conversion/viewport boundaries. The default desktop CTest does not open a
  visible window or require a private RAW fixture.
  
+diff --git a/engine/WINDOWS_DESKTOP.md b/engine/WINDOWS_DESKTOP.md
+index 33aaf96..efe74d6 100644
+--- a/engine/WINDOWS_DESKTOP.md
++++ b/engine/WINDOWS_DESKTOP.md
+@@ -52,7 +52,7 @@ TIFF 保留完整分辨率 RGB16，并嵌入固定 sRGB ICC；不透明 alpha 
+ 
+ 自动测试覆盖共享 host 的完整 RAW 打开、参数更新、缓存重印、headroom、打开失败后保留旧会话、旧结果寿命，以及与同一显示帧逐个 RGB16 样本一致的 TIFF 导出。默认 CTest 还检查 BGRA 通道顺序、行间填充、全部 65,536 个量化输入、透明度约束和 viewport 边界。
+ 
+-Win32 离屏测试检查真实窗口处理函数、控件选择、适合窗口和 100% 绘制、导出及失败打开后的状态。可使用自己提供的支持 RAW 和预期被拒绝的 Nikon HE/HE* 样本重跑：
++Win32 离屏测试检查真实窗口处理函数、控件选择、适合窗口和 100% 绘制、导出及失败打开后的状态。可使用自己提供的支持 RAW 和一个 Nikon HE/HE* 样本（现应成功解码）重跑：
+ 
+ ```powershell
+ python engine/tools/windows_preview_smoke.py `
+@@ -64,4 +64,4 @@ python engine/tools/windows_preview_smoke.py `
+ 
+ 输出目录必须不存在。此工具记录可执行文件和输入哈希、执行结果及输出文件。其图像由离屏窗口和内存 DC 绘制，**不是实际显示器截图**，也不能证明真实拖放、文件对话框、用户手势响应或屏幕色彩正确。测试总耗时包括比较与文件输出，不是正式渲染基准。
+ 
+-当前 LibRaw 0.22.2 明确拒绝 Nikon HE/HE*；不会提取内嵌 JPEG 冒充 RAW 结果。支持 Nikon 正向测试需要受支持的无损压缩 NEF、经验证的 RAW DNG，或将来另行验收的解码器。HE/HE* 的完整解码尚未接入。
++自 2026-11-17 起 LibRaw 固定为上游 master（0.23.0-Snapshot202611），Nikon HE/HE* 可以解码（`RAW-SUPPORT-20261117.md`）。`--integration` 的 NEF 参数现在须能解码；“打开失败后保留旧会话”改用测试自行写出的非 RAW 文件验证。
+diff --git a/engine/WINDOWS_FEATURE_COVERAGE.md b/engine/WINDOWS_FEATURE_COVERAGE.md
+index 54cc1f7..72eec57 100644
+--- a/engine/WINDOWS_FEATURE_COVERAGE.md
++++ b/engine/WINDOWS_FEATURE_COVERAGE.md
+@@ -32,9 +32,9 @@ parity remains unverified.
+ | GPU memory and transfer | Device-local computation, staged upload/readback, device copy | Range/alignment/overlap tests, dependency checks and result lifetime; synchronous scheduling retained |
+ | Striped processing | Existing stripe algorithm with corrected FIR boundaries | 35 deterministic configurations and full ARW with 509-row strips agree with whole-frame/reprint; broader stochastic combinations remain unverified |
+ | C API result lifetime | Independent CPU RGBA16 ownership | Earlier results survive later renders and session/engine destruction; result is not a drawable VkImage |
+-| Native RAW `compatible16` | LibRaw 0.22.2 and linear ProPhoto float storage | Full Sony ARW matches rawpy/LibRaw reference fixture; integer RGB clipping remains; broader camera acceptance pending |
++| Native RAW `compatible16` | LibRaw master snapshot 202611 (`42f89c16`) and linear ProPhoto float storage | Full Sony ARW matches rawpy/LibRaw reference fixture; integer RGB clipping remains; broader camera acceptance pending |
+ | Native RAW `headroom` | Max-normalised WB, uint16 demosaic, unclipped float matrix conversion | Restricted Bayer mode; full ARW camera-RGB/float64 oracle max error `2.31e-7`; sensor and black-level clipping are not recovered |
+-| Nikon HE/HE* | Explicit rejection by bundled decoder | Tested Z8 HE* metadata and clean rejection in both modes/Unicode paths; no positive Nikon decode or timing claim |
++| Nikon HE/HE* | Decoded by the pinned LibRaw master's `nikon_he_load_raw()` (2026-11-17) | One Z6III HE* file decodes in both modes on the Mac host (`RAW-SUPPORT-20261117.md`); Z8/Z9/Zf HE untested; nothing decoded on Windows itself |
+ | Native TIFF | Uncompressed RGB16 with pinned sRGB ICC | Independent tags, strips, all samples, ICC, no-overwrite and failure cleanup; no HDR, other TIFF colour spaces or EXIF copying |
+ | Minimal Win32 viewer | Serial worker and immutable RGBA16/BGRA8 frames | Full RAW open, film/paper/brightness edits, fit/100% pan, same-frame export and failed-open preservation |
+ | Qt Quick editor | Shared native host, three-panel layout and single-photo strip | Full RAW/controller/offscreen scene regression; physical 100% samples, repeated texture updates and failure recovery; live display validation pending |
+diff --git a/engine/WINDOWS_NATIVE_RAW.md b/engine/WINDOWS_NATIVE_RAW.md
+index 2dcdeed..8d6aff8 100644
+--- a/engine/WINDOWS_NATIVE_RAW.md
++++ b/engine/WINDOWS_NATIVE_RAW.md
+@@ -6,8 +6,9 @@ the engine are statically linked into the host. Python/rawpy are test tools
+ only. File I/O remains outside the pixel-input/pixel-output engine API.
+ 
+ The default policy is `compatible16`. `headroom` is an explicit experimental
+-alternative; neither mode silently falls back to the other. Bundled LibRaw
+-does not support Nikon HE/HE* decoding.
++alternative; neither mode silently falls back to the other. Since 2026-11-17
++the bundled LibRaw (upstream master, `0.23.0-Snapshot202611`) decodes Nikon
++HE/HE* NEFs; what was decoded here is in `RAW-SUPPORT-20261117.md`.
+ 
+ ## Build and run
+ 
+@@ -45,11 +46,25 @@ The [Win32 viewer](WINDOWS_DESKTOP.md) uses the same decoder and TIFF writer.
+ 
+ ## Dependency and deployment
+ 
+-The dependency is official [LibRaw 0.22.2](https://github.com/LibRaw/LibRaw/releases/tag/0.22.2),
+-using the [fixed source archive](https://codeload.github.com/LibRaw/LibRaw/zip/refs/tags/0.22.2)
+-with SHA-256 `02275a04cf0d1477ab9fd7ee231ddea59e7b14497458da6e3ba957517d6655c7`.
+-`setup-libraw.ps1` verifies it before extraction. CMake does not fetch mutable
+-dependencies. Build manifests record source and runtime hashes.
++The dependency is upstream LibRaw at a pinned **master** commit,
++`42f89c165763272a5482a254c446337f8048e0df` (tree `865b3ac461d5b734e5bc54683e914ff8dd82b7da`,
++reports `0.23.0-Snapshot202611`), from the commit's
++[source archive](https://codeload.github.com/LibRaw/LibRaw/zip/42f89c165763272a5482a254c446337f8048e0df)
++with SHA-256 `95a5c092fd12c16359b8a13afac58bf1b4aaad50e27d2c9221f275c496b79ca2`. Release tags stop at
++0.22.3 and only master decodes Sony ARW 6 / A7 V, the EOS R6 Mark III's colour data, Nikon HE/HE* and
++the GFX 100RF's matrix. The setup scripts verify the archive (and `setup-libraw.sh` the git tree id it
++hashes to) and refuse an existing tree that differs in any file; `cmake/LibRaw.cmake` checks the
++version macros and every file against `third_party/libraw-pin/SHA256SUMS` before compiling. Nothing of
++LibRaw is patched: the ARW 6 overlay that 0.22.2 needed (`third_party/libraw-arw6/`) is gone, because
++master carries all of it, and so is `raw_camera.hpp`'s GFX100RF / X-E5 matrix override
++(`third_party/libraw-pin/README.md`). CMake does not fetch mutable dependencies. Build manifests
++record source and runtime hashes.
++
++Sony A7 V ARW 6 lossy files are decoded through upstream's `sony_arw6_load_raw()`, lossless ones
++through `sony_ljpeg_load_raw()`; both fixtures here are bit-identical to what the 0.22.2 + overlay
++build decoded. Nikon HE/HE* goes through upstream's `nikon_he_load_raw()` (new in snapshot 202611).
++This is sample-level coverage, not a guarantee for every camera or mode: `RAW-SUPPORT-20261117.md` lists
++each file decoded, and `engine/tests/raw_gate.sh` re-checks them.
+ 
+ The build selects LibRaw's LGPL-2.1 licence option and deploys `LICENSE.LGPL`
+ and `COPYRIGHT` under the output's `third-party/LibRaw` directory. Preserve
+@@ -128,17 +143,15 @@ Display P3/ProPhoto TIFF, HDR metadata, EXIF copying and DI file packaging are
+ not implemented by this host. Receiving DI pixels through the engine API does
+ not imply a corresponding file export is available.
+ 
+-## Nikon HE/HE* limitation
++## Nikon HE/HE*
+ 
+-A tested Nikon Z8 HE* sample has a 5408×3608 stored plane, 14-bit data,
+-compression code 14 and payload prefix `ff 10 ff 50`. LibRaw 0.22.2 selects
+-`nikon_he_load_raw()`, whose bundled implementation rejects the format.
+-TIFF compression tag 34713 alone does not distinguish HE from ordinary NEF.
+-
+-This sample has metadata and rejection coverage only: no successful Nikon
+-decode, render or speed result is claimed. An embedded JPEG is never used as
+-a replacement. Nikon positive testing needs a supported lossless-compressed
+-NEF, a separately validated RAW DNG conversion, or a future decoder integration.
++Until 2026-11-17 the host refused HE/HE* NEFs by name ("Nikon HE/HE* compression is not supported by
++bundled LibRaw 0.22.2"): 0.22.2's `nikon_he_load_raw()` was a stub. The pinned master has the real
++decoder (`src/decoders/nikonhe.cpp`, LibRaw snapshot 202611: Z6III, Z8, Z9, Zf), so the refusal is
++gone. A Nikon Z6III HE* fixture decodes in both modes, every sample finite, and renders a plausible
++frame (`RAW-SUPPORT-20261117.md`). The decoder keeps about 8 bytes per pixel of intermediate buffers
++while it runs (LibRaw's Changelog: ~400 MB for a 45 MP Z9 file) and is serial in this build: the
++Mac host and the Homebrew MinGW cross-build have no OpenMP. A Z8/Z9 HE file has not been decoded here.
+ 
+ ## Reproduce validation and timing
+ 
+diff --git a/engine/WINDOWS_WIDE_GAMUT.md b/engine/WINDOWS_WIDE_GAMUT.md
+index b79d7ec..7ca33d5 100644
+--- a/engine/WINDOWS_WIDE_GAMUT.md
++++ b/engine/WINDOWS_WIDE_GAMUT.md
+@@ -12,7 +12,7 @@ is no legacy grading mode. Non-neutral old edits can therefore look different.
+ ProPhoto print -> encoded-domain ProPhoto post -> crop/rotation -> resize ->
+ display or export conversion`.
+ 
+-- RAW keeps LibRaw 0.22.2, AHD, white balance, and compatible16/headroom modes.
++- RAW keeps LibRaw (now the pinned master snapshot, `RAW-SUPPORT-20261117.md`), AHD, white balance, and compatible16/headroom modes.
+   `SPEKTRALAB_LIBRAW_OPENMP=ON` requires OpenMP and propagates consistent LibRaw
+   definitions to consumers. Windows GNU also defines `LIBRAW_FORCE_OPENMP`.
+   `LIBRAW_NOTHREADS` is removed. A worker scope defaults to
+diff --git a/engine/build-linux.sh b/engine/build-linux.sh
+index 30cb1ec..5a63445 100755
+--- a/engine/build-linux.sh
++++ b/engine/build-linux.sh
+@@ -3,7 +3,7 @@
+ #
+ #   engine/build-linux.sh [--test] [--no-deps]
+ #
+-# 1. engine/setup-deps.sh: pinned LibRaw 0.22.2 + Vulkan-Headers into the
++# 1. engine/setup-deps.sh: pinned LibRaw (master snapshot) + Vulkan-Headers into the
+ #    gitignored build/deps (verified; skipped with --no-deps).
+ # 2. CMake + Ninja in build/linux: the engine (Vulkan backend, kernels to
+ #    SPIR-V), LibRaw, spektralab-host, and the tests. libstdc++/libgcc are
 diff --git a/engine/build-windows-cross.sh b/engine/build-windows-cross.sh
-index d0c92e7..e86efdb 100755
+index d0c92e7..76f048f 100755
 --- a/engine/build-windows-cross.sh
 +++ b/engine/build-windows-cross.sh
-@@ -90,7 +90,8 @@ if true; then
+@@ -5,7 +5,8 @@
+ #
+ # MinGW-w64 (posix threads) through cmake/toolchain-mingw-w64.cmake; Vulkan
+ # through volk, so no SDK import library -- the exe opens vulkan-1.dll at run
+-# time; LibRaw 0.22.2 cross-built from the same pinned tree as Linux;
++# time; LibRaw (the pinned upstream master snapshot, engine/setup-libraw.sh)
++# cross-built from the same verified tree as Linux;
+ # libstdc++, libgcc and winpthread linked statically, so the exe depends only
+ # on system DLLs. Stages build/host-win-x64/ (HOST-PROTOCOL.md §4).
+ #
+@@ -90,7 +91,8 @@ if true; then
    # runtime is msvcrt (Ubuntu's MinGW) or the Universal CRT's api-ms-win-crt-*
    # forwarders (Homebrew's MinGW 14 defaults to UCRT; part of Windows 10+).
    # vulkan-1.dll is never imported: volk opens it at run time.
@@ -264,6 +474,121 @@ index d0c92e7..e86efdb 100755
    if [[ -n "$unexpected" ]]; then
      echo "spektralab-host.exe imports DLLs outside the system allowlist: $(echo $unexpected)" >&2
      exit 1
+diff --git a/engine/build-windows.ps1 b/engine/build-windows.ps1
+index 5c77476..cd1f293 100644
+--- a/engine/build-windows.ps1
++++ b/engine/build-windows.ps1
+@@ -112,7 +112,7 @@ try {
+         $configureArguments += "-DSPEKTRALAB_LENS_PREFIX=$($LensPrefix.Replace('\', '/'))"
+     }
+     if ($NativeRaw) {
+-        if (-not $LibRawSourceDirectory) { $LibRawSourceDirectory = Join-Path $dependencyDirectory 'LibRaw-0.22.2' }
++        if (-not $LibRawSourceDirectory) { $LibRawSourceDirectory = Join-Path $dependencyDirectory 'LibRaw-42f89c165763272a5482a254c446337f8048e0df' }
+         if (-not (Test-Path -LiteralPath (Join-Path $LibRawSourceDirectory 'libraw\libraw.h'))) {
+             throw 'LibRaw is missing; run engine/setup-libraw.ps1 first.'
+         }
+diff --git a/engine/cmake/LibRaw.cmake b/engine/cmake/LibRaw.cmake
+index c7b5047..eec5459 100644
+--- a/engine/cmake/LibRaw.cmake
++++ b/engine/cmake/LibRaw.cmake
+@@ -1,15 +1,58 @@
+ # Pinned standalone LibRaw build; no download or Python at configure/runtime.
+-set(SPEKTRALAB_LIBRAW_SOURCE "${SPEKTRALAB_DEPS_DIR}/LibRaw-0.22.2" CACHE PATH "Extracted official LibRaw 0.22.2 source")
++#
++# The pin is an upstream master checkout (LibRaw's release tags stop at 0.22.3
++# and none of them decodes the modern bodies the product needs). setup-libraw.sh
++# and setup-libraw.ps1 fetch and verify it; this file refuses to build from any
++# other tree: the version macros must say 0.23.0-Snapshot202611 and every file
++# must match engine/third_party/libraw-pin/SHA256SUMS -- nothing added, removed
++# or edited. A 0.22.x tree, a later snapshot or a locally patched copy all stop
++# here, before a single LibRaw object is compiled.
++set(SPEKTRALAB_LIBRAW_COMMIT 42f89c165763272a5482a254c446337f8048e0df)
++set(SPEKTRALAB_LIBRAW_TREE 865b3ac461d5b734e5bc54683e914ff8dd82b7da)
++set(SPEKTRALAB_LIBRAW_VERSION "0.23.0-Snapshot202611")
++set(SPEKTRALAB_LIBRAW_SOURCE "${SPEKTRALAB_DEPS_DIR}/LibRaw-${SPEKTRALAB_LIBRAW_COMMIT}" CACHE PATH
++    "Verified LibRaw master ${SPEKTRALAB_LIBRAW_COMMIT} source tree")
++set(spk_libraw_setup_hint "run engine/setup-libraw.ps1 (Windows) or engine/setup-libraw.sh (POSIX) and set SPEKTRALAB_LIBRAW_SOURCE to the directory it prints")
+ if(NOT EXISTS "${SPEKTRALAB_LIBRAW_SOURCE}/libraw/libraw.h")
+-    message(FATAL_ERROR "Native RAW requires LibRaw 0.22.2; run engine/setup-libraw.ps1 (Windows) or engine/setup-libraw.sh (POSIX) and set SPEKTRALAB_LIBRAW_SOURCE")
++    message(FATAL_ERROR "Native RAW requires LibRaw master ${SPEKTRALAB_LIBRAW_COMMIT} (${SPEKTRALAB_LIBRAW_VERSION}); ${spk_libraw_setup_hint}")
+ endif()
+-file(STRINGS "${SPEKTRALAB_LIBRAW_SOURCE}/libraw/libraw_version.h" libraw_version REGEX "^#define LIBRAW_(MAJOR|MINOR|PATCH)_VERSION")
+-list(FIND libraw_version "#define LIBRAW_MAJOR_VERSION 0" libraw_major)
+-list(FIND libraw_version "#define LIBRAW_MINOR_VERSION 22" libraw_minor)
+-list(FIND libraw_version "#define LIBRAW_PATCH_VERSION 2" libraw_patch)
+-if(libraw_major EQUAL -1 OR libraw_minor EQUAL -1 OR libraw_patch EQUAL -1)
+-    message(FATAL_ERROR "This RAW integration is validated with LibRaw 0.22.2 only")
++file(STRINGS "${SPEKTRALAB_LIBRAW_SOURCE}/libraw/libraw_version.h" libraw_version
++     REGEX "^#define LIBRAW_(MAJOR|MINOR|PATCH)_VERSION|^#define LIBRAW_VERSION_TAIL")
++foreach(line IN ITEMS "#define LIBRAW_MAJOR_VERSION 0" "#define LIBRAW_MINOR_VERSION 23"
++                      "#define LIBRAW_PATCH_VERSION 0" "#define LIBRAW_VERSION_TAIL Snapshot202611")
++    list(FIND libraw_version "${line}" libraw_version_found)
++    if(libraw_version_found EQUAL -1)
++        message(FATAL_ERROR "This RAW integration is validated with LibRaw ${SPEKTRALAB_LIBRAW_VERSION} (master ${SPEKTRALAB_LIBRAW_COMMIT}) only; ${SPEKTRALAB_LIBRAW_SOURCE} is a different version. ${spk_libraw_setup_hint}")
++    endif()
++endforeach()
++# The version macros do not move between snapshot commits, so the tree is
++# checked file by file as well. A git checkout's own metadata is not part of it.
++set(libraw_manifest "${CMAKE_CURRENT_LIST_DIR}/../third_party/libraw-pin/SHA256SUMS")
++file(STRINGS "${libraw_manifest}" libraw_manifest_lines)
++set(libraw_expected "")
++foreach(line IN LISTS libraw_manifest_lines)
++    if(NOT line MATCHES "^([0-9a-f]+)  (.+)$")
++        message(FATAL_ERROR "Malformed line in ${libraw_manifest}: ${line}")
++    endif()
++    set(hash "${CMAKE_MATCH_1}")
++    set(rel "${CMAKE_MATCH_2}")
++    list(APPEND libraw_expected "${rel}")
++    if(NOT EXISTS "${SPEKTRALAB_LIBRAW_SOURCE}/${rel}")
++        message(FATAL_ERROR "LibRaw tree ${SPEKTRALAB_LIBRAW_SOURCE} is missing ${rel}; it is not the pinned ${SPEKTRALAB_LIBRAW_COMMIT}. ${spk_libraw_setup_hint}")
++    endif()
++    file(SHA256 "${SPEKTRALAB_LIBRAW_SOURCE}/${rel}" actual)
++    if(NOT actual STREQUAL hash)
++        message(FATAL_ERROR "LibRaw file ${rel} differs from the pinned ${SPEKTRALAB_LIBRAW_COMMIT} (tree ${SPEKTRALAB_LIBRAW_TREE}); refusing a modified tree. ${spk_libraw_setup_hint}")
++    endif()
++endforeach()
++file(GLOB_RECURSE libraw_present LIST_DIRECTORIES false RELATIVE "${SPEKTRALAB_LIBRAW_SOURCE}" "${SPEKTRALAB_LIBRAW_SOURCE}/*")
++list(FILTER libraw_present EXCLUDE REGEX "^\\.git/")
++list(REMOVE_ITEM libraw_present ${libraw_expected})
++if(libraw_present)
++    list(GET libraw_present 0 libraw_extra)
++    message(FATAL_ERROR "Unexpected file in the pinned LibRaw tree: ${libraw_extra}; refusing a modified tree. ${spk_libraw_setup_hint}")
+ endif()
++
+ file(GLOB_RECURSE libraw_sources CONFIGURE_DEPENDS "${SPEKTRALAB_LIBRAW_SOURCE}/src/*.cpp")
+ # *_ph.cpp are replacement placeholders for LibRaw's no-postprocessing build,
+ # not extra implementations. Including them beside the real processing units
+@@ -35,9 +78,9 @@ if(SPEKTRALAB_LIBRAW_OPENMP)
+     endif()
+     find_package(OpenMP REQUIRED COMPONENTS CXX)
+     target_link_libraries(spk_libraw PUBLIC OpenMP::OpenMP_CXX)
+-    # LibRaw 0.22.2 intentionally disables OpenMP for non-MSVC Windows
+-    # compilers unless explicitly opted in. PUBLIC keeps its inline allocator
+-    # definitions identical in the library and all consumers of libraw.h.
++    # LibRaw (0.22.2 and this snapshot alike) disables OpenMP for non-MSVC
++    # Windows compilers unless explicitly opted in. PUBLIC keeps its inline
++    # allocator definitions identical in the library and all consumers.
+     if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+         target_compile_definitions(spk_libraw PUBLIC LIBRAW_FORCE_OPENMP)
+     endif()
+@@ -56,8 +99,16 @@ endif()
+ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+     target_compile_options(spk_libraw PRIVATE -w)
+ endif()
+-# Select the LGPL-2.1 option offered by the LibRaw dual license.
++# Select the LGPL-2.1 option offered by the LibRaw dual license. stage-host.sh
++# copies these three files into the staged licenses/.
+ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/third-party/LibRaw")
+ foreach(notice LICENSE.LGPL COPYRIGHT)
+     configure_file("${SPEKTRALAB_LIBRAW_SOURCE}/${notice}" "third-party/LibRaw/${notice}" COPYONLY)
+ endforeach()
++file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/third-party/LibRaw/SOURCE.txt"
++"LibRaw ${SPEKTRALAB_LIBRAW_VERSION}, statically linked under the LGPL-2.1 option
++of its LGPL-2.1 / CDDL-1.0 dual licence (LICENSE.LGPL, COPYRIGHT).
++Source: https://github.com/LibRaw/LibRaw, commit ${SPEKTRALAB_LIBRAW_COMMIT}
++(git tree ${SPEKTRALAB_LIBRAW_TREE}), unmodified; engine/setup-libraw.sh in the
++SpektraLab repository fetches and verifies exactly this tree.
++")
 diff --git a/engine/cmake/lens-codecs-pins.json b/engine/cmake/lens-codecs-pins.json
 index b1ab250..f01c32d 100644
 --- a/engine/cmake/lens-codecs-pins.json
@@ -815,6 +1140,382 @@ index b0c2a45..b2661f9 100644
  /* Build identity, for `capabilities.backend` and for a human reading a bug
   * report: version, git-ish build stamp, the Metal math mode the kernels were
   * compiled with, and whether the fast-math probe agreed with it. */
+diff --git a/engine/setup-deps.sh b/engine/setup-deps.sh
+index df808e0..fc501bc 100755
+--- a/engine/setup-deps.sh
++++ b/engine/setup-deps.sh
+@@ -3,7 +3,8 @@
+ #
+ #   engine/setup-deps.sh [deps-dir]        (default: <repo>/build/deps)
+ #
+-# - LibRaw 0.22.2 (engine/setup-libraw.sh: zip SHA-256, or git commit + tree id)
++# - LibRaw master 42f89c16, 0.23.0-Snapshot202611 (engine/setup-libraw.sh: zip
++#   SHA-256 and tree id, or git commit + tree id)
+ # - Khronos Vulkan-Headers, tag vulkan-sdk-1.4.341.0 (commit + tree id). Headers
+ #   only, compile time only; Apache-2.0 OR MIT. The loader itself is not linked:
+ #   engine/third_party/volk opens libvulkan.so.1 / vulkan-1.dll at run time.
+diff --git a/engine/setup-libraw.ps1 b/engine/setup-libraw.ps1
+index d63dca8..4041f5e 100644
+--- a/engine/setup-libraw.ps1
++++ b/engine/setup-libraw.ps1
+@@ -1,45 +1,97 @@
+-# Download a fixed official release, verify before extraction. No Python needed.
++# Download the one LibRaw source tree the native RAW path is validated against
++# and verify it. No Python needed.
++#
++# The pin is an upstream master checkout, not a release: LibRaw's tags stop at
++# 0.22.3, and only master decodes the modern bodies this product needs (Sony
++# ARW 6 / A7 V, Canon EOS R6 Mark III, Nikon HE/HE*, Fujifilm GFX 100RF):
++#   commit 42f89c165763272a5482a254c446337f8048e0df (0.23.0-Snapshot202611)
++#   tree   865b3ac461d5b734e5bc54683e914ff8dd82b7da
++#   zip    SHA-256 95a5c092fd12c16359b8a13afac58bf1b4aaad50e27d2c9221f275c496b79ca2
++# The archive's SHA-256 is checked before anything is extracted. That SHA-256
++# is the same one setup-libraw.sh checks, and setup-libraw.sh also recomputes
++# the git tree id from the archive's entries, so this zip is that tree.
++#
++# An existing tree is verified file by file against the archive and refused --
++# never "fixed" -- if any file was added, removed or edited. There is no
++# overlay any more (RAW-SUPPORT-20261117.md, "The LibRaw pin").
+ [CmdletBinding()]
+ param([string]$DependencyDirectory = (Join-Path $PSScriptRoot '..\..\deps'))
+ $ErrorActionPreference = 'Stop'
+ $DependencyDirectory = [IO.Path]::GetFullPath($DependencyDirectory)
+ New-Item -ItemType Directory -Path $DependencyDirectory -Force | Out-Null
+-$archive = Join-Path $DependencyDirectory 'LibRaw-0.22.2.zip'
+-$source = Join-Path $DependencyDirectory 'LibRaw-0.22.2'
+-$url = 'https://codeload.github.com/LibRaw/LibRaw/zip/refs/tags/0.22.2'
+-$expected = '02275a04cf0d1477ab9fd7ee231ddea59e7b14497458da6e3ba957517d6655c7'
+-if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -Uri $url -OutFile $archive }
+-if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
+-    throw 'LibRaw archive checksum mismatch; existing files were not extracted or changed.'
++
++# The pin. engine/cmake/LibRaw.cmake and engine/setup-libraw.sh carry the same
++# values; engine/tests/raw_pin_guard.sh fails if they drift apart.
++$commit = '42f89c165763272a5482a254c446337f8048e0df'
++$tree = '865b3ac461d5b734e5bc54683e914ff8dd82b7da'
++$expected = '95a5c092fd12c16359b8a13afac58bf1b4aaad50e27d2c9221f275c496b79ca2'
++$name = "LibRaw-$commit"
++$url = "https://codeload.github.com/LibRaw/LibRaw/zip/$commit"
++$archive = Join-Path $DependencyDirectory "$name.zip"
++$source = Join-Path $DependencyDirectory $name
++
++function Get-FileSha256([string]$Path) {
++    (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+ }
++
++function Get-ZipEntrySha256($Entry) {
++    $stream = $Entry.Open()
++    $hasher = [Security.Cryptography.SHA256]::Create()
++    try {
++        [BitConverter]::ToString($hasher.ComputeHash($stream)).Replace('-', '').ToLowerInvariant()
++    } finally {
++        $hasher.Dispose()
++        $stream.Dispose()
++    }
++}
++
++if (-not (Test-Path -LiteralPath $archive)) {
++    $partial = "$archive.partial"
++    Invoke-WebRequest -Uri $url -OutFile $partial
++    Move-Item -LiteralPath $partial -Destination $archive
++}
++$actualArchive = Get-FileSha256 $archive
++if ($actualArchive -ne $expected) {
++    throw "LibRaw archive checksum mismatch ($actualArchive); nothing was extracted or changed."
++}
++
+ Add-Type -AssemblyName System.IO.Compression.FileSystem
+ $zip = [IO.Compression.ZipFile]::OpenRead($archive)
+ try {
++    # Every entry must sit under the one top-level folder the pin names.
+     foreach ($entry in $zip.Entries) {
+-        $target = [IO.Path]::GetFullPath((Join-Path $DependencyDirectory $entry.FullName))
+-        if (-not $target.StartsWith($source + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -and $target.TrimEnd('\') -ne $source) {
+-            throw 'Unsafe LibRaw archive path'
++        $entryName = $entry.FullName.Replace('\', '/')
++        $parts = $entryName.TrimEnd('/').Split('/')
++        if ($parts[0] -ne $name -or $parts -contains '..' -or $entryName.StartsWith('/')) {
++            throw "Unsafe LibRaw archive path: $($entry.FullName)"
+         }
+     }
+-    if (Test-Path -LiteralPath $source) {
+-        $expectedPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+-        foreach ($entry in $zip.Entries) {
+-            if (-not $entry.Name) { continue }
+-            $target = [IO.Path]::GetFullPath((Join-Path $DependencyDirectory $entry.FullName))
+-            [void]$expectedPaths.Add($target)
+-            if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw "Incomplete LibRaw source tree: $target" }
+-            $stream = $entry.Open()
+-            $hasher = [Security.Cryptography.SHA256]::Create()
+-            try { $digest = [BitConverter]::ToString($hasher.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }
+-            finally { $hasher.Dispose(); $stream.Dispose() }
+-            if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant() -ne $digest) {
+-                throw "Modified LibRaw source file: $target. Existing files were not overwritten."
+-            }
++
++    $extracted = $false
++    if (-not (Test-Path -LiteralPath $source)) {
++        [IO.Compression.ZipFile]::ExtractToDirectory($archive, $DependencyDirectory)
++        $extracted = $true
++    }
++
++    # The tree on disk is the archive, byte for byte, and nothing else.
++    $expectedPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
++    foreach ($entry in $zip.Entries) {
++        if (-not $entry.Name) { continue }
++        $target = [IO.Path]::GetFullPath((Join-Path $DependencyDirectory $entry.FullName))
++        if (-not $target.StartsWith($source + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
++            throw "Unsafe LibRaw archive path: $($entry.FullName)"
+         }
+-        foreach ($file in Get-ChildItem -LiteralPath $source -File -Recurse) {
+-            if (-not $expectedPaths.Contains($file.FullName)) { throw "Unexpected file in pinned LibRaw source: $($file.FullName)" }
++        if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw "Incomplete LibRaw source tree: $target" }
++        [void]$expectedPaths.Add($target)
++        if ((Get-FileSha256 $target) -ne (Get-ZipEntrySha256 $entry)) {
++            throw "Modified LibRaw source file: $target. Existing files were not overwritten."
+         }
+     }
++    foreach ($file in Get-ChildItem -LiteralPath $source -File -Recurse -Force) {
++        if (-not $expectedPaths.Contains($file.FullName)) { throw "Unexpected file in pinned LibRaw source: $($file.FullName)" }
++    }
+ } finally { $zip.Dispose() }
+-if (-not (Test-Path -LiteralPath $source)) { [IO.Compression.ZipFile]::ExtractToDirectory($archive, $DependencyDirectory) }
+-Write-Output "LibRaw 0.22.2: $source (archive SHA256 and existing source verified)."
++
++$how = if ($extracted) { 'archive SHA-256 verified, extracted' } else { 'existing source verified file by file' }
++Write-Host "LibRaw $commit (tree $tree): $how."
++Write-Output $source
+diff --git a/engine/setup-libraw.sh b/engine/setup-libraw.sh
+index 34f0b8e..fc408f5 100755
+--- a/engine/setup-libraw.sh
++++ b/engine/setup-libraw.sh
+@@ -1,19 +1,30 @@
+ #!/usr/bin/env bash
+ # setup-libraw.sh -- the POSIX twin of setup-libraw.ps1.
+ #
+-# Fetches the one LibRaw release the native RAW path is validated against
+-# (0.22.2) into a gitignored dependency directory, and verifies it before it
+-# is used:
++# Fetches the one LibRaw source tree the native RAW path is validated against
++# into a gitignored dependency directory and verifies it. That tree is an
++# upstream master checkout, not a release: LibRaw's release tags stop at
++# 0.22.3, and only master decodes the modern bodies this product needs (Sony
++# ARW 6 / A7 V, Canon EOS R6 Mark III, Nikon HE/HE*, Fujifilm GFX 100RF).
+ #
+-#   1. the release zip from codeload.github.com, checked against the same
+-#      SHA-256 setup-libraw.ps1 pins, before anything is extracted; or, when
+-#      that host is unreachable (some egress proxies refuse it),
+-#   2. a shallow `git clone` of the 0.22.2 tag, checked against the tag's
+-#      commit id *and* its tree id -- a content hash over every file -- so a
+-#      moved tag or a different tree is refused exactly as a bad zip is.
++#   pin     LibRaw master 42f89c165763272a5482a254c446337f8048e0df
++#           ("Planebuf limit: change bytes to items", 2026-11-16), which
++#           reports itself as 0.23.0-Snapshot202611
++#   tree    865b3ac461d5b734e5bc54683e914ff8dd82b7da (git tree id: a content
++#           hash over every file and mode)
+ #
+-# An existing tree is re-verified and never overwritten, so a locally patched
+-# LibRaw cannot silently become "the pinned source".
++# Two ways in, both verified before anything is used:
++#
++#   1. the commit's zip from codeload.github.com, checked against its SHA-256
++#      *and* against the git tree id recomputed from the archive's entries,
++#      before anything is extracted; or, when that host is unreachable,
++#   2. a depth-1 `git fetch` of the commit, checked against the commit id and
++#      the tree id.
++#
++# An existing tree is re-verified file by file and refused -- never "fixed" --
++# if anything differs: no file may be added, removed or edited. There is no
++# overlay any more: master carries everything the 0.22.2 overlay backported
++# (RAW-SUPPORT-20261117.md, "The LibRaw pin").
+ #
+ #   engine/setup-libraw.sh [deps-dir]      (default: <repo>/build/deps)
+ #
+@@ -27,56 +38,108 @@ deps="${1:-$here/../build/deps}"
+ mkdir -p "$deps"
+ deps="$(cd "$deps" && pwd)"
+ 
+-version=0.22.2
+-url="https://codeload.github.com/LibRaw/LibRaw/zip/refs/tags/$version"
+-zip_sha256=02275a04cf0d1477ab9fd7ee231ddea59e7b14497458da6e3ba957517d6655c7
+-git_url="https://github.com/LibRaw/LibRaw.git"
+-git_commit=b93f6e45c194f5df9b02a43b1af9a54b4f41f33f
+-git_tree=0fd7d10c62714db90d9fa922230916a030c2d6d3
+-archive="$deps/LibRaw-$version.zip"
+-source="$deps/LibRaw-$version"
++# The pin. engine/cmake/LibRaw.cmake and engine/setup-libraw.ps1 carry the
++# same four values; engine/tests/raw_pin_guard.sh fails if they drift apart.
++git_commit=42f89c165763272a5482a254c446337f8048e0df
++git_tree=865b3ac461d5b734e5bc54683e914ff8dd82b7da
++zip_sha256=95a5c092fd12c16359b8a13afac58bf1b4aaad50e27d2c9221f275c496b79ca2
++name="LibRaw-$git_commit"
++url="https://codeload.github.com/LibRaw/LibRaw/zip/$git_commit"
++git_url="${SPEKTRALAB_LIBRAW_GIT_URL:-https://github.com/LibRaw/LibRaw.git}"
++archive="$deps/$name.zip"
++source="$deps/$name"
+ 
+-verify_git_tree() {   # $1 = a checkout; succeeds only on the pinned commit+tree, clean
++verify_git_tree() {   # $1 = a checkout: the pinned commit and tree, nothing else
+   local dir="$1"
+   [[ "$(git -C "$dir" rev-parse HEAD)" == "$git_commit" ]] || return 1
+   [[ "$(git -C "$dir" rev-parse 'HEAD^{tree}')" == "$git_tree" ]] || return 1
+-  [[ -z "$(git -C "$dir" status --porcelain --ignored)" ]] || return 1
++  [[ -z "$(git -C "$dir" status --porcelain=v1 --ignored --untracked-files=all)" ]] || return 1
+ }
+ 
+-verify_zip_tree() {   # the extracted tree against the verified archive, byte for byte
+-  python3 - "$archive" "$deps" <<'PY'
+-import hashlib, os, sys, zipfile
+-archive, deps = sys.argv[1], sys.argv[2]
++# $1 = archive | extract | tree. "archive": the zip's own entries hash to the
++# pinned git tree. "tree": every file on disk is the archive's, byte for byte,
++# and nothing else is there. "extract": safe extraction into $deps.
++zip_tool() {
++  python3 -I - "$archive" "$deps" "$name" "$git_tree" "$1" <<'PY'
++import hashlib, os, stat, sys, zipfile
++archive, deps, name, want_tree, mode = sys.argv[1:]
+ z = zipfile.ZipFile(archive)
+-expected = set()
++files = [i for i in z.infolist() if not i.is_dir()]
+ for info in z.infolist():
+-    if info.is_dir():
+-        continue
+-    path = os.path.normpath(os.path.join(deps, info.filename))
+-    expected.add(path)
+-    if not os.path.isfile(path):
+-        sys.exit(f"Incomplete LibRaw source tree: {path}")
+-    if hashlib.sha256(z.read(info)).digest() != hashlib.sha256(open(path, 'rb').read()).digest():
+-        sys.exit(f"Modified LibRaw source file: {path}. Existing files were not overwritten.")
+-top = os.path.join(deps, z.namelist()[0].split('/')[0])
+-for root, _, files in os.walk(top):
+-    for f in files:
+-        p = os.path.normpath(os.path.join(root, f))
+-        if p not in expected:
+-            sys.exit(f"Unexpected file in pinned LibRaw source: {p}")
++    parts = info.filename.rstrip('/').split('/')
++    if parts[0] != name or '..' in parts or info.filename.startswith('/') or '\\' in info.filename:
++        sys.exit(f"Unsafe LibRaw archive path: {info.filename}")
++
++if mode == "archive":
++    root = {}
++    for info in files:
++        parts = info.filename.split('/')[1:]
++        kind = (info.external_attr >> 16) & 0o177777
++        gmode = b'120000' if stat.S_ISLNK(kind) else b'100755' if kind & 0o111 else b'100644'
++        data = z.read(info)
++        node = root
++        for p in parts[:-1]:
++            node = node.setdefault(p, {})
++        node[parts[-1]] = (gmode, hashlib.sha1(b'blob %d\0' % len(data) + data).digest())
++    def tree(node):
++        entries = []
++        for key, value in node.items():
++            if isinstance(value, dict):
++                entries.append((key + '/', b'40000', key, tree(value)))
++            else:
++                entries.append((key, value[0], key, value[1]))
++        entries.sort(key=lambda e: e[0].encode())
++        body = b''.join(m + b' ' + n.encode() + b'\0' + h for _, m, n, h in entries)
++        return hashlib.sha1(b'tree %d\0' % len(body) + body).digest()
++    got = tree(root).hex()
++    if got != want_tree:
++        sys.exit(f"LibRaw archive is not the pinned tree {want_tree} (it hashes to {got})")
++elif mode == "extract":
++    if any(stat.S_ISLNK((i.external_attr >> 16) & 0o177777) for i in files):
++        sys.exit("LibRaw archive contains a symbolic link; refusing to extract it")
++    z.extractall(deps)
++elif mode == "tree":
++    expected = set()
++    for info in files:
++        path = os.path.normpath(os.path.join(deps, *info.filename.split('/')))
++        expected.add(path)
++        if not os.path.isfile(path) or os.path.islink(path):
++            sys.exit(f"Incomplete LibRaw source tree: {path}")
++        with open(path, 'rb') as f:
++            if hashlib.sha256(f.read()).digest() != hashlib.sha256(z.read(info)).digest():
++                sys.exit(f"Modified LibRaw source file: {path}. Existing files were not overwritten.")
++    for top, _, names in os.walk(os.path.join(deps, name)):
++        for n in names:
++            path = os.path.normpath(os.path.join(top, n))
++            if path not in expected:
++                sys.exit(f"Unexpected file in pinned LibRaw source: {path}")
++else:
++    sys.exit(f"unknown mode {mode}")
+ PY
+ }
+ 
++verify_archive() {
++  local actual
++  actual="$(sha256sum "$archive" | cut -d' ' -f1)"
++  if [[ "$actual" != "$zip_sha256" ]]; then
++    echo "LibRaw archive checksum mismatch ($actual); nothing was extracted or changed." >&2
++    return 1
++  fi
++  zip_tool archive
++}
++
+ if [[ -d "$source" ]]; then
+   if [[ -d "$source/.git" ]]; then
+-    verify_git_tree "$source" || { echo "LibRaw at $source is not the pinned, clean $version tree; not touched." >&2; exit 1; }
++    verify_git_tree "$source" || { echo "LibRaw at $source is not the pinned commit $git_commit / tree $git_tree, or has local changes; not touched." >&2; exit 1; }
++    echo "LibRaw $git_commit: existing git checkout verified (commit and tree id)." >&2
+   elif [[ -f "$archive" ]]; then
+-    verify_zip_tree
++    verify_archive || exit 1
++    zip_tool tree || exit 1
++    echo "LibRaw $git_commit: existing source verified file by file against the pinned archive." >&2
+   else
+     echo "LibRaw at $source has no archive or git metadata to verify it against; remove it and re-run." >&2
+     exit 1
+   fi
+-  echo "LibRaw $version: existing source verified." >&2
+   echo "$source"
+   exit 0
+ fi
+@@ -87,33 +150,23 @@ fi
+ rm -f "$archive.partial"
+ 
+ if [[ -f "$archive" ]]; then
+-  actual="$(sha256sum "$archive" | cut -d' ' -f1)"
+-  if [[ "$actual" != "$zip_sha256" ]]; then
+-    echo "LibRaw archive checksum mismatch ($actual); nothing was extracted or changed." >&2
+-    exit 1
+-  fi
+-  python3 - "$archive" "$deps" "$version" <<'PY'
+-import os, sys, zipfile
+-archive, deps, version = sys.argv[1:]
+-z = zipfile.ZipFile(archive)
+-for n in z.namelist():
+-    parts = n.rstrip('/').split('/')
+-    if parts[0] != f"LibRaw-{version}" or '..' in parts or n.startswith('/'):
+-        sys.exit(f"Unsafe LibRaw archive path: {n}")
+-z.extractall(deps)
+-PY
+-  echo "LibRaw $version: archive SHA256 verified and extracted." >&2
++  verify_archive || exit 1
++  zip_tool extract
++  zip_tool tree
++  echo "LibRaw $git_commit: archive SHA-256 and tree id verified, extracted." >&2
+ else
+-  echo "codeload.github.com unreachable; falling back to a pinned git clone." >&2
++  echo "codeload.github.com unreachable; falling back to a pinned git fetch." >&2
+   tmp="$source.partial"
+   rm -rf "$tmp"
+-  git -c advice.detachedHead=false clone -q --depth 1 --branch "$version" "$git_url" "$tmp"
++  git -c init.defaultBranch=pin init -q "$tmp"
++  git -C "$tmp" fetch -q --depth 1 "$git_url" "$git_commit"
++  git -C "$tmp" -c advice.detachedHead=false checkout -q FETCH_HEAD
+   if ! verify_git_tree "$tmp"; then
+     rm -rf "$tmp"
+-    echo "LibRaw git clone does not match the pinned commit $git_commit / tree $git_tree." >&2
++    echo "LibRaw git fetch does not match the pinned commit $git_commit / tree $git_tree." >&2
+     exit 1
+   fi
+   mv "$tmp" "$source"
+-  echo "LibRaw $version: git commit and tree id verified." >&2
++  echo "LibRaw $git_commit: git commit and tree id verified." >&2
+ fi
+ echo "$source"
 diff --git a/engine/src/core/params.cpp b/engine/src/core/params.cpp
 index dc17089..8b25267 100644
 --- a/engine/src/core/params.cpp
@@ -2270,40 +2971,31 @@ index 5083ec8..94ba88c 100644
  // with GENERIC_READ | GENERIC_WRITE | DELETE access. The caller owns it and
 diff --git a/engine/src/io/raw_camera.hpp b/engine/src/io/raw_camera.hpp
 new file mode 100644
-index 0000000..2e50ba7
+index 0000000..da637f0
 --- /dev/null
 +++ b/engine/src/io/raw_camera.hpp
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,19 @@
 +#pragma once
 +#include <libraw/libraw.h>
-+#include <cstring>
 +
 +namespace spk::io::detail {
-+// Reuse coefficient lookups for models absent from LibRaw 0.22.2.
-+// Keep the actual model and all other camera identification intact.
++// The one LibRaw subclass every decode path starts from.
++//
++// Until 2026-11-17 this also overrode adobe_coeff() to lend the Fujifilm
++// GFX100RF the GFX 100 II matrix and the X-E5 the X-H2 one, because LibRaw
++// 0.22.2 had neither body. The pinned master snapshot carries both entries
++// with exactly those coefficients (colordata.cpp "GFX 100RF", "X-E5") and
++// normalises "GFX100RF" to "GFX 100RF" itself; the override was removed with
++// the pixel comparison in RAW-SUPPORT-20261117.md (GFX100RF: bit-identical
++// compatible16 and headroom frames). tests/raw_camera.cpp now holds the
++// upstream table to those values, so a pin that loses them fails there.
 +class CameraLibRaw : public LibRaw {
 +public:
 +    CameraLibRaw() : LibRaw(LIBRAW_OPTIONS_NO_DATAERR_CALLBACK) {}
-+protected:
-+    int adobe_coeff(unsigned make, const char* model, int internal_only = 0) override {
-+        if (make != LIBRAW_CAMERAMAKER_Fujifilm || !model ||
-+            imgdata.idata.colors != 3 || imgdata.idata.dng_version)
-+            return LibRaw::adobe_coeff(make, model, internal_only);
-+
-+        // RawSpeed's cameras.xml gives both GFX100RF modes the GFX 100 II matrix.
-+        // https://github.com/darktable-org/rawspeed/blob/develop/data/cameras.xml
-+        if (!std::strcmp(model, "GFX100RF") || !std::strcmp(model, "GFX 100RF"))
-+            return LibRaw::adobe_coeff(make, "GFX 100 II", internal_only);
-+        // LibRaw 202611's X-E5 entry has the same matrix and level overrides as X-H2.
-+        // https://github.com/LibRaw/LibRaw/blob/a9a14b1970d188c25dade81f8326ff00a6e33649/src/tables/colordata.cpp
-+        if (!std::strcmp(model, "X-E5"))
-+            return LibRaw::adobe_coeff(make, "X-H2", internal_only);
-+        return LibRaw::adobe_coeff(make, model, internal_only);
-+    }
 +};
 +} // namespace spk::io::detail
 diff --git a/engine/src/io/raw_decoder.cpp b/engine/src/io/raw_decoder.cpp
-index 1f55a69..9ee2c8a 100644
+index 1f55a69..a83173c 100644
 --- a/engine/src/io/raw_decoder.cpp
 +++ b/engine/src/io/raw_decoder.cpp
 @@ -1,5 +1,6 @@
@@ -2324,7 +3016,28 @@ index 1f55a69..9ee2c8a 100644
  #include <cstring>
  #include <cstdlib>
  #include <exception>
-@@ -163,6 +168,18 @@ bool capture_source_metadata(const LibRaw& raw, RawMetadata& metadata,
+@@ -86,20 +91,6 @@ bool libraw_ok(int status, const char* stage, std::string& error) {
+     return false;
+ }
+ 
+-bool supported_compression(LibRaw& raw, std::string& error) {
+-    const char* decoder = raw.unpack_function_name();
+-    if (decoder && std::strstr(decoder, "nikon_he_load_raw") != nullptr) {
+-        const auto& model = raw.imgdata.idata.model;
+-        error = "RAW unpack (" +
+-            std::string(std::begin(model), std::find(std::begin(model), std::end(model), '\0')) +
+-            "): Nikon HE/HE* compression is not supported by bundled LibRaw " +
+-            LibRaw::version() +
+-            "; use a lossless-compressed NEF or externally converted RAW DNG";
+-        return false;
+-    }
+-    return true;
+-}
+-
+ void configure_compatible(libraw_output_params_t& params) {
+     params.user_qual = 3;  // AHD (LibRaw still selects its native X-Trans path).
+     params.half_size = 0;
+@@ -163,6 +154,18 @@ bool capture_source_metadata(const LibRaw& raw, RawMetadata& metadata,
                           std::find(std::begin(data.idata.make), std::end(data.idata.make), '\0'));
      metadata.model.assign(data.idata.model,
                            std::find(std::begin(data.idata.model), std::end(data.idata.model), '\0'));
@@ -2343,7 +3056,7 @@ index 1f55a69..9ee2c8a 100644
      metadata.sizes_before_postprocess = {
          sizes.raw_width, sizes.raw_height, sizes.width, sizes.height,
          sizes.iwidth, sizes.iheight, sizes.top_margin, sizes.left_margin,
-@@ -226,12 +243,15 @@ bool supported_headroom_source(LibRaw& raw, std::string& error) {
+@@ -226,12 +229,15 @@ bool supported_headroom_source(LibRaw& raw, std::string& error) {
      return true;
  }
  
@@ -2361,7 +3074,7 @@ index 1f55a69..9ee2c8a 100644
          if (!libraw_internal_data.internal_output_params.raw_color && imgdata.idata.colors == 3)
              for (unsigned row = 0; row < 3; ++row)
                  for (unsigned col = 0; col < 4; ++col)
-@@ -241,9 +261,9 @@ protected:
+@@ -241,9 +247,9 @@ protected:
      }
  };
  
@@ -2373,7 +3086,7 @@ index 1f55a69..9ee2c8a 100644
  
      std::vector<float> converted;
      std::uint32_t converted_width = 0, converted_height = 0;
-@@ -289,7 +309,7 @@ bool decode_raw_compatible(const std::filesystem::path& source,
+@@ -289,7 +295,7 @@ bool decode_raw_compatible(const std::filesystem::path& source,
  }
  
  bool decode_raw_compatible(const std::filesystem::path& source, const std::array<float, 4>* user_mul,
@@ -2382,10 +3095,11 @@ index 1f55a69..9ee2c8a 100644
      error.clear();
      const auto total_start = Clock::now();
      try {
-@@ -324,6 +344,17 @@ bool decode_raw_compatible(const std::filesystem::path& source, const std::array
+@@ -323,7 +329,18 @@ bool decode_raw_compatible(const std::filesystem::path& source, const std::array
+         const int open_status = raw->open_file(source.c_str());
          decoded.timings.open_ms = elapsed_ms(start);
          if (!libraw_ok(open_status, "RAW open", error)) return false;
-         if (!supported_compression(*raw, error)) return false;
+-        if (!supported_compression(*raw, error)) return false;
 +        // Half-size before unpack: the sizes are known now and the demosaic
 +        // reads whatever this says. Four times the hint keeps the halved frame
 +        // above it, so the caller still gets its full pixel budget.
@@ -2397,10 +3111,11 @@ index 1f55a69..9ee2c8a 100644
 +                decoded.metadata.decoder_name += " (half-size)";
 +            }
 +        }
++
  
          start = Clock::now();
          const int unpack_status = raw->unpack();
-@@ -340,6 +371,10 @@ bool decode_raw_compatible(const std::filesystem::path& source, const std::array
+@@ -340,6 +357,10 @@ bool decode_raw_compatible(const std::filesystem::path& source, const std::array
          const int process_status = raw->dcraw_process();
          decoded.timings.process_ms = elapsed_ms(start);
          if (!libraw_ok(process_status, "RAW process", error)) return false;
@@ -2411,7 +3126,15 @@ index 1f55a69..9ee2c8a 100644
          if (raw->error_count() != 0) {
              error = "RAW process: decoder reported corrupt data";
              return false;
-@@ -509,4 +544,129 @@ bool decode_raw_headroom(const std::filesystem::path& source, const std::array<f
+@@ -449,7 +470,6 @@ bool decode_raw_headroom(const std::filesystem::path& source, const std::array<f
+         const int open_status = raw->open_file(source.c_str());
+         decoded.timings.open_ms = elapsed_ms(start);
+         if (!libraw_ok(open_status, "RAW open", error)) return false;
+-        if (!supported_compression(*raw, error)) return false;
+ 
+         start = Clock::now();
+         const int unpack_status = raw->unpack();
+@@ -509,4 +529,129 @@ bool decode_raw_headroom(const std::filesystem::path& source, const std::array<f
      }
  }
  
@@ -3800,16 +4523,23 @@ index 3a51683..b7feb7c 100644
  
  }  // namespace spk
 diff --git a/engine/src/pipeline/pipeline.cpp b/engine/src/pipeline/pipeline.cpp
-index 828ac50..de466e4 100644
+index 828ac50..b814aed 100644
 --- a/engine/src/pipeline/pipeline.cpp
 +++ b/engine/src/pipeline/pipeline.cpp
-@@ -1,4 +1,5 @@
+@@ -1,10 +1,12 @@
  #include "pipeline.hpp"
 +#include "tiling.hpp"
  #include "timer.hpp"
  #include "halation_psf.hpp"
  #if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
-@@ -456,7 +457,7 @@ bool Pipeline::build(const Params& params, std::string& error) {
+ #include "windows_unported.hpp"
+ #endif
+ 
++#include <algorithm>
+ #include <chrono>
+ #include <cmath>
+ #include <cstring>
+@@ -456,7 +458,7 @@ bool Pipeline::build(const Params& params, std::string& error) {
      node_count_ += 1;                                                    // input_cast
      node_count_ += params_.io.input_cctf_decoding ? 1 : 0;               // decode_input
      node_count_ += params_.io.geometry.is_identity() ? 0 : 1;            // geometry
@@ -3818,7 +4548,7 @@ index 828ac50..de466e4 100644
      node_count_ += 1;                                                    // crop_rescale
      node_count_ += scene_latitude_wanted() ? 1 : 0;                      // RFC-023
      node_count_ += 1;                                                    // upsample
-@@ -492,23 +493,29 @@ bool Pipeline::build(const Params& params, std::string& error) {
+@@ -492,23 +494,29 @@ bool Pipeline::build(const Params& params, std::string& error) {
  // small dispatch helpers
  // ---------------------------------------------------------------------------
  
@@ -3852,7 +4582,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::spectral(const Image& cmy, const gpu::BufferRef& chd, const gpu::BufferRef& base,
-@@ -520,10 +527,11 @@ bool Pipeline::spectral(const Image& cmy, const gpu::BufferRef& chd, const gpu::
+@@ -520,10 +528,11 @@ bool Pipeline::spectral(const Image& cmy, const gpu::BufferRef& chd, const gpu::
      gpu::BufferRef ep_buf = gpu_->upload(ep, sizeof ep, error);
      if (!ep_buf) return false;
      const uint32_t meta[3] = {uint32_t(cmy.pixels()), uint32_t(n_lambda), log_out ? 0u : 1u};
@@ -3865,7 +4595,7 @@ index 828ac50..de466e4 100644
                            cmy.pixels(), error);
  }
  
-@@ -536,9 +544,9 @@ bool Pipeline::lognormal_field(uint32_t h, uint32_t w, double mean, double std,
+@@ -536,9 +545,9 @@ bool Pipeline::lognormal_field(uint32_t h, uint32_t w, double mean, double std,
      gpu::BufferRef p_buf = gpu_->upload(p, sizeof p, error);
      if (!p_buf) return false;
      const uint32_t meta[4] = {uint32_t(out.pixels()), seed, stream0, per_channel ? 1u : 0u};
@@ -3877,7 +4607,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::device_max(const Image& img, double& out, std::string& error) {
-@@ -578,9 +586,9 @@ bool Pipeline::node_input_cast(const Image& in, Image& out, std::string& error)
+@@ -578,9 +587,9 @@ bool Pipeline::node_input_cast(const Image& in, Image& out, std::string& error)
      out.buf = gpu_->alloc(out.bytes(), error);
      if (!out.buf) return false;
      const uint32_t meta[2] = {uint32_t(in.pixels()), in.c};
@@ -3889,7 +4619,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::node_decode_input(const Image& in, Image& out, std::string& error) {
-@@ -588,40 +596,50 @@ bool Pipeline::node_decode_input(const Image& in, Image& out, std::string& error
+@@ -588,40 +597,50 @@ bool Pipeline::node_decode_input(const Image& in, Image& out, std::string& error
      Timer t(this, "preprocess.decode_input");
      if (!alloc_like(in, out, error)) return false;
      const uint32_t meta[2] = {uint32_t(in.elements()), input_cctf_mode_};
@@ -3963,7 +4693,7 @@ index 828ac50..de466e4 100644
      if (overscan_wanted() || params_.film_render.date_imprint.active)
          source_long_edge_ = std::max(ow, oh);
      const uint32_t cw = turns % 2 == 0 ? ow : oh;   // the crop's own frame
-@@ -629,31 +647,104 @@ bool Pipeline::node_geometry(const Image& in, Image& out, std::string& error) {
+@@ -629,31 +648,104 @@ bool Pipeline::node_geometry(const Image& in, Image& out, std::string& error) {
  
      const double a = g.rotation_deg * 3.14159265358979323846 / 180.0;
      const double vals[8] = {
@@ -4081,7 +4811,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::exposure_sample_y(const Image& in, bool stride, std::vector<double>& Y,
-@@ -671,9 +762,10 @@ bool Pipeline::exposure_sample_y(const Image& in, bool stride, std::vector<doubl
+@@ -671,9 +763,10 @@ bool Pipeline::exposure_sample_y(const Image& in, bool stride, std::vector<doubl
      small.buf = gpu_->alloc(small.bytes(), error);
      if (!small.buf) return false;
      const uint32_t meta[4] = {in.w, small.h, small.w, step};
@@ -4094,7 +4824,7 @@ index 828ac50..de466e4 100644
      std::vector<float> host;
      if (!read_back(small, host, error)) return false;
  
-@@ -861,12 +953,13 @@ bool Pipeline::measure_meter_evs(const Image& in, ExposureEvs& out, std::string&
+@@ -861,12 +954,13 @@ bool Pipeline::measure_meter_evs(const Image& in, ExposureEvs& out, std::string&
  }
  
  bool Pipeline::node_auto_exposure(const Image& in, Image& out, std::string& error) {
@@ -4110,7 +4840,7 @@ index 828ac50..de466e4 100644
      else if (!measure_exposure_ev(in, ev, error)) return false;
      last_ae_ev_ = ev;
      // `matching_scalar`: the gain is narrowed to float32 before it multiplies
-@@ -894,16 +987,19 @@ bool Pipeline::node_upsample(const Image& in, Image& out, std::string& error) {
+@@ -894,16 +988,19 @@ bool Pipeline::node_upsample(const Image& in, Image& out, std::string& error) {
      gpu::BufferRef b = gpu_->alloc(in.pixels() * sizeof(float), error);
      if (!tc.buf || !b) return false;
      const uint32_t n[1] = {uint32_t(in.pixels())};
@@ -4133,7 +4863,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::node_exposure(const Image& in, Image& out, std::string& error) {
-@@ -951,10 +1047,10 @@ bool Pipeline::node_boost(const Image& in, Image& out, std::string& error) {
+@@ -951,10 +1048,10 @@ bool Pipeline::node_boost(const Image& in, Image& out, std::string& error) {
      if (!p_buf) return false;
      if (!alloc_like(in, out, error)) return false;
      const uint32_t n[1] = {uint32_t(in.elements())};
@@ -4146,7 +4876,7 @@ index 828ac50..de466e4 100644
  }
  
  // **The headroom a digital frame clipped off, given back to the negative.** A
-@@ -992,10 +1088,10 @@ bool Pipeline::node_headroom(const Image& in, Image& out, std::string& error) {
+@@ -992,10 +1089,10 @@ bool Pipeline::node_headroom(const Image& in, Image& out, std::string& error) {
      if (!p_buf) return false;
      if (!alloc_like(in, out, error)) return false;
      const uint32_t n[1] = {uint32_t(in.pixels())};
@@ -4159,7 +4889,7 @@ index 828ac50..de466e4 100644
  }
  
  // --- the sigmas, in one place, because a demand must agree with its node ----
-@@ -1209,16 +1305,15 @@ bool Pipeline::node_lens_blur(const Image& in, Image& out, std::string& error) {
+@@ -1209,16 +1306,15 @@ bool Pipeline::node_lens_blur(const Image& in, Image& out, std::string& error) {
      return blur_.gaussian(in, sigma, out, error);
  }
  
@@ -4178,7 +4908,7 @@ index 828ac50..de466e4 100644
  
      if (!blurs.scatter.empty()) {
          Image scattered;
-@@ -1228,7 +1323,11 @@ bool Pipeline::node_halation(const Image& in, Image& out, std::string& error) {
+@@ -1228,7 +1324,11 @@ bool Pipeline::node_halation(const Image& in, Image& out, std::string& error) {
          fill3(b, hal.scatter_amount);
          Image mixed;
          if (!blur_.lincomb(raw, scattered, a, b, mixed, error)) return false;
@@ -4191,7 +4921,7 @@ index 828ac50..de466e4 100644
      }
  
      if (!blurs.bounces.empty()) {
-@@ -1249,9 +1348,9 @@ bool Pipeline::node_halation(const Image& in, Image& out, std::string& error) {
+@@ -1249,9 +1349,9 @@ bool Pipeline::node_halation(const Image& in, Image& out, std::string& error) {
          if (!blur_.mixture(raw, blurs.bounces, hb, error)) return false;
          Image mixed;
          if (!blur_.lincomb(raw, hb, a, b, mixed, error)) return false;
@@ -4203,7 +4933,7 @@ index 828ac50..de466e4 100644
      return true;
  }
  
-@@ -1272,10 +1371,10 @@ bool Pipeline::node_expose_log(const Image& in, Image& out, std::string& error)
+@@ -1272,10 +1372,10 @@ bool Pipeline::node_expose_log(const Image& in, Image& out, std::string& error)
      if (!k_buf) return false;
      if (!alloc_like(in, out, error)) return false;
      const uint32_t n[1] = {uint32_t(in.elements())};
@@ -4216,7 +4946,7 @@ index 828ac50..de466e4 100644
  }
  
  // ---------------------------------------------------------------------------
-@@ -1288,7 +1387,7 @@ bool Pipeline::node_film_curves(const Image& in, Image& out, std::string& error)
+@@ -1288,7 +1388,7 @@ bool Pipeline::node_film_curves(const Image& in, Image& out, std::string& error)
                          baked_.film_curve_k, out, error);
  }
  
@@ -4225,7 +4955,7 @@ index 828ac50..de466e4 100644
                                   std::string& error) {
      const DirCouplersParams& dcp = params_.film_render.dir_couplers;
      if (!dcp.active) { out = cmy; return true; }
-@@ -1297,13 +1396,19 @@ bool Pipeline::node_dir_couplers(const Image& cmy, const Image& log_raw, Image&
+@@ -1297,13 +1397,19 @@ bool Pipeline::node_dir_couplers(const Image& cmy, const Image& log_raw, Image&
      if (!alloc_like(cmy, corr, error)) return false;
      const uint32_t pos[1] = {params_.film.info.is_positive() ? 1u : 0u};
      const uint32_t n[1] = {uint32_t(cmy.pixels())};
@@ -4246,7 +4976,7 @@ index 828ac50..de466e4 100644
      const std::vector<Blur::Component> diffusion = dir_coupler_diffusion();
      if (!diffusion.empty()) {
          Image diffused;
-@@ -1316,6 +1421,9 @@ bool Pipeline::node_dir_couplers(const Image& cmy, const Image& log_raw, Image&
+@@ -1316,6 +1422,9 @@ bool Pipeline::node_dir_couplers(const Image& cmy, const Image& log_raw, Image&
      fill3(b, -1.0);
      Image log_raw_0;
      if (!blur_.lincomb(log_raw, corr, a, b, log_raw_0, error)) return false;
@@ -4256,7 +4986,7 @@ index 828ac50..de466e4 100644
      return curve_interp(log_raw_0, baked_.coupler_curve_x, baked_.coupler_curve_inv,
                          baked_.coupler_curve_y, baked_.film_curve_k, out, error);
  }
-@@ -1393,11 +1501,12 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
+@@ -1393,11 +1502,12 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
              if (!alloc_like(in, grain, error)) return false;
              const uint32_t meta[4] = {uint32_t(k), uint32_t(in.pixels()),
                                        params_.film.info.is_positive() ? 1u : 0u, seed};
@@ -4270,7 +5000,7 @@ index 828ac50..de466e4 100644
                                  in.pixels(), error)) return false;
          } else {
              // The dye-cloud blur is per (sub-layer, channel), so each
-@@ -1412,11 +1521,12 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
+@@ -1412,11 +1522,12 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
                  if (!alloc_like(in, layer, error)) return false;
                  const uint32_t meta[5] = {uint32_t(k), uint32_t(in.pixels()),
                                            params_.film.info.is_positive() ? 1u : 0u, seed, sl};
@@ -4284,7 +5014,7 @@ index 828ac50..de466e4 100644
                                      in.pixels(), error)) return false;
                  double sigma[3];
                  for (int ch = 0; ch < 3; ++ch)
-@@ -1425,8 +1535,9 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
+@@ -1425,8 +1536,9 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
                  double one[3];
                  fill3(one, 1.0);
                  Image accumulated;
@@ -4296,7 +5026,7 @@ index 828ac50..de466e4 100644
              }
          }
      } else {
-@@ -1448,15 +1559,18 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
+@@ -1448,15 +1560,18 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
          if (!lp_buf || !streams_buf) return false;
          if (!alloc_like(in, grain, error)) return false;
          const uint32_t meta[3] = {uint32_t(in.pixels()), uint32_t(nsub), seed};
@@ -4316,7 +5046,7 @@ index 828ac50..de466e4 100644
          if (g.blur > kMinEffectiveBlurSigma) {
              double sigma[3];
              fill3(sigma, g.blur);
-@@ -1483,10 +1597,10 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
+@@ -1483,10 +1598,10 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
          Image multiplied;
          if (!alloc_like(grain, multiplied, error)) return false;
          const uint32_t n[1] = {uint32_t(grain.elements())};
@@ -4329,7 +5059,7 @@ index 828ac50..de466e4 100644
          grain = multiplied;
      }
      double s[3], t0[3];
-@@ -1494,6 +1608,8 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
+@@ -1494,6 +1609,8 @@ bool Pipeline::grain_realise(const Image& in, Image& out, std::string& error) {
      for (int c = 0; c < 3; ++c) t0[c] = -g.density_min[c];
      Image shifted;
      if (!blur_.affine(grain, s, t0, shifted, error)) return false;
@@ -4338,7 +5068,7 @@ index 828ac50..de466e4 100644
      if (g.blur > 0.0) {
          double sigma[3];
          fill3(sigma, g.blur);
-@@ -1620,10 +1736,10 @@ bool Pipeline::node_print_exposure(const Image& in, Image& out, std::string& err
+@@ -1620,10 +1737,10 @@ bool Pipeline::node_print_exposure(const Image& in, Image& out, std::string& err
      if (!k_buf) return false;
      if (!alloc_like(in, out, error)) return false;
      const uint32_t n[1] = {uint32_t(in.elements())};
@@ -4351,7 +5081,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::node_print_curves(const Image& in, Image& out, std::string& error) {
-@@ -1687,9 +1803,10 @@ bool Pipeline::node_digital_intermediate(const Image& in, Image& out, std::strin
+@@ -1687,9 +1804,10 @@ bool Pipeline::node_digital_intermediate(const Image& in, Image& out, std::strin
      if (!p_buf) return false;
      if (!alloc_like(positive, out, error)) return false;
      const uint32_t n[1] = {uint32_t(positive.pixels())};
@@ -4363,7 +5093,7 @@ index 828ac50..de466e4 100644
                            positive.pixels(), error);
  }
  
-@@ -1707,10 +1824,10 @@ bool Pipeline::node_bw_correction(const Image& in, Image& out, std::string& erro
+@@ -1707,10 +1825,10 @@ bool Pipeline::node_bw_correction(const Image& in, Image& out, std::string& erro
      if (!p_buf) return false;
      if (!alloc_like(in, out, error)) return false;
      const uint32_t n[1] = {uint32_t(in.pixels())};
@@ -4376,7 +5106,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::node_glare(const Image& in, Image& out, std::string& error) {
-@@ -1738,16 +1855,16 @@ bool Pipeline::node_glare(const Image& in, Image& out, std::string& error) {
+@@ -1738,16 +1856,16 @@ bool Pipeline::node_glare(const Image& in, Image& out, std::string& error) {
          double sigma[3];
          fill3(sigma, glare.blur * ratio * radius);
          Image blurred;
@@ -4397,7 +5127,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::node_xyz_to_rgb(const Image& in, Image& out, std::string& error) {
-@@ -1763,11 +1880,11 @@ bool Pipeline::node_edr(const Image& in, Image& out, std::string& error) {
+@@ -1763,11 +1881,11 @@ bool Pipeline::node_edr(const Image& in, Image& out, std::string& error) {
      if (!baked_.edr_params || !baked_.edr_lut) { error = "EDR calibration is not available"; return false; }
      if (!alloc_like(in, out, error)) return false;
      const uint32_t n[1] = {uint32_t(in.pixels())};
@@ -4411,7 +5141,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::node_gamut_compress(const Image& in, Image& out, std::string& error) {
-@@ -1776,12 +1893,12 @@ bool Pipeline::node_gamut_compress(const Image& in, Image& out, std::string& err
+@@ -1776,12 +1894,12 @@ bool Pipeline::node_gamut_compress(const Image& in, Image& out, std::string& err
      if (!alloc_like(in, out, error)) return false;
      const uint32_t meta[4] = {uint32_t(in.pixels()), uint32_t(baked_.cam16_nl),
                                uint32_t(baked_.cam16_nh), baked_.cam16_lightness ? 1u : 0u};
@@ -4426,7 +5156,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::node_scanner_blur(const Image& in, Image& out, std::string& error) {
-@@ -1814,16 +1931,30 @@ bool Pipeline::node_cctf(const Image& in, Image& out, std::string& error) {
+@@ -1814,16 +1932,30 @@ bool Pipeline::node_cctf(const Image& in, Image& out, std::string& error) {
      Timer t(this, "scanning.cctf");
      if (!alloc_like(in, out, error)) return false;
      const uint32_t meta[2] = {uint32_t(in.pixels()), output_cctf_mode_};
@@ -4459,7 +5189,7 @@ index 828ac50..de466e4 100644
  // Fire one node, then evaluate.
  //
  // The flush is not bookkeeping: a buffer freed by the node that just ran only
-@@ -1843,30 +1974,191 @@ bool Pipeline::node_cctf(const Image& in, Image& out, std::string& error) {
+@@ -1843,30 +1975,191 @@ bool Pipeline::node_cctf(const Image& in, Image& out, std::string& error) {
          if (!gpu_->flush(error)) return false;                             \
      } while (0)
  
@@ -4674,7 +5404,7 @@ index 828ac50..de466e4 100644
      {
          Timer t(this, "preprocess.crop_rescale");
          if (source_long_edge_ == 0) source_long_edge_ = frame.long_edge();
-@@ -1891,9 +2183,84 @@ bool Pipeline::film_prefix(const Image& in, const FrameShape& frame, Image& cur,
+@@ -1891,9 +2184,84 @@ bool Pipeline::film_prefix(const Image& in, const FrameShape& frame, Image& cur,
      const GrainParams& film_grain = params_.film_render.grain;
      film_seed_ = (film_grain.active && params_.settings.grain_sampler != "exact")
                 ? fresh_seed() : 0x5EEDu;
@@ -4759,7 +5489,7 @@ index 828ac50..de466e4 100644
  // The film and print chains, as **stages**: contiguous runs of the same nodes
  // the segments used to call inline, in the same order, split at the class
  // boundaries (§4.2) because that is where the executor has to convert between a
-@@ -1907,20 +2274,27 @@ bool Pipeline::film_prefix(const Image& in, const FrameShape& frame, Image& cur,
+@@ -1907,20 +2275,27 @@ bool Pipeline::film_prefix(const Image& in, const FrameShape& frame, Image& cur,
  // between a band run and a whole-frame stage has to copy **every live field**,
  // not just `cur`. That is a real finding from writing this out rather than a
  // complication invented here, and step 6 inherits it.
@@ -4795,7 +5525,7 @@ index 828ac50..de466e4 100644
      // **`node_boost` is a stage of its own, and it is not a detail.** It
      // normalises the highlight lift by `device_max(in)` -- the *frame's* own
      // maximum, a reduction over every pixel -- so it is not a pointwise node
-@@ -1942,134 +2316,144 @@ bool Pipeline::film_boost(const Chain& in, Chain& out, std::string& error) {
+@@ -1942,134 +2317,144 @@ bool Pipeline::film_boost(const Chain& in, Chain& out, std::string& error) {
      // that can never be striped. Cutting the table at the node is how a
      // per-node hatch is spelled in a stage-based executor, and the runs either
      // side stay contiguous.
@@ -5006,7 +5736,7 @@ index 828ac50..de466e4 100644
      // `cctf` writes into the destination, exactly as it did when it was the
      // segment's last call -- the destination is the caller's `out.cur`, not a
      // scratch buffer, and `node_cctf` allocates it.
-@@ -2109,17 +2493,19 @@ const char* Pipeline::class_name(StageClass klass) {
+@@ -2109,17 +2494,19 @@ const char* Pipeline::class_name(StageClass klass) {
  }
  const size_t Pipeline::kPrintStageCount = sizeof(kPrintStages) / sizeof(kPrintStages[0]);
  
@@ -5031,7 +5761,7 @@ index 828ac50..de466e4 100644
      return true;
  }
  
-@@ -2149,7 +2535,28 @@ std::vector<StripSpan> Pipeline::strip_plan(uint32_t plane_h) const {
+@@ -2149,7 +2536,28 @@ std::vector<StripSpan> Pipeline::strip_plan(uint32_t plane_h) const {
      return plan;
  }
  
@@ -5060,7 +5790,7 @@ index 828ac50..de466e4 100644
      if (!built_) { error = "pipeline was not built"; return false; }
      progress_ = progress;
      if (progress_) { progress_->total_nodes = node_count_; progress_->fired = 0; }
-@@ -2157,7 +2564,7 @@ bool Pipeline::run_film(const Image& in, Image& out, Progress* progress, std::st
+@@ -2157,7 +2565,7 @@ bool Pipeline::run_film(const Image& in, Image& out, Progress* progress, std::st
  
      Image cur;
      if (!film_prefix(in, FrameShape{in.h, in.w}, cur, error)) return false;
@@ -5069,7 +5799,7 @@ index 828ac50..de466e4 100644
      progress_ = nullptr;
      return true;
  }
-@@ -2213,6 +2620,12 @@ bool Pipeline::run_stages_striped(const Stage* stages, size_t count, Chain& chai
+@@ -2213,6 +2621,12 @@ bool Pipeline::run_stages_striped(const Stage* stages, size_t count, Chain& chai
              // or more strips with two F stages in one run.
              while (j < count && band_able[j]) { halo += halos[j]; ++j; }
              for (size_t k = i; k < j; ++k) report.stages[k].halo = halo;
@@ -5082,7 +5812,7 @@ index 828ac50..de466e4 100644
              ++report.runs;
              report.crossings += 2;   // the slice in, the assembly out
  
-@@ -2230,22 +2643,23 @@ bool Pipeline::run_stages_striped(const Stage* stages, size_t count, Chain& chai
+@@ -2230,22 +2644,23 @@ bool Pipeline::run_stages_striped(const Stage* stages, size_t count, Chain& chai
                  if (chain.log_e_film.buf &&
                      !band_from(chain.log_e_film, span, halo, read, band_in.log_e_film, error)) return false;
  
@@ -5111,7 +5841,7 @@ index 828ac50..de466e4 100644
                  }
                  ++report.passes;
  
-@@ -2286,7 +2700,7 @@ bool Pipeline::run_stages_striped(const Stage* stages, size_t count, Chain& chai
+@@ -2286,7 +2701,7 @@ bool Pipeline::run_stages_striped(const Stage* stages, size_t count, Chain& chai
              const bool report_sweep = report.stages[i].resolution == "swept";
              if (report_sweep) blur_.set_sweep_report(&sweep);
              Chain next;
@@ -5120,7 +5850,7 @@ index 828ac50..de466e4 100644
              if (report_sweep) blur_.set_sweep_report(nullptr);
              if (!ok) return false;
              chain = next;
-@@ -2363,7 +2777,7 @@ bool Pipeline::run_film_striped(const Image& in, Image& out, Progress* progress,
+@@ -2363,7 +2778,7 @@ bool Pipeline::run_film_striped(const Image& in, Image& out, Progress* progress,
      if (!film_prefix(in, FrameShape{in.h, in.w}, cur, error)) return false;
  
      Chain chain;
@@ -5129,7 +5859,7 @@ index 828ac50..de466e4 100644
      Progress::StripRun report;
      report.stage = "film";
      report.plan = strip_plan(cur.h);
-@@ -2376,7 +2790,17 @@ bool Pipeline::run_film_striped(const Image& in, Image& out, Progress* progress,
+@@ -2376,7 +2791,17 @@ bool Pipeline::run_film_striped(const Image& in, Image& out, Progress* progress,
      return true;
  }
  
@@ -5148,7 +5878,7 @@ index 828ac50..de466e4 100644
      // The enlarger's cheap constants are re-derived on every print run,
      // because `print_exposure` and the two filter shifts are live-mutable: the
      // service writes them straight onto this pipeline between renders.
-@@ -2391,15 +2815,78 @@ bool Pipeline::print_prefix(std::string& error) {
+@@ -2391,15 +2816,78 @@ bool Pipeline::print_prefix(std::string& error) {
      return true;
  }
  
@@ -5230,7 +5960,7 @@ index 828ac50..de466e4 100644
      return true;
  }
  
-@@ -2413,14 +2900,16 @@ bool Pipeline::run_print(const Image& cmy, Image& out, Progress* progress, std::
+@@ -2413,14 +2901,16 @@ bool Pipeline::run_print(const Image& cmy, Image& out, Progress* progress, std::
          error = "run_print was called before any run_film, so the film's pixel pitch is unknown";
          return false;
      }
@@ -5249,7 +5979,7 @@ index 828ac50..de466e4 100644
  }
  
  bool Pipeline::run_print_striped(const Image& cmy, Image& out, Progress* progress,
-@@ -2431,7 +2920,7 @@ bool Pipeline::run_print_striped(const Image& cmy, Image& out, Progress* progres
+@@ -2431,7 +2921,7 @@ bool Pipeline::run_print_striped(const Image& cmy, Image& out, Progress* progres
          error = "run_print was called before any run_film, so the film's pixel pitch is unknown";
          return false;
      }
@@ -5258,7 +5988,7 @@ index 828ac50..de466e4 100644
      if (!prepare_contrast_mask(cmy, error)) { progress_ = nullptr; return false; }
  
      Chain chain;
-@@ -2446,7 +2935,7 @@ bool Pipeline::run_print_striped(const Image& cmy, Image& out, Progress* progres
+@@ -2446,7 +2936,7 @@ bool Pipeline::run_print_striped(const Image& cmy, Image& out, Progress* progres
      if (progress_) { progress_->strips.push_back(std::move(report)); progress_->done = true; }
      progress_ = nullptr;
      out = chain.cur;
@@ -7330,6 +8060,92 @@ index 5425a64..77db464 100644
      uint ya, yb, xa, xb; float ty, tx;
      sample_axis(oy, SH, OH, ya, yb, ty);
      sample_axis(ox, SW, OW, xa, xb, tx);
+diff --git a/engine/stage-host.sh b/engine/stage-host.sh
+index 708e6dc..22460fa 100755
+--- a/engine/stage-host.sh
++++ b/engine/stage-host.sh
+@@ -9,7 +9,8 @@
+ #   SpektraLab, GPL-3.0-or-later            license/LICENSE
+ #   spektrafilm (upstream engine), GPL-3.0  license/SPEKTRAFILM_LICENSE.txt
+ #   profiles and LUTs, CC BY-SA 4.0         engine/resources/profiles, print LUTs
+-#   LibRaw 0.22.2, LGPL-2.1 (of its LGPL/CDDL dual licence), statically linked
++#   LibRaw 0.23.0-Snapshot202611 (master 42f89c16), LGPL-2.1 (of its LGPL/CDDL
++#   dual licence), statically linked
+ #   stb (public domain / MIT), volk (MIT), Vulkan-Headers (Apache-2.0 OR MIT,
+ #   compile time only)
+ set -euo pipefail
+@@ -38,8 +39,11 @@ cp "$here/resources_product/NOTICE.md" "$lic/Product-profiles-NOTICE.md"
+ cp "$here/resources_product/fonts/LICENSE" "$lic/Imprint-fonts-LICENSE.txt"
+ cp "$here/resources_product/fonts/DejaVu-LICENSE" "$lic/Imprint-mono-font-DejaVu-LICENSE.txt"
+ cp "$here/third_party/stb/LICENSE" "$lic/stb-LICENSE.txt"
+-cp "$deps/LibRaw-0.22.2/LICENSE.LGPL" "$lic/LibRaw-LGPL-2.1.txt"
+-cp "$deps/LibRaw-0.22.2/COPYRIGHT" "$lic/LibRaw-COPYRIGHT.txt"
++# The LibRaw notices come from the tree this build compiled (cmake/LibRaw.cmake
++# copies them, with the pin, out of the verified source).
++for notice in LICENSE.LGPL:LibRaw-LGPL-2.1.txt COPYRIGHT:LibRaw-COPYRIGHT.txt SOURCE.txt:LibRaw-SOURCE.txt; do
++  cp "$build/engine/third-party/LibRaw/${notice%%:*}" "$lic/${notice#*:}"
++done
+ cp "$here/third_party/stb/LICENSE" "$lic/stb-LICENSE.txt"
+ cp "$here/third_party/volk/LICENSE.md" "$lic/volk-LICENSE.txt"
+ cp "$deps/Vulkan-Headers/LICENSE.md" "$lic/Vulkan-Headers-LICENSE.txt"
+@@ -53,8 +57,9 @@ The full corresponding source is the SpektraLab repository at the commit
+ this build was made from.
+ 
+ Bundled third-party components:
+-  LibRaw 0.22.2        LGPL-2.1, statically linked; source: libraw.org, and
+-                       engine/setup-libraw.sh fetches the exact pinned tree.
++  LibRaw 0.23.0-Snapshot202611 (upstream master 42f89c16, unmodified)
++                       LGPL-2.1, statically linked; source and pin in
++                       LibRaw-SOURCE.txt; engine/setup-libraw.sh fetches it.
+   stb_image, stb_image_write, stb_truetype   public domain / MIT (stb-LICENSE.txt)
+   volk                 MIT (volk-LICENSE.txt)
+   Vulkan-Headers       Apache-2.0 OR MIT, compile time only
+diff --git a/engine/tests/desktop_preview.cpp b/engine/tests/desktop_preview.cpp
+index feb63c9..8e7f16d 100644
+--- a/engine/tests/desktop_preview.cpp
++++ b/engine/tests/desktop_preview.cpp
+@@ -510,13 +510,22 @@ void integration(const fs::path& resources, const fs::path& arw,
+         check(edited->settings.print_exposure == 1.25 && edited->timings.decode_ms == 0 && edited->timings.open_ms == 0,
+               "print edit changed settings incorrectly or reopened RAW");
+         report.set("print_edit", frame_report(*edited));
+-        const auto nef_error = rejected([&] { host.open_raw(nef, DecodeMode::compatible16); }, "unsupported Nikon HE file opened");
+-        check(nef_error.find("Nikon HE/HE*") != std::string::npos, "Nikon failure lacks compression diagnosis");
+-        check(host.current() == edited, "failed Nikon open replaced prior frame");
++        // A failed open must leave the current frame alone. Until 2026-11-17
++        // the Nikon HE/HE* NEF was the file that failed; the pinned LibRaw
++        // master decodes it now (checked below), so the failure comes from a
++        // file that is not a RAW at all.
++        const auto broken = destination / "not-a-raw.NEF";
++        {
++            std::ofstream junk(broken, std::ios::binary);
++            check(bool(junk << std::string(4096, '\x5a')), "cannot write the broken NEF");
++        }
++        const auto nef_error = rejected([&] { host.open_raw(broken, DecodeMode::compatible16); }, "a file that is not a RAW opened");
++        check(nef_error.find("RAW open") != std::string::npos, "RAW failure does not name its stage");
++        check(host.current() == edited, "failed open replaced prior frame");
+         report.set("nef_failure", Json(nef_error));
+         print_edit.print_exposure = 0.8;
+         auto after_failure = host.render(print_edit);
+-        check(after_failure->reprint() && after_failure->negative_was_cached(), "Nikon open failure damaged reusable session");
++        check(after_failure->reprint() && after_failure->negative_was_cached(), "open failure damaged reusable session");
+         report.set("render_after_nef_failure", frame_report(*after_failure));
+ 
+         for (unsigned variant = 0; variant < 4; ++variant) {
+@@ -560,6 +569,14 @@ void integration(const fs::path& resources, const fs::path& arw,
+     check(frame_fingerprint(*first) == first_pixels &&
+           fingerprint(first->bgra8.data(), first->bgra8.size()) == first_display,
+           "display/result invalid after host and engine destruction");
++    {
++        // The Nikon HE/HE* NEF decodes with the pinned LibRaw master.
++        PreviewHost host(resources);
++        auto he = host.open_raw(nef, DecodeMode::compatible16);
++        check(he && he->width() > 0 && he->height() > 0 && he->metadata.decoder_name == "nikon_he_load_raw()",
++              "the Nikon HE/HE* NEF did not decode through nikon_he_load_raw()");
++        report.set("nef_open", frame_report(*he));
++    }
+     compare_tiff(exported, *first, resources / "io/sRGB.icc");
+     first.reset();  // spk_result_free is intentionally exercised without engine.
+     report.set("status", Json(std::string("passed")));
 diff --git a/engine/tests/gpu_vulkan_device_lost.cpp b/engine/tests/gpu_vulkan_device_lost.cpp
 new file mode 100644
 index 0000000..8067c44
@@ -9286,18 +10102,32 @@ index 757e87e..ca161c0 100755
          "default": False, "live": False, "range": None,
 diff --git a/engine/tests/raw_camera.cpp b/engine/tests/raw_camera.cpp
 new file mode 100644
-index 0000000..bd568ed
+index 0000000..b563c3a
 --- /dev/null
 +++ b/engine/tests/raw_camera.cpp
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,62 @@
 +#include "../src/io/raw_camera.hpp"
 +#include <cmath>
 +#include <memory>
 +#include <iostream>
++// The colour tables SpektraLab used to supply itself (raw_camera.hpp's history)
++// now come from the pinned LibRaw. Hold upstream to the exact coefficients the
++// removed override supplied, so a pin that drops or changes them fails here
++// rather than silently falling back to an uncalibrated camera.
 +struct Camera : spk::io::detail::CameraLibRaw {
 +    using CameraLibRaw::adobe_coeff;
 +    bool uncalibrated() const { return libraw_internal_data.internal_output_params.raw_color; }
 +};
++namespace {
++bool matrix_is(Camera& raw, const float (&want)[3][3]) {
++    for (int row = 0; row < 3; ++row)
++        for (int col = 0; col < 3; ++col)
++            if (std::abs(raw.imgdata.color.cam_xyz[row][col] - want[row][col]) > 1e-6f) return false;
++    for (auto& row : raw.imgdata.color.rgb_cam)
++        for (float v : row) if (!std::isfinite(v)) return false;
++    return true;
++}
++}  // namespace
 +int main() {
 +    // LibRaw matches model prefixes, so R6 Mark III must precede R6 Mark II.
 +    auto canon = std::make_unique<Camera>();
@@ -9306,34 +10136,1052 @@ index 0000000..bd568ed
 +        std::abs(canon->imgdata.color.cam_xyz[0][0] - 0.8309f) > 1e-6f) return 11;
 +    if (!canon->adobe_coeff(LIBRAW_CAMERAMAKER_Canon, "EOS R6 Mark II") ||
 +        std::abs(canon->imgdata.color.cam_xyz[0][0] - 0.9539f) > 1e-6f) return 12;
-+    for (const auto* name : {"GFX100RF", "GFX 100RF"}) {
++
++    // GFX 100RF: the GFX 100 II matrix (RawSpeed's cameras.xml gives both the
++    // same), which is what the override lent it under 0.22.2.
++    constexpr float gfx100_ii[3][3] = {
++        {1.2806f, -0.5779f, -0.1110f},
++        {-0.3546f, 1.1507f, 0.2318f},
++        {-0.0177f, 0.0996f, 0.5715f},
++    };
++    for (const auto* name : {"GFX 100RF", "GFX 100 II"}) {
 +        auto raw = std::make_unique<Camera>();
 +        raw->imgdata.idata.colors = 3;
 +        if (!raw->adobe_coeff(LIBRAW_CAMERAMAKER_Fujifilm, name) || raw->uncalibrated()) return 1;
-+        if (std::abs(raw->imgdata.color.cam_xyz[0][0] - 1.2806f) > 1e-6f) return 2;
-+        for (auto& row : raw->imgdata.color.rgb_cam)
-+            for (float v : row) if (!std::isfinite(v)) return 3;
++        if (!matrix_is(*raw, gfx100_ii)) return 2;
 +    }
-+    auto raw = std::make_unique<Camera>();
-+    raw->imgdata.idata.colors = 3;
-+    if (raw->adobe_coeff(LIBRAW_CAMERAMAKER_Fujifilm, "GFX100RF-unknown")) return 4;
-+    if (raw->adobe_coeff(LIBRAW_CAMERAMAKER_Canon, "GFX100RF")) return 5;
-+
-+    if (!raw->adobe_coeff(LIBRAW_CAMERAMAKER_Fujifilm, "X-E5") || raw->uncalibrated()) return 6;
-+    constexpr float xe5_xyz_to_camera[3][3] = {
++    // X-E5: the X-H2 matrix.
++    constexpr float xh2[3][3] = {
 +        {1.1809f, -0.5358f, -0.1141f},
 +        {-0.4248f, 1.2164f, 0.2343f},
 +        {-0.0514f, 0.1097f, 0.5848f},
 +    };
-+    for (int row = 0; row < 3; ++row)
-+        for (int col = 0; col < 3; ++col)
-+            if (std::abs(raw->imgdata.color.cam_xyz[row][col] - xe5_xyz_to_camera[row][col]) > 1e-6f) return 7;
-+    if (raw->adobe_coeff(LIBRAW_CAMERAMAKER_Fujifilm, "X-E5-unknown")) return 8;
-+    if (raw->adobe_coeff(LIBRAW_CAMERAMAKER_Canon, "X-E5")) return 9;
-+    raw->imgdata.idata.dng_version = 0x01040000;
-+    if (raw->adobe_coeff(LIBRAW_CAMERAMAKER_Fujifilm, "X-E5")) return 10;
-+    std::cout << "GFX100RF and X-E5 calibration and exact model boundaries passed\n";
++    for (const auto* name : {"X-E5", "X-H2"}) {
++        auto raw = std::make_unique<Camera>();
++        raw->imgdata.idata.colors = 3;
++        if (!raw->adobe_coeff(LIBRAW_CAMERAMAKER_Fujifilm, name) || raw->uncalibrated()) return 6;
++        if (!matrix_is(*raw, xh2)) return 7;
++    }
++    // A Fujifilm entry is not found under another maker.
++    auto raw = std::make_unique<Camera>();
++    raw->imgdata.idata.colors = 3;
++    if (raw->adobe_coeff(LIBRAW_CAMERAMAKER_Canon, "GFX 100RF")) return 5;
++    std::cout << "EOS R6 Mark III, GFX 100RF and X-E5 calibration come from the pinned LibRaw\n";
 +}
+diff --git a/engine/tests/raw_fixtures.py b/engine/tests/raw_fixtures.py
+new file mode 100755
+index 0000000..aeab458
+--- /dev/null
++++ b/engine/tests/raw_fixtures.py
+@@ -0,0 +1,371 @@
++#!/usr/bin/env python3
++"""Every RAW fixture through the pinned LibRaw, with its outcome written down.
++
++The camera files are not in the repository; SPEKTRALAB_RAW_FIXTURES names the
++folder that holds them (the 2026-11-17 set: A7m3, A7V, "DNG RAW", "EOS R6iii",
++GFX100RF, "Leica Q3", "Lumix S1", "Nikon Z6iii", "Nikon Z7ii", "Olympus
++E300"). FIXTURES below is the expected outcome of every RAW file in it, one row
++per file. Nothing is skipped: the variable unset, a listed file missing, or a
++RAW file in the folder that has no row is a failure, as is a file expected to
++decode that does not (or one expected to be refused that decodes).
++
++Two checks share the table:
++
++  host     T-A1. Each file through a native spektralab-host
++           (desktop/HOST-PROTOCOL.md): probe (make, model, displayed size,
++           EXIF orientation), thumbnail, open in compatible16 and in headroom,
++           and one render_view of each, whose picture must be not constant, not
++           black and plausibly exposed. A refused file must be refused by both
++           modes with the listed error code and message, after a working probe
++           and thumbnail.
++
++  compare  T-A2. The decoded linear frame (raw_pin_compare/raw_decode_dump)
++           from the previous pin and from this one, both modes, for every file
++           the previous pin decoded: the same size and orientation, and no
++           difference beyond the row's `pin` expectation. Every frame of the
++           current pin must be finite. engine/tests/raw_pin_compare.sh builds
++           the two dump tools and calls this.
++
++    SPEKTRALAB_RAW_FIXTURES=<folder> engine/tests/raw_fixtures.py host \\
++        --host build/mac-new/engine/host/spektralab-host --resources build/mac-new/engine/resources
++    SPEKTRALAB_RAW_FIXTURES=<folder> engine/tests/raw_fixtures.py compare \\
++        --old <dir with raw_decode_dump> --new <dir with raw_decode_dump, raw_frame_compare> --scratch <dir>
++
++Standard library only. No timing is measured or asserted.
++"""
++from __future__ import annotations
++
++import argparse
++import json
++import math
++import os
++import subprocess
++import sys
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++from host_smoke import Host  # noqa: E402  (the framed protocol client)
++
++RAW_EXTENSIONS = {".arw", ".cr2", ".cr3", ".crw", ".dng", ".nef", ".nrw", ".orf", ".raf", ".rw2", ".pef",
++                  ".srw", ".3fr", ".iiq", ".rwl", ".x3f", ".erf", ".kdc", ".dcr", ".mos", ".mef", ".srf", ".sr2"}
++# Sidecars, prints and LUTs that live beside the fixtures; never decoded.
++IGNORED_EXTENSIONS = {".json", ".xmp", ".tif", ".tiff", ".cube", ".ds_store", ""}
++
++# The previous pin was LibRaw 0.22.2 + the libraw-arw6 overlay + raw_camera.hpp's
++# GFX100RF/X-E5 matrices (base 1aa6f4d8). `pin` is what moving to master
++# 42f89c16 is allowed to change in the decoded frame:
++#   "identical"        every sample bit-identical, same size and orientation;
++#   {"crop": ...}      the new frame contains the old one at offset (x, y) and is
++#                      larger by (w, h); the overlap, less an 8 px band, identical;
++#   {"colour": ...}    same size and orientation, samples changed by upstream
++#                      colour data: mean |difference| and max |difference| bounded
++#                      (linear [0,1] units) -- the measured values, not a wider bar;
++#   "new"              the old pin refused the file; nothing to compare.
++FIXTURES = [
++    # path, make, model, displayed width x height, EXIF orientation, decoder, outcome, pin
++    {"path": "A7m3/DSC03710.ARW", "make": "Sony", "model": "ILCE-7M3", "size": (6024, 4024), "orientation": 1,
++     "decoder": "sony_arw2_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "A7m3/DSC03733.ARW", "make": "Sony", "model": "ILCE-7M3", "size": (6024, 4024), "orientation": 1,
++     "decoder": "sony_arw2_load_raw()", "decode": True, "pin": "identical"},
++    # Sony A7 V: one lossless-compressed file, one ARW 6 "Compressed" (lossy) file.
++    {"path": "A7V/5676846937.arw", "make": "Sony", "model": "ILCE-7M5", "size": (4688, 7028), "orientation": 8,
++     "decoder": "sony_ljpeg_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "A7V/9218571104.arw", "make": "Sony", "model": "ILCE-7M5", "size": (4688, 7028), "orientation": 8,
++     "decoder": "sony_arw6_load_raw()", "decode": True, "pin": "identical"},
++    # iPhone 17 Pro ProRAW: DNG 1.7 with JPEG XL compression (52546). LibRaw
++    # decodes that only when built with the Adobe DNG SDK, which this build is
++    # not; probe and the embedded preview work, the decode is refused.
++    {"path": "DNG RAW/IMG_9826.DNG", "make": "Apple", "model": "iPhone18,1 back telephoto camera",
++     "size": (6048, 8064), "orientation": 6, "decode": False, "error_code": "decode_failed",
++     "error": "RAW unpack: Unsupported file format or not RAW file (-2)", "pin": "refused by both"},
++    {"path": "DNG RAW/R0030139.DNG", "make": "Ricoh", "model": "GR II", "size": (4944, 3280), "orientation": 1,
++     "decoder": "lossless_dng_load_raw()", "decode": True, "pin": "identical"},
++    # Canon EOS R6 Mark III: master's crop keeps 25 x 27 more of the sensor than
++    # the 0.22.2 overlay did (visible 6986x4664 at margins 158,96 against
++    # 6959x4639 at 172,108); the old frame sits inside the new one unchanged.
++    {"path": "EOS R6iii/8153398483.cr3", "make": "Canon", "model": "EOS R6 Mark III", "size": (4664, 6986),
++     "orientation": 8, "decoder": "crxLoadRaw()", "decode": True,
++     "pin": {"crop": {"x": 12, "y": 13, "w": 25, "h": 27}}},
++    # Fujifilm GFX100RF: 102 MP. Bit-identical with raw_camera.hpp's override
++    # gone -- master's own "GFX 100RF" entry has the GFX 100 II matrix it lent.
++    {"path": "GFX100RF/DSCF1220.RAF", "make": "Fujifilm", "model": "GFX100RF", "size": (11662, 8746),
++     "orientation": 1, "decoder": "unpacked_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Leica Q3/L1026319.DNG", "make": "Leica", "model": "Q3", "size": (9536, 6344), "orientation": 1,
++     "decoder": "lossless_dng_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Leica Q3/L1026321.DNG", "make": "Leica", "model": "Q3", "size": (9536, 6344), "orientation": 1,
++     "decoder": "lossless_dng_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Leica Q3/L1026367.DNG", "make": "Leica", "model": "Q3", "size": (6344, 9536), "orientation": 6,
++     "decoder": "lossless_dng_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Leica Q3/L1026368.DNG", "make": "Leica", "model": "Q3", "size": (6344, 9536), "orientation": 6,
++     "decoder": "lossless_dng_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Lumix S1/2186891362.rw2", "make": "Panasonic", "model": "DC-S1", "size": (6024, 4016),
++     "orientation": 1, "decoder": "panasonicC6_load_raw()", "decode": True, "pin": "identical"},
++    # Panasonic DC-S1 II: 0.22.2 had no entry and matched "DC-S1" by prefix
++    # (camera_from_xyz 0.9744, -0.3905, ...); master has the S1 II's own matrix
++    # (1.073, -0.4442, ...). The sensor data, levels and WB are unchanged.
++    {"path": "Lumix S1/P2319446.RW2", "make": "Panasonic", "model": "DC-S1M2", "size": (6008, 4008),
++     "orientation": 1, "decoder": "panasonicC8_load_raw()", "decode": True,
++     "pin": {"colour": {"compatible16": {"mean_abs": 1.2e-4, "max_abs": 0.21},
++                        "headroom": {"mean_abs": 1.5e-4, "max_abs": 0.14}}}},
++    # Nikon Z6III, HE* compression: refused by name under 0.22.2, decoded by
++    # master's new nikon_he_load_raw().
++    {"path": "Nikon Z6iii/9143972759.nef", "make": "Nikon", "model": "Z6_3", "size": (6064, 4040),
++     "orientation": 1, "decoder": "nikon_he_load_raw()", "decode": True, "pin": "new"},
++    {"path": "Nikon Z7ii/_DSC0897.NEF", "make": "Nikon", "model": "Z 7_2", "size": (8288, 5520), "orientation": 1,
++     "decoder": "nikon_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Nikon Z7ii/_DSC2439.NEF", "make": "Nikon", "model": "Z 7_2", "size": (5520, 8288), "orientation": 8,
++     "decoder": "nikon_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Nikon Z7ii/_DSC2663.NEF", "make": "Nikon", "model": "Z 7_2", "size": (5520, 8288), "orientation": 8,
++     "decoder": "nikon_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Nikon Z7ii/_DSC2704.NEF", "make": "Nikon", "model": "Z 7_2", "size": (8288, 5520), "orientation": 1,
++     "decoder": "nikon_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Nikon Z7ii/_DSC2715.NEF", "make": "Nikon", "model": "Z 7_2", "size": (8288, 5520), "orientation": 1,
++     "decoder": "nikon_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Nikon Z7ii/_DSC8127.NEF", "make": "Nikon", "model": "Z 7_2", "size": (5520, 8288), "orientation": 8,
++     "decoder": "nikon_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Nikon Z7ii/_DSC8683.NEF", "make": "Nikon", "model": "Z 7_2", "size": (5520, 8288), "orientation": 8,
++     "decoder": "nikon_load_raw()", "decode": True, "pin": "identical"},
++    {"path": "Olympus E300/sample1.orf", "make": "Olympus", "model": "E-300", "size": (3340, 2504),
++     "orientation": 1, "decoder": "packed_load_raw()", "decode": True, "pin": "identical"},
++]
++
++FAILURES: list[str] = []
++
++
++def check(cond, label, detail=""):
++    print(("ok   " if cond else "FAIL ") + label + (f"  ({detail})" if detail else ""), flush=True)
++    if not cond:
++        FAILURES.append(label)
++    return bool(cond)
++
++
++def fixture_root() -> Path:
++    root = os.environ.get("SPEKTRALAB_RAW_FIXTURES")
++    if not root:
++        print("FAIL SPEKTRALAB_RAW_FIXTURES is not set; the RAW fixtures are required, not optional", flush=True)
++        sys.exit(1)
++    path = Path(root)
++    if not path.is_dir():
++        print(f"FAIL SPEKTRALAB_RAW_FIXTURES={root} is not a folder", flush=True)
++        sys.exit(1)
++    return path
++
++
++def inventory(root: Path) -> list[dict]:
++    """The table, with every listed file present and every RAW file listed."""
++    listed = {row["path"] for row in FIXTURES}
++    for row in FIXTURES:
++        check((root / row["path"]).is_file(), f"fixture present: {row['path']}")
++    for path in sorted(p for p in root.rglob("*") if p.is_file()):
++        rel = path.relative_to(root).as_posix()
++        ext = path.suffix.lower()
++        if ext in RAW_EXTENSIONS:
++            check(rel in listed, f"RAW file has an expected-outcome row: {rel}")
++        elif ext not in IGNORED_EXTENSIONS and path.name.lower() != ".ds_store":
++            check(False, f"unrecognised fixture file (add it to the table or the ignored list): {rel}")
++    return [row for row in FIXTURES if (root / row["path"]).is_file()]
++
++
++# --- T-A1 ---------------------------------------------------------------------------------------
++
++def picture_stats(px: bytes, width: int, height: int) -> dict:
++    n = width * height
++    step = max(1, n // 200_000)
++    lum, clipped, dark = [], 0, 0
++    for i in range(0, n, step):
++        r, g, b = px[4 * i], px[4 * i + 1], px[4 * i + 2]
++        y = 0.2126 * r + 0.7152 * g + 0.0722 * b
++        lum.append(y)
++        clipped += max(r, g, b) >= 254
++        dark += max(r, g, b) <= 4
++    mean = sum(lum) / len(lum)
++    sd = math.sqrt(sum((v - mean) ** 2 for v in lum) / len(lum))
++    return {"mean": mean, "sd": sd, "clipped": clipped / len(lum), "dark": dark / len(lum)}
++
++
++def plausible(stats: dict) -> bool:
++    # Not constant, not black, not blown: generous bounds a broken decode
++    # (all-black, all-white, a flat field, NaNs turned to 0) cannot meet.
++    return 12 <= stats["mean"] <= 240 and stats["sd"] >= 6 and stats["clipped"] < 0.5 and stats["dark"] < 0.5
++
++
++def view(host: Host, sid: str, label: str, opened: dict) -> None:
++    h, _ = host.call("get_params", {"session": sid})
++    if not check(h["ok"], f"{label}: get_params", h.get("error")):
++        return
++    req = {"session": sid, "tier": "preview", "display": "srgb", "format": "rgba8", "generation": 1,
++           "params": h["result"]["params"], "long_edge": 512, "adjustments": {}, "geometry": {}}
++    h, px = host.call("render_view", req)
++    if not check(h["ok"], f"{label}: render_view", h.get("error")):
++        return
++    im = h["result"]["image"]
++    w, hh = im["width"], im["height"]
++    check(len(px) == w * hh * 4 and max(w, hh) <= 512 and (w >= hh) == (opened["width"] >= opened["height"]),
++          f"{label}: render_view size and orientation", f"{w}x{hh}")
++    s = picture_stats(px, w, hh)
++    check(plausible(s), f"{label}: picture is not constant, not black, plausibly exposed",
++          "mean {mean:.1f} sd {sd:.1f} clipped {clipped:.3f} dark {dark:.3f}".format(**s))
++
++
++def host_check(args) -> None:
++    root = fixture_root()
++    rows = inventory(root)
++    host = Host([args.host, "--resources", args.resources])
++    h, _ = host.call("hello")
++    check(h["ok"] and h["result"]["backend"].get("available"), "host: hello, Vulkan backend available",
++          h.get("error") or h["result"].get("build_info"))
++    for row in rows:
++        path, label = str(root / row["path"]), row["path"]
++        h, _ = host.call("probe", {"path": path})
++        if not check(h["ok"], f"{label}: probe", h.get("error")):
++            continue
++        r = h["result"]
++        md = r.get("metadata", {})
++        check(r["kind"] == "raw", f"{label}: probe kind raw", r["kind"])
++        check((r["width"], r["height"]) == tuple(row["size"]), f"{label}: probe displayed size",
++              f'{r["width"]}x{r["height"]}, want {row["size"][0]}x{row["size"][1]}')
++        check(md.get("make") == row["make"] and md.get("model") == row["model"], f"{label}: make and model",
++              f'{md.get("make")} / {md.get("model")}')
++        check(md.get("orientation") == row["orientation"], f"{label}: EXIF orientation",
++              f'{md.get("orientation")}, want {row["orientation"]}')
++        h, px = host.call("thumbnail", {"path": path, "long_edge": 320})
++        if check(h["ok"], f"{label}: thumbnail", h.get("error")):
++            im = h["result"]["image"]
++            ok = len(px) == im["width"] * im["height"] * 4 and max(im["width"], im["height"]) <= 320
++            check(ok and (im["width"] >= im["height"]) == (r["width"] >= r["height"]),
++                  f"{label}: thumbnail payload and orientation",
++                  f'{im["width"]}x{im["height"]} {h["result"].get("source")}')
++            s = picture_stats(px, im["width"], im["height"])
++            # The camera's own preview keeps the scene's exposure: the two Leica
++            # Q3 night frames preview at a mean of 4-6 of 255. Not constant and
++            # not all black is what can be asked of it.
++            check(s["sd"] >= 6 and s["mean"] >= 2 and s["dark"] < 0.99, f"{label}: thumbnail is a picture",
++                  "mean {mean:.1f} sd {sd:.1f}".format(**s))
++        for mode in ("compatible16", "headroom"):
++            h, _ = host.call("open", {"path": path, "decode": {"raw_mode": mode}})
++            if not row["decode"]:
++                err = h.get("error") or {}
++                check(not h["ok"] and err.get("code") == row["error_code"] and row["error"] in err.get("message", ""),
++                      f"{label}: {mode} refused as expected", err or "it decoded")
++                if h["ok"]:
++                    host.call("close", {"session": h["result"]["session"]})
++                continue
++            if not check(h["ok"], f"{label}: open {mode}", h.get("error")):
++                continue
++            o = h["result"]
++            check((o["width"], o["height"]) == tuple(row["size"]) and o["kind"] == "raw",
++                  f"{label}: {mode} size matches the table", f'{o["width"]}x{o["height"]}')
++            check(o["metadata"].get("model") == row["model"], f"{label}: {mode} model", o["metadata"].get("model"))
++            view(host, o["session"], f"{label}: {mode}", o)
++            host.call("close", {"session": o["session"]})
++    h, _ = host.call("shutdown")
++    host.p.wait(timeout=60)
++    check(host.p.returncode == 0, "host: clean shutdown", host.p.returncode)
++
++
++# --- T-A2 ---------------------------------------------------------------------------------------
++
++def dump(tool: Path, raw: Path, mode: str, out: Path):
++    p = subprocess.run([str(tool), str(raw), mode, str(out)], capture_output=True, text=True)
++    return p.returncode, (p.stdout + p.stderr).strip()
++
++
++def header(path: Path) -> dict:
++    out = {}
++    with open(path, "rb") as f:
++        assert f.readline() == b"SPKF32 1\n"
++        while True:
++            line = f.readline().decode("utf-8").rstrip("\n")
++            if not line:
++                return out
++            k, _, v = line.partition(" ")
++            out[k] = v
++
++
++def compare_check(args) -> None:
++    root = fixture_root()
++    rows = inventory(root)
++    old_dump, new_dump = Path(args.old) / "raw_decode_dump", Path(args.new) / "raw_decode_dump"
++    compare = Path(args.new) / "raw_frame_compare"
++    scratch = Path(args.scratch)
++    scratch.mkdir(parents=True, exist_ok=True)
++    a, b = scratch / "old.spkf32", scratch / "new.spkf32"
++    report = []
++    for row in rows:
++        raw, label, pin = root / row["path"], row["path"], row["pin"]
++        for mode in ("compatible16", "headroom"):
++            try:
++                oc, otext = dump(old_dump, raw, mode, a)
++                nc, ntext = dump(new_dump, raw, mode, b)
++                tag = f"{label}: {mode}"
++                if not row["decode"]:
++                    check(oc == 3 and nc == 3 and row["error"] in ntext and row["error"] in otext,
++                          f"{tag}: refused by both pins", f"old {oc} {otext} | new {nc} {ntext}")
++                    report.append({"file": label, "mode": mode, "old": otext, "new": ntext})
++                    continue
++                if not check(nc == 0, f"{tag}: the current pin decodes", ntext):
++                    continue
++                hb = header(b)
++                check(hb["nonfinite"] == "0", f"{tag}: every sample finite", hb["nonfinite"])
++                check(hb["decoder"] == row["decoder"], f"{tag}: decoder", hb["decoder"])
++                if pin == "new":
++                    check(oc == 3, f"{tag}: the previous pin refused it", otext)
++                    report.append({"file": label, "mode": mode, "old": otext, "new": ntext})
++                    continue
++                if not check(oc == 0, f"{tag}: the previous pin decodes", otext):
++                    continue
++                p = subprocess.run([str(compare), str(a), str(b)], capture_output=True, text=True)
++                if not check(p.returncode == 0, f"{tag}: compare", p.stderr.strip()):
++                    continue
++                d = json.loads(p.stdout)
++                entry = {"file": label, "mode": mode, "result": d}
++                report.append(entry)
++                check(d["same_flip"], f"{tag}: same orientation", f'{d["a"]["flip"]} / {d["b"]["flip"]}')
++                if pin == "identical":
++                    ok = d["same_size"] and d["max_abs"] == 0 and d["nonfinite"] == 0
++                    check(ok, f"{tag}: bit-identical to the previous pin",
++                          "size {}x{} -> {}x{}, max {}, mean {}".format(d["a"]["width"], d["a"]["height"], d["b"]["width"],
++                                                                        d["b"]["height"], d.get("max_abs"), d.get("mean_abs")))
++                elif "crop" in pin:
++                    c = pin["crop"]
++                    al = d.get("aligned") or {}
++                    grew = (int(d["b"]["width"]) - int(d["a"]["width"]), int(d["b"]["height"]) - int(d["a"]["height"]))
++                    check(grew == (c["w"], c["h"]) and al.get("offset_x") == c["x"] and al.get("offset_y") == c["y"],
++                          f"{tag}: the new crop contains the old frame where recorded",
++                          f"grew {grew}, offset {al.get('offset_x')},{al.get('offset_y')}")
++                    check(al.get("max_abs") == 0 and al.get("samples", 0) > 0, f"{tag}: the overlap is bit-identical",
++                          f"max {al.get('max_abs')} over {al.get('samples')} samples")
++                elif "colour" in pin:
++                    bound = pin["colour"][mode]
++                    check(d["same_size"] and d["mean_abs"] <= bound["mean_abs"] and d["max_abs"] <= bound["max_abs"],
++                          f"{tag}: changed only by upstream colour data, within the recorded bound",
++                          f"mean {d.get('mean_abs'):.3g} <= {bound['mean_abs']}, max {d.get('max_abs'):.3g} <= {bound['max_abs']}")
++                    check(d["mean_abs"] > 0, f"{tag}: the recorded change is still there (else make the row identical)")
++                else:
++                    check(False, f"{tag}: unknown pin expectation {pin!r}")
++            finally:
++                for f in (a, b):
++                    f.unlink(missing_ok=True)
++    if args.report:
++        Path(args.report).write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    sub = ap.add_subparsers(dest="cmd", required=True)
++    h = sub.add_parser("host")
++    h.add_argument("--host", required=True)
++    h.add_argument("--resources", required=True)
++    c = sub.add_parser("compare")
++    c.add_argument("--old", required=True, help="build dir of raw_pin_compare against the previous pin")
++    c.add_argument("--new", required=True, help="build dir of raw_pin_compare against the current pin")
++    c.add_argument("--scratch", required=True, help="where the frames are written (and deleted)")
++    c.add_argument("--report", help="write every comparison as JSON here")
++    args = ap.parse_args()
++    (host_check if args.cmd == "host" else compare_check)(args)
++    print(f"\n{len(FAILURES)} failure(s)" + ("" if not FAILURES else ": " + "; ".join(FAILURES[:20])), flush=True)
++    return 1 if FAILURES else 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/engine/tests/raw_gate.sh b/engine/tests/raw_gate.sh
+new file mode 100755
+index 0000000..2de91d7
+--- /dev/null
++++ b/engine/tests/raw_gate.sh
+@@ -0,0 +1,92 @@
++#!/usr/bin/env bash
++# raw_gate.sh -- the LibRaw gate on a Mac (PRD-W3 T-A1..T-A4, and the engine's
++# own CTests in the MoltenVK build). Exit 0 only if every step passed.
++#
++#   SPEKTRALAB_RAW_FIXTURES=<folder of camera files> engine/tests/raw_gate.sh
++#
++#   0. engine/setup-libraw.sh verifies (or fetches) the pinned LibRaw tree.
++#   1. The native host against MoltenVK (engine/LINUX_WINDOWS.md §7) is built
++#      in build/raw-gate-mac, with native codec prefixes from the setup
++#      scripts and the pinned Vulkan-Headers (not /opt/homebrew/include, whose
++#      jpeglib.h is libjpeg 8 and fails spk_host_codecs); its CTests must pass.
++#   2. T-A1 engine/tests/raw_fixtures.py host: every fixture through that host.
++#   3. T-A2 engine/tests/raw_pin_compare.sh: the previous pin against this one.
++#   4. T-A3 engine/tests/raw_pin_guard.sh: the pin guards fire.
++#   5. T-A4 engine/build-windows-cross.sh: spektralab-host.exe is PE32+
++#      x86-64, imports system DLLs only (the script's own allowlist), carries
++#      this LibRaw, and the staged licences name it.
++# No step is skipped: the fixture variable unset, a tool missing or a step
++# failing fails the gate. No timing is measured or asserted.
++set -euo pipefail
++here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++engine="$(cd "$here/.." && pwd)"
++repo="$(cd "$engine/.." && pwd)"
++deps="${SPEKTRALAB_DEPS_DIR:-$repo/build/deps}"
++mac="${SPEKTRALAB_RAW_GATE_BUILD:-$repo/build/raw-gate-mac}"
++fail() { echo "FAIL $*" >&2; exit 1; }
++ok() { echo "ok   $*"; }
++[[ -n "${SPEKTRALAB_RAW_FIXTURES:-}" && -d "$SPEKTRALAB_RAW_FIXTURES" ]] \
++  || fail "SPEKTRALAB_RAW_FIXTURES must name the RAW fixture folder (required, never skipped)"
++[[ "$(uname -s)" == Darwin ]] || fail "this gate is the Mac gate (MoltenVK host); Linux runs build-linux.sh"
++for tool in cmake ninja python3 git glslangValidator x86_64-w64-mingw32-g++ x86_64-w64-mingw32-objdump; do
++  command -v "$tool" >/dev/null || fail "$tool not found"
++done
++export DYLD_FALLBACK_LIBRARY_PATH="${DYLD_FALLBACK_LIBRARY_PATH:-/opt/homebrew/lib}"   # volk dlopens libvulkan
++logs="$repo/build/raw-gate-logs"
++mkdir -p "$logs"
++step() {   # name log command...: run, keep the log, fail with its tail
++  local name="$1" log="$logs/$2"; shift 2
++  if "$@" > "$log" 2>&1; then return 0; fi
++  tail -25 "$log" >&2
++  fail "$name (log: $log)"
++}
++
++# --- 0. the pin --------------------------------------------------------------------------------
++"$engine/setup-deps.sh" "$deps" > "$logs/setup-deps.txt" 2>&1 || { tail -20 "$logs/setup-deps.txt"; fail "setup-deps.sh"; }
++libraw="$("$engine/setup-libraw.sh" "$deps" 2>/dev/null | tail -n 1)"
++ok "LibRaw pin verified: $libraw"
++
++# --- 1. the native MoltenVK host and its CTests -------------------------------------------------
++step "native input codecs" input-codecs.txt python3 "$engine/setup-input-codecs.py" --sources "$deps/input-codecs" \
++  --build "$mac/codecs/input" --install "$deps/input-codecs/install-mac" --generator Ninja
++step "native lens codecs" lens-codecs.txt python3 "$engine/setup-lens-codecs.py" --sources "$deps/lens-codecs" \
++  --build "$mac/codecs/lens" --install "$deps/lens-codecs/install-mac" --generator Ninja
++step "configure the MoltenVK host" configure.txt cmake -S "$repo" -B "$mac" -G Ninja -DCMAKE_BUILD_TYPE=Release \
++  -DSPEKTRALAB_VULKAN_ON_APPLE=ON -DSPEKTRALAB_REQUIRE_VULKAN=ON \
++  -DSPEKTRALAB_VULKAN_HEADERS="$deps/Vulkan-Headers/include" \
++  -DSPEKTRALAB_BUILD_NATIVE_RAW=ON -DSPEKTRALAB_BUILD_HOST=ON -DSPEKTRALAB_LIBRAW_OPENMP=OFF \
++  -DSPEKTRALAB_LIBRAW_SOURCE="$libraw" \
++  -DSPEKTRALAB_INPUT_CODEC_PREFIX="$deps/input-codecs/install-mac" \
++  -DSPEKTRALAB_LENS_PREFIX="$deps/lens-codecs/install-mac" -DBUILD_TESTING=ON
++step "build the MoltenVK host" build.txt ninja -C "$mac"
++step "CTest (MoltenVK build)" ctest.txt ctest --test-dir "$mac" --output-on-failure
++ok "native build and CTests: $(grep -E 'tests passed' "$logs/ctest.txt")"
++
++# --- 2. T-A1 ---------------------------------------------------------------------------------
++step "T-A1 raw_fixtures.py host" t-a1.txt python3 "$here/raw_fixtures.py" host \
++  --host "$mac/engine/host/spektralab-host" --resources "$mac/engine/resources"
++ok "T-A1 every fixture through the host: $(grep -c '^ok' "$logs/t-a1.txt") checks, $(tail -n 1 "$logs/t-a1.txt")"
++
++# --- 3. T-A2 ---------------------------------------------------------------------------------
++step "T-A2 raw_pin_compare.sh" t-a2.txt "$here/raw_pin_compare.sh" "$repo/build/raw-pin-compare"
++ok "T-A2 previous pin against this one: $(grep -c '^ok' "$logs/t-a2.txt") checks, $(tail -n 1 "$logs/t-a2.txt")"
++
++# --- 4. T-A3 ---------------------------------------------------------------------------------
++step "T-A3 raw_pin_guard.sh" t-a3.txt "$here/raw_pin_guard.sh" "$repo/build/raw-pin-guard"
++ok "T-A3 the pin guards fire: $(grep -c '^ok' "$logs/t-a3.txt") checks, $(tail -n 1 "$logs/t-a3.txt")"
++
++# --- 5. T-A4 ---------------------------------------------------------------------------------
++step "T-A4 build-windows-cross.sh" t-a4.txt "$engine/build-windows-cross.sh"
++exe="$repo/build/host-win-x64/spektralab-host.exe"
++lic="$repo/build/host-win-x64/licenses"
++file "$exe" | grep -q 'PE32+ executable (console) x86-64' || fail "T-A4: $(file -b "$exe")"
++imports="$(x86_64-w64-mingw32-objdump -p "$exe" | awk '/DLL Name/ {print $3}' | sort -u | tr '\n' ' ')"
++grep -qiE 'libstdc|libgcc|libwinpthread|libgomp|vulkan-1|libraw' <<<"$imports" && fail "T-A4: non-system import in [$imports]"
++LC_ALL=C grep -aq "0.23.0-Snapshot202611" "$exe" || fail "T-A4: the exe does not carry LibRaw 0.23.0-Snapshot202611"
++LC_ALL=C grep -aq "0.22.2-Release" "$exe" && fail "T-A4: the exe still carries LibRaw 0.22.2"
++for f in LibRaw-LGPL-2.1.txt LibRaw-COPYRIGHT.txt LibRaw-SOURCE.txt; do [[ -s "$lic/$f" ]] || fail "T-A4: licenses/$f not staged"; done
++grep -q "42f89c165763272a5482a254c446337f8048e0df" "$lic/LibRaw-SOURCE.txt" || fail "T-A4: LibRaw-SOURCE.txt does not name the pinned commit"
++grep -q "GNU LESSER GENERAL PUBLIC LICENSE" "$lic/LibRaw-LGPL-2.1.txt" || fail "T-A4: LibRaw-LGPL-2.1.txt is not the LGPL"
++ok "T-A4 spektralab-host.exe: PE32+ x86-64, $(wc -c < "$exe" | tr -d ' ') bytes, imports [$imports], LibRaw 0.23.0-Snapshot202611, LibRaw notices staged"
++echo
++echo "raw gate: all passed (logs in $logs)"
+diff --git a/engine/tests/raw_pin_compare.sh b/engine/tests/raw_pin_compare.sh
+new file mode 100755
+index 0000000..73169d2
+--- /dev/null
++++ b/engine/tests/raw_pin_compare.sh
+@@ -0,0 +1,48 @@
++#!/usr/bin/env bash
++# raw_pin_compare.sh -- T-A2: the previous LibRaw pin against the current one.
++#
++#   SPEKTRALAB_RAW_FIXTURES=<folder> engine/tests/raw_pin_compare.sh [work-dir]
++#
++# Builds raw_pin_compare/ (spk::io's decoder and LibRaw, nothing else) twice
++# with the same compiler and flags:
++#   old  engine/src/io and engine/setup-libraw.sh + third_party/libraw-arw6 as
++#        they were at SPEKTRALAB_RAW_OLD_PIN_COMMIT (default 1aa6f4d8, the
++#        Windows v1 line: LibRaw 0.22.2 + the ARW 6 overlay + raw_camera.hpp's
++#        matrices), extracted with `git archive` and set up by that commit's
++#        own script, which verifies its tree exactly as it always did;
++#   new  this checkout's engine/src/io against the tree engine/setup-libraw.sh
++#        verifies;
++# then runs `raw_fixtures.py compare`, which decodes every fixture with both
++# and holds each file to its row's `pin` expectation. Frames are written to
++# <work-dir>/frames one at a time and deleted after each comparison.
++# Default work dir: <repo>/build/raw-pin-compare. Exit status 0 only if every
++# check passed. Needs cmake, ninja, a C++20 compiler and git (for the archive).
++set -euo pipefail
++here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++repo="$(cd "$here/../.." && pwd)"
++work="${1:-$repo/build/raw-pin-compare}"
++deps="${SPEKTRALAB_DEPS_DIR:-$repo/build/deps}"
++old_commit="${SPEKTRALAB_RAW_OLD_PIN_COMMIT:-1aa6f4d8}"
++[[ -n "${SPEKTRALAB_RAW_FIXTURES:-}" ]] || { echo "FAIL SPEKTRALAB_RAW_FIXTURES is not set" >&2; exit 1; }
++mkdir -p "$work" "$deps"
++
++# The previous pin, from its own commit.
++rm -rf "$work/old-src"
++mkdir -p "$work/old-src"
++git -C "$repo" archive "$old_commit" engine/setup-libraw.sh engine/third_party/libraw-arw6 engine/src/io \
++  | tar -x -C "$work/old-src"
++old_libraw="$("$work/old-src/engine/setup-libraw.sh" "$deps" | tail -n 1)"
++new_libraw="$("$repo/engine/setup-libraw.sh" "$deps" | tail -n 1)"
++echo "old pin: $old_libraw" >&2
++echo "new pin: $new_libraw" >&2
++
++build() {   # name engine-src libraw
++  cmake -S "$here/raw_pin_compare" -B "$work/$1" -G Ninja -DCMAKE_BUILD_TYPE=Release \
++    -DSPK_ENGINE_SRC="$2" -DSPK_LIBRAW_SOURCE="$3" >/dev/null
++  ninja -C "$work/$1" >/dev/null
++}
++build old "$work/old-src/engine/src" "$old_libraw"
++build new "$repo/engine/src" "$new_libraw"
++
++python3 "$here/raw_fixtures.py" compare --old "$work/old" --new "$work/new" \
++  --scratch "$work/frames" --report "$work/report.json"
+diff --git a/engine/tests/raw_pin_compare/CMakeLists.txt b/engine/tests/raw_pin_compare/CMakeLists.txt
+new file mode 100644
+index 0000000..85f8b7f
+--- /dev/null
++++ b/engine/tests/raw_pin_compare/CMakeLists.txt
+@@ -0,0 +1,34 @@
++# The decoder alone, against a chosen LibRaw tree and a chosen copy of
++# engine/src/io -- so the previous pin and the current one can be built with
++# the same compiler and flags and their linear frames compared (T-A2).
++# raw_pin_compare.sh configures this twice; it is not part of the product
++# build and does not run the pin guard (the setup scripts verified each tree).
++#
++#   cmake -S engine/tests/raw_pin_compare -B <dir> -DSPK_ENGINE_SRC=<engine/src> \
++#         -DSPK_LIBRAW_SOURCE=<LibRaw tree>
++cmake_minimum_required(VERSION 3.20)
++project(spk_raw_pin_compare LANGUAGES C CXX)
++# The same language settings engine/CMakeLists.txt gives LibRaw and spk_image_io.
++set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++set(CMAKE_CXX_EXTENSIONS ON)
++if(NOT CMAKE_BUILD_TYPE)
++    set(CMAKE_BUILD_TYPE Release)
++endif()
++foreach(var SPK_ENGINE_SRC SPK_LIBRAW_SOURCE)
++    if(NOT EXISTS "${${var}}")
++        message(FATAL_ERROR "${var} is required")
++    endif()
++endforeach()
++file(GLOB_RECURSE libraw_sources "${SPK_LIBRAW_SOURCE}/src/*.cpp")
++list(FILTER libraw_sources EXCLUDE REGEX "/[^/]*_ph\\.cpp$")
++add_library(cmp_libraw STATIC ${libraw_sources})
++target_include_directories(cmp_libraw PUBLIC "${SPK_LIBRAW_SOURCE}")
++target_compile_definitions(cmp_libraw PUBLIC LIBRAW_NODLL SPEKTRALAB_RAW_OPENMP=0)
++target_compile_options(cmp_libraw PRIVATE -w)
++add_executable(raw_decode_dump raw_decode_dump.cpp
++    "${SPK_ENGINE_SRC}/io/raw_decoder.cpp" "${SPK_ENGINE_SRC}/io/raw_headroom.cpp")
++target_include_directories(raw_decode_dump PRIVATE "${SPK_ENGINE_SRC}")
++target_compile_features(raw_decode_dump PRIVATE cxx_std_20)
++target_link_libraries(raw_decode_dump PRIVATE cmp_libraw m)
++add_executable(raw_frame_compare raw_frame_compare.cpp)
+diff --git a/engine/tests/raw_pin_compare/raw_decode_dump.cpp b/engine/tests/raw_pin_compare/raw_decode_dump.cpp
+new file mode 100644
+index 0000000..aae1286
+--- /dev/null
++++ b/engine/tests/raw_pin_compare/raw_decode_dump.cpp
+@@ -0,0 +1,85 @@
++// raw_decode_dump <raw> <compatible16|headroom> <out.spkf32>
++//
++// One RAW through spk::io's decoder, written as the linear frame the host
++// hands the engine: a text header, then width*height*3 float32 (native
++// endian, top row first). Built twice by raw_pin_compare.sh -- once against
++// the previous LibRaw pin and once against the current one -- so the two
++// frames can be compared value by value (raw_frame_compare.cpp).
++//
++// Header (one line each, then a blank line):
++//   SPKF32 1
++//   width <w>
++//   height <h>
++//   libraw <LibRaw::version()>
++//   make <make> / model <model> / decoder <unpack function>
++//   flip <LibRaw sizes.flip>
++//   nonfinite <count of NaN/Inf samples>
++//   sizes / levels / wb / camera_from_xyz: the calibration LibRaw used
++// Exit 0 when the decode succeeded, 3 when it failed (the error on stderr).
++#include "io/raw_decoder.hpp"
++
++#include <cmath>
++#include <cstdio>
++#include <cstring>
++#include <iostream>
++#include <string>
++
++int main(int argc, char** argv) {
++    if (argc != 4) {
++        std::cerr << "usage: raw_decode_dump <raw> <compatible16|headroom> <out>\n";
++        return 2;
++    }
++    const std::string mode = argv[2];
++    spk::io::DecodedRaw decoded;
++    std::string error;
++    bool ok = false;
++    if (mode == "compatible16") {
++        ok = spk::io::decode_raw_compatible(std::filesystem::u8path(argv[1]), decoded, error);
++    } else if (mode == "headroom") {
++        ok = spk::io::decode_raw_headroom(std::filesystem::u8path(argv[1]), decoded, error);
++    } else {
++        std::cerr << "unknown mode " << mode << "\n";
++        return 2;
++    }
++    if (!ok) {
++        std::cerr << error << "\n";
++        return 3;
++    }
++    if (decoded.rgb.size() != std::size_t(decoded.width) * decoded.height * 3) {
++        std::cerr << "decoded frame size does not match its dimensions\n";
++        return 4;
++    }
++    std::size_t nonfinite = 0;
++    for (float v : decoded.rgb)
++        if (!std::isfinite(v)) ++nonfinite;
++    std::FILE* out = std::fopen(argv[3], "wb");
++    if (!out) {
++        std::cerr << "cannot write " << argv[3] << "\n";
++        return 5;
++    }
++    const auto& m = decoded.metadata;
++    std::fprintf(out, "SPKF32 1\nwidth %u\nheight %u\nlibraw %s\nmake %s\nmodel %s\ndecoder %s\nflip %d\nnonfinite %zu\n",
++                 decoded.width, decoded.height, m.libraw_version.c_str(), m.make.c_str(), m.model.c_str(),
++                 m.decoder_name.c_str(), m.raw_flip, nonfinite);
++    // The calibration LibRaw used, so a changed frame can be traced to its cause.
++    const auto& s = m.sizes_before_postprocess;
++    std::fprintf(out, "sizes raw %ux%u visible %ux%u margins %u,%u\n", s.raw_width, s.raw_height, s.width, s.height,
++                 s.left_margin, s.top_margin);
++    std::fprintf(out, "levels black %u white %u per-channel-black %u,%u,%u,%u postprocess %u..%u\n", m.black, m.white_level,
++                 m.black_level_per_channel[0], m.black_level_per_channel[1], m.black_level_per_channel[2],
++                 m.black_level_per_channel[3], m.postprocess_black, m.postprocess_maximum);
++    std::fprintf(out, "wb as-shot %.6g,%.6g,%.6g,%.6g applied %.6g,%.6g,%.6g,%.6g\n", m.camera_whitebalance[0],
++                 m.camera_whitebalance[1], m.camera_whitebalance[2], m.camera_whitebalance[3], m.post_scale_pre_mul[0],
++                 m.post_scale_pre_mul[1], m.post_scale_pre_mul[2], m.post_scale_pre_mul[3]);
++    std::fprintf(out, "camera_from_xyz %.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g\n\n", m.camera_from_xyz[0],
++                 m.camera_from_xyz[1], m.camera_from_xyz[2], m.camera_from_xyz[3], m.camera_from_xyz[4],
++                 m.camera_from_xyz[5], m.camera_from_xyz[6], m.camera_from_xyz[7], m.camera_from_xyz[8]);
++    const std::size_t written = std::fwrite(decoded.rgb.data(), sizeof(float), decoded.rgb.size(), out);
++    if (std::fclose(out) != 0 || written != decoded.rgb.size()) {
++        std::cerr << "short write to " << argv[3] << "\n";
++        return 5;
++    }
++    std::printf("%s %ux%u %s %s %s flip=%d nonfinite=%zu\n", mode.c_str(), decoded.width, decoded.height,
++                m.make.c_str(), m.model.c_str(), m.decoder_name.c_str(), m.raw_flip, nonfinite);
++    return 0;
++}
+diff --git a/engine/tests/raw_pin_compare/raw_frame_compare.cpp b/engine/tests/raw_pin_compare/raw_frame_compare.cpp
+new file mode 100644
+index 0000000..ef2a303
+--- /dev/null
++++ b/engine/tests/raw_pin_compare/raw_frame_compare.cpp
+@@ -0,0 +1,202 @@
++// raw_frame_compare <a.spkf32> <b.spkf32>
++//
++// Compares two frames raw_decode_dump wrote and prints one JSON object:
++// both headers, whether size and LibRaw flip agree, and the absolute
++// difference over the samples compared: max, mean, the share of samples that
++// differ at all and by more than one 16-bit code, the 99.9th percentile (from
++// a fixed histogram in 1/65535 steps), and the per-channel means of each side.
++// Values are in the decoder's linear [0,1] scale, so 1/65535 is one code of
++// LibRaw's 16-bit output.
++//
++// Same size: every sample. Different size with b at least as large as a in
++// both directions (a pin that crops less of the sensor): the offset of a
++// inside b is found first (the smallest mean difference over a sparse grid,
++// every offset tried), then a's interior -- a band of kAlignBorder pixels
++// left out, where the demosaic of a cropped frame sees an edge the larger
++// one does not -- is compared with the same pixels of b ("aligned": {...}).
++// No judgement is made here; raw_pin_compare.sh holds the expectation.
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstdint>
++#include <cstdio>
++#include <fstream>
++#include <iostream>
++#include <limits>
++#include <map>
++#include <string>
++#include <vector>
++
++namespace {
++constexpr std::uint32_t kAlignBorder = 8;
++
++struct Frame {
++    std::map<std::string, std::string> header;
++    std::uint32_t width = 0, height = 0;
++    std::ifstream data;
++};
++
++bool open_frame(const char* path, Frame& f) {
++    f.data.open(path, std::ios::binary);
++    if (!f.data) return false;
++    std::string line;
++    if (!std::getline(f.data, line) || line != "SPKF32 1") return false;
++    while (std::getline(f.data, line) && !line.empty()) {
++        const auto space = line.find(' ');
++        f.header[line.substr(0, space)] = space == std::string::npos ? "" : line.substr(space + 1);
++    }
++    f.width = static_cast<std::uint32_t>(std::stoul(f.header["width"]));
++    f.height = static_cast<std::uint32_t>(std::stoul(f.header["height"]));
++    return true;
++}
++
++bool read_all(Frame& f, std::vector<float>& out) {
++    out.resize(std::size_t(f.width) * f.height * 3);
++    f.data.read(reinterpret_cast<char*>(out.data()), std::streamsize(out.size() * sizeof(float)));
++    return bool(f.data);
++}
++
++std::string quote(const std::string& s) {
++    std::string out = "\"";
++    for (char c : s) {
++        if (c == '"' || c == '\\') out += '\\';
++        out += c;
++    }
++    return out + "\"";
++}
++
++void print_header(const char* key, const Frame& f) {
++    std::printf("\"%s\":{", key);
++    bool first = true;
++    for (const auto& [k, v] : f.header) {
++        std::printf("%s%s:%s", first ? "" : ",", quote(k).c_str(), quote(v).c_str());
++        first = false;
++    }
++    std::printf("}");
++}
++
++struct Stats {
++    static constexpr std::size_t kBins = 65536 * 2;  // 0 .. 2.0 in 1/65535 steps; the last bin collects the rest
++    std::vector<std::uint64_t> histogram = std::vector<std::uint64_t>(kBins + 1, 0);
++    std::array<double, 3> sum_a{}, sum_b{};
++    double max_abs = 0.0, sum_abs = 0.0;
++    std::uint64_t differ = 0, differ_code = 0, nonfinite = 0, total = 0;
++
++    void add(double x, double y, std::size_t channel) {
++        if (!std::isfinite(x) || !std::isfinite(y)) {
++            ++nonfinite;
++            return;
++        }
++        sum_a[channel] += x;
++        sum_b[channel] += y;
++        const double d = std::fabs(x - y);
++        max_abs = std::max(max_abs, d);
++        sum_abs += d;
++        if (d > 0.0) ++differ;
++        if (d > 1.5 / 65535.0) ++differ_code;
++        ++histogram[std::min<std::size_t>(kBins, static_cast<std::size_t>(d * 65535.0))];
++        ++total;
++    }
++
++    void print() const {
++        const std::uint64_t target = static_cast<std::uint64_t>(std::ceil(double(total) * 0.999));
++        std::uint64_t running = 0;
++        std::size_t p999 = 0;
++        for (; p999 <= kBins; ++p999) {
++            running += histogram[p999];
++            if (running >= target) break;
++        }
++        const double per_channel = total ? double(total) / 3.0 : 1.0;
++        std::printf("\"samples\":%llu,\"nonfinite\":%llu,\"max_abs\":%.9g,\"mean_abs\":%.9g,"
++                    "\"share_differ\":%.9g,\"share_differ_over_1_code\":%.9g,\"p999_abs_codes\":%zu,"
++                    "\"mean_a\":[%.9g,%.9g,%.9g],\"mean_b\":[%.9g,%.9g,%.9g]",
++                    static_cast<unsigned long long>(total), static_cast<unsigned long long>(nonfinite), max_abs,
++                    total ? sum_abs / double(total) : 0.0, total ? double(differ) / double(total) : 0.0,
++                    total ? double(differ_code) / double(total) : 0.0, p999,
++                    sum_a[0] / per_channel, sum_a[1] / per_channel, sum_a[2] / per_channel,
++                    sum_b[0] / per_channel, sum_b[1] / per_channel, sum_b[2] / per_channel);
++    }
++};
++}  // namespace
++
++int main(int argc, char** argv) {
++    if (argc != 3) {
++        std::cerr << "usage: raw_frame_compare <a> <b>\n";
++        return 2;
++    }
++    Frame a, b;
++    if (!open_frame(argv[1], a) || !open_frame(argv[2], b)) {
++        std::cerr << "not a raw_decode_dump frame\n";
++        return 2;
++    }
++    const bool same_size = a.width == b.width && a.height == b.height;
++    const bool same_flip = a.header["flip"] == b.header["flip"];
++    std::printf("{");
++    print_header("a", a);
++    std::printf(",");
++    print_header("b", b);
++    std::printf(",\"same_size\":%s,\"same_flip\":%s", same_size ? "true" : "false", same_flip ? "true" : "false");
++    if (same_size) {
++        Stats stats;
++        std::vector<float> ca(1 << 20), cb(1 << 20);
++        const std::uint64_t samples = std::uint64_t(a.width) * a.height * 3;
++        std::uint64_t done = 0;
++        while (done < samples) {
++            const std::size_t n = static_cast<std::size_t>(std::min<std::uint64_t>(ca.size(), samples - done));
++            a.data.read(reinterpret_cast<char*>(ca.data()), std::streamsize(n * sizeof(float)));
++            b.data.read(reinterpret_cast<char*>(cb.data()), std::streamsize(n * sizeof(float)));
++            if (!a.data || !b.data) {
++                std::cerr << "truncated frame\n";
++                return 2;
++            }
++            for (std::size_t i = 0; i < n; ++i) stats.add(ca[i], cb[i], static_cast<std::size_t>((done + i) % 3));
++            done += n;
++        }
++        std::printf(",");
++        stats.print();
++        std::printf("}\n");
++        return 0;
++    }
++    if (b.width < a.width || b.height < a.height || a.width <= 2 * kAlignBorder || a.height <= 2 * kAlignBorder) {
++        std::printf("}\n");
++        return 0;
++    }
++    std::vector<float> fa, fb;
++    if (!read_all(a, fa) || !read_all(b, fb)) {
++        std::cerr << "truncated frame\n";
++        return 2;
++    }
++    const auto at = [](const std::vector<float>& f, std::uint32_t w, std::uint32_t x, std::uint32_t y, unsigned c) {
++        return double(f[(std::size_t(y) * w + x) * 3 + c]);
++    };
++    // Every offset, scored on a 64 x 64 grid of a's interior.
++    std::uint32_t best_dx = 0, best_dy = 0;
++    double best = std::numeric_limits<double>::infinity();
++    for (std::uint32_t dy = 0; dy <= b.height - a.height; ++dy) {
++        for (std::uint32_t dx = 0; dx <= b.width - a.width; ++dx) {
++            double score = 0.0;
++            for (unsigned gy = 0; gy < 64; ++gy) {
++                const std::uint32_t y = kAlignBorder + gy * (a.height - 2 * kAlignBorder) / 64;
++                for (unsigned gx = 0; gx < 64; ++gx) {
++                    const std::uint32_t x = kAlignBorder + gx * (a.width - 2 * kAlignBorder) / 64;
++                    for (unsigned c = 0; c < 3; ++c)
++                        score += std::fabs(at(fa, a.width, x, y, c) - at(fb, b.width, x + dx, y + dy, c));
++                }
++            }
++            if (score < best) {
++                best = score;
++                best_dx = dx;
++                best_dy = dy;
++            }
++        }
++    }
++    Stats stats;
++    for (std::uint32_t y = kAlignBorder; y < a.height - kAlignBorder; ++y)
++        for (std::uint32_t x = kAlignBorder; x < a.width - kAlignBorder; ++x)
++            for (unsigned c = 0; c < 3; ++c)
++                stats.add(at(fa, a.width, x, y, c), at(fb, b.width, x + best_dx, y + best_dy, c), c);
++    std::printf(",\"aligned\":{\"offset_x\":%u,\"offset_y\":%u,\"border\":%u,", best_dx, best_dy, kAlignBorder);
++    stats.print();
++    std::printf("}}\n");
++    return 0;
++}
+diff --git a/engine/tests/raw_pin_guard.sh b/engine/tests/raw_pin_guard.sh
+new file mode 100755
+index 0000000..36e11ca
+--- /dev/null
++++ b/engine/tests/raw_pin_guard.sh
+@@ -0,0 +1,140 @@
++#!/usr/bin/env bash
++# raw_pin_guard.sh -- T-A3: the LibRaw pin guards can fire.
++#
++#   engine/tests/raw_pin_guard.sh [work-dir]      (default <repo>/build/raw-pin-guard)
++#
++# 1. The four places that name the pin agree: setup-libraw.sh, setup-libraw.ps1,
++#    cmake/LibRaw.cmake (commit, tree, archive SHA-256) and the directory the
++#    Windows build scripts expect.
++# 2. setup-libraw.sh, on scratch copies of the verified tree and archive:
++#    accepts the untouched copy (the control), and refuses an edited file, an
++#    added file, a removed file, an archive with one byte changed, and a git
++#    checkout of another commit -- each with its own message.
++# 3. cmake/LibRaw.cmake, configured against scratch trees: accepts the untouched
++#    tree (the control), and refuses another version (libraw_version.h says
++#    0.22.2), an edited file, an added file and a removed file.
++# Nothing here touches the real build/deps tree. setup-libraw.ps1 is checked
++# for its pin only: there is no PowerShell on this Mac to run it.
++set -euo pipefail
++here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++engine="$(cd "$here/.." && pwd)"
++repo="$(cd "$engine/.." && pwd)"
++work="${1:-$repo/build/raw-pin-guard}"
++deps="${SPEKTRALAB_DEPS_DIR:-$repo/build/deps}"
++failures=0
++ok()   { echo "ok   $*"; }
++fail() { echo "FAIL $*"; failures=$((failures + 1)); }
++
++# --- 1. one pin, everywhere -----------------------------------------------------------------
++value() { sed -n -E "s/^$2=([0-9a-f]+)\$/\\1/p" "$1" | head -n 1; }
++commit="$(value "$engine/setup-libraw.sh" git_commit)"
++tree="$(value "$engine/setup-libraw.sh" git_tree)"
++zipsha="$(value "$engine/setup-libraw.sh" zip_sha256)"
++[[ ${#commit} == 40 && ${#tree} == 40 && ${#zipsha} == 64 ]] && ok "setup-libraw.sh names a commit, a tree and a SHA-256" \
++  || fail "setup-libraw.sh pin unreadable ($commit / $tree / $zipsha)"
++ps1="$engine/setup-libraw.ps1"
++grep -q "^\$commit = '$commit'\$" "$ps1" && grep -q "^\$tree = '$tree'\$" "$ps1" && grep -q "^\$expected = '$zipsha'\$" "$ps1" \
++  && ok "setup-libraw.ps1 has the same commit, tree and SHA-256" || fail "setup-libraw.ps1 pin differs from setup-libraw.sh"
++cm="$engine/cmake/LibRaw.cmake"
++grep -q "^set(SPEKTRALAB_LIBRAW_COMMIT $commit)\$" "$cm" && grep -q "^set(SPEKTRALAB_LIBRAW_TREE $tree)\$" "$cm" \
++  && ok "cmake/LibRaw.cmake has the same commit and tree" || fail "cmake/LibRaw.cmake pin differs from setup-libraw.sh"
++for f in "$engine/build-windows.ps1" "$repo/windows_UI/build.ps1" "$repo/.github/workflows/desktop.yml"; do
++  if grep -q "LibRaw-0\.22" "$f" || ! grep -q "LibRaw-$commit" "$f"; then
++    fail "${f#$repo/} does not name LibRaw-$commit"
++  else
++    ok "${f#$repo/} names LibRaw-$commit"
++  fi
++done
++
++# --- 2. the setup script --------------------------------------------------------------------
++source_dir="$("$engine/setup-libraw.sh" "$deps" | tail -n 1)"
++archive="$deps/LibRaw-$commit.zip"
++[[ -f "$archive" && -d "$source_dir" ]] || { fail "the verified LibRaw tree and archive are not in $deps"; exit 1; }
++rm -rf "$work"
++mkdir -p "$work"
++fresh() {   # a scratch deps dir holding a copy of the verified tree and archive
++  rm -rf "$work/deps"
++  mkdir -p "$work/deps"
++  cp "$archive" "$work/deps/"
++  cp -R "$source_dir" "$work/deps/"
++}
++refuses() {   # label expected-message: setup-libraw.sh must fail and say why
++  local out
++  if out="$("$engine/setup-libraw.sh" "$work/deps" 2>&1)"; then
++    fail "setup-libraw.sh accepted $1"
++  elif grep -q "$2" <<<"$out"; then
++    ok "setup-libraw.sh refuses $1 ($(grep "$2" <<<"$out" | head -n 1 | sed "s|$work/||g"))"
++  else
++    fail "setup-libraw.sh refused $1 for another reason: $out"
++  fi
++}
++fresh
++if out="$("$engine/setup-libraw.sh" "$work/deps" 2>&1)" && [[ "$(tail -n 1 <<<"$out")" == "$work/deps/LibRaw-$commit" ]]; then
++  ok "setup-libraw.sh accepts an untouched copy (control)"
++else
++  fail "setup-libraw.sh rejected an untouched copy: $out"
++fi
++victim="src/decoders/sony_arw6.cpp"
++fresh; printf '\n// local patch\n' >> "$work/deps/LibRaw-$commit/$victim"
++refuses "an edited file" "Modified LibRaw source file"
++fresh; echo x > "$work/deps/LibRaw-$commit/src/extra.cpp"
++refuses "an added file" "Unexpected file in pinned LibRaw source"
++fresh; rm "$work/deps/LibRaw-$commit/src/decoders/nikonhe.cpp"
++refuses "a removed file" "Incomplete LibRaw source tree"
++fresh; rm -rf "$work/deps/LibRaw-$commit"
++python3 - "$work/deps/LibRaw-$commit.zip" <<'PY'
++import sys
++p = sys.argv[1]; b = bytearray(open(p, 'rb').read()); b[len(b) // 2] ^= 0x01; open(p, 'wb').write(bytes(b))
++PY
++refuses "an archive with one byte changed" "checksum mismatch"
++[[ ! -e "$work/deps/LibRaw-$commit" ]] && ok "nothing was extracted from the bad archive" || fail "the bad archive was extracted"
++# A git checkout of another commit: the same commit id check the git fallback uses.
++fresh; rm -rf "$work/deps/LibRaw-$commit"; mkdir -p "$work/deps/LibRaw-$commit"
++cp -R "$source_dir/." "$work/deps/LibRaw-$commit/"
++(cd "$work/deps/LibRaw-$commit" && git init -q && git add -A && git -c user.name=guard -c user.email=guard@invalid commit -qm other)
++refuses "a git checkout of another commit" "is not the pinned commit"
++
++# --- 3. the CMake check ---------------------------------------------------------------------
++mkdir -p "$work/cmake"
++cat > "$work/cmake/CMakeLists.txt" <<EOF
++cmake_minimum_required(VERSION 3.20)
++project(libraw_pin_guard CXX)
++set(SPEKTRALAB_DEPS_DIR "\${CMAKE_CURRENT_BINARY_DIR}/unused")
++set(SPEKTRALAB_LIBRAW_OPENMP OFF CACHE BOOL "" FORCE)
++include("$engine/cmake/LibRaw.cmake")
++EOF
++tree_copy() {
++  rm -rf "$work/tree"
++  cp -R "$source_dir" "$work/tree"
++}
++configure() { cmake -S "$work/cmake" -B "$work/cmake-build" -DSPEKTRALAB_LIBRAW_SOURCE="$work/tree" 2>&1; }
++cmake_refuses() {   # label expected-message
++  local out
++  rm -rf "$work/cmake-build"
++  if out="$(configure)"; then
++    fail "cmake/LibRaw.cmake accepted $1"
++  elif grep -q "$2" <<<"$out"; then
++    ok "cmake/LibRaw.cmake refuses $1"
++  else
++    fail "cmake/LibRaw.cmake refused $1 for another reason: $(grep -A3 'CMake Error' <<<"$out" | head -n 6)"
++  fi
++}
++tree_copy; rm -rf "$work/cmake-build"
++if out="$(configure)"; then ok "cmake/LibRaw.cmake accepts the pinned tree (control)"; else fail "cmake/LibRaw.cmake rejected the pinned tree: $out"; fi
++tree_copy
++sed -i.bak -e 's/^#define LIBRAW_MINOR_VERSION 23$/#define LIBRAW_MINOR_VERSION 22/' \
++           -e 's/^#define LIBRAW_PATCH_VERSION 0$/#define LIBRAW_PATCH_VERSION 2/' \
++           -e 's/^#define LIBRAW_VERSION_TAIL Snapshot202611$/#define LIBRAW_VERSION_TAIL Release/' "$work/tree/libraw/libraw_version.h"
++rm -f "$work/tree/libraw/libraw_version.h.bak"
++cmake_refuses "a tree that says it is 0.22.2" "is a different version"
++tree_copy; printf '\n// local patch\n' >> "$work/tree/$victim"
++cmake_refuses "an edited file" "differs from the pinned"
++tree_copy; echo x > "$work/tree/src/extra.cpp"
++cmake_refuses "an added file" "Unexpected file in the pinned LibRaw tree"
++tree_copy; rm "$work/tree/src/decoders/nikonhe.cpp"
++cmake_refuses "a removed file" "is missing src/decoders/nikonhe.cpp"
++
++rm -rf "$work"
++echo
++echo "$failures failure(s)"
++[[ $failures == 0 ]]
 diff --git a/engine/tests/vulkan_test_hooks.hpp b/engine/tests/vulkan_test_hooks.hpp
 new file mode 100644
 index 0000000..8e2d3a8
@@ -9360,6 +11208,334 @@ index 0000000..8e2d3a8
 +bool test_latch_device_lost(Gpu* gpu, std::string& error);
 +
 +}  // namespace spk::gpu
+diff --git a/engine/third_party/README.md b/engine/third_party/README.md
+index 0987fc6..1dc6656 100644
+--- a/engine/third_party/README.md
++++ b/engine/third_party/README.md
+@@ -1,13 +1,16 @@
+ # engine/third_party
+ 
+-Vendored sources, each pinned and unmodified. Licences are shipped with every
+-build that contains them (`licenses/` in the staged host directory).
++Vendored sources and source pins. Licences are shipped with
++every build that contains them (`licenses/` in the staged host directory).
+ 
+ | directory | what | version / pin | licence | used by |
+ |---|---|---|---|---|
+ | `metal-cpp/` | Apple's C++ Metal bindings | (see its own README) | Apache-2.0 | macOS engine only |
+ | `volk/` | Vulkan meta-loader: `volk.h`, `volk.c` | zeux/volk tag `vulkan-sdk-1.4.341.0`, commit `d979819fd03de3a7606d6e23d6ff4968942599da` | MIT (`volk/LICENSE.md`) | Vulkan backend (Linux, Windows): loads `libvulkan.so.1` / `vulkan-1.dll` at run time, so no SDK import library is needed to link |
+ | `stb/` | `stb_image.h` 2.30, `stb_image_write.h` 1.16, `stb_truetype.h` 1.26 | nothings/stb commit `2c980bb59875b0d32144a71867fbdebb2f77cd20` | public domain or MIT, at the user's choice (`stb/LICENSE`); we take MIT | `engine/host/` (JPEG/PNG decode, JPEG/PNG encode, zlib inflate for TIFF/PNG ICC), the portable overscan text raster |
++| `libraw-pin/` | What proves the LibRaw source tree is the pinned one: `SHA256SUMS` of all 227 files of upstream master `42f89c16` (`0.23.0-Snapshot202611`), and a README on why master and how to move the pin. No LibRaw source is vendored or patched | LibRaw master `42f89c165763272a5482a254c446337f8048e0df`, tree `865b3ac461d5b734e5bc54683e914ff8dd82b7da` | LibRaw: LGPL-2.1 or CDDL-1.0 (the LGPL-2.1 option is taken) | `engine/cmake/LibRaw.cmake` checks the tree against it at configure time; `engine/setup-libraw.ps1` / `.sh` fetch and verify the tree |
+ 
+-Everything here is GPL-3.0-or-later compatible. Nothing here is compiled by
+-`engine/build.sh` or by the Xcode project: the macOS app is unchanged.
++Everything here is GPL-3.0-or-later compatible. The `metal-cpp`, `volk` and
++`stb` copies are not compiled by `engine/build.sh` or the Xcode project: the
++macOS app is unchanged. `libraw-pin/` holds no code. The `libraw-arw6/` overlay that the 0.22.2 pin
++needed was removed on 2026-11-17: the pinned master carries all of it (`libraw-pin/README.md`).
+diff --git a/engine/third_party/libraw-pin/README.md b/engine/third_party/libraw-pin/README.md
+new file mode 100644
+index 0000000..01dcaae
+--- /dev/null
++++ b/engine/third_party/libraw-pin/README.md
+@@ -0,0 +1,64 @@
++# The LibRaw pin
++
++The Windows/Linux native RAW path (`engine/src/io/raw_*`, through `spektralab-host`) compiles LibRaw
++from one exact upstream tree. Nothing of LibRaw's is vendored in this repository: the setup scripts
++fetch it into the gitignored `build/deps/`, and this folder holds only what proves it is the right tree.
++
++| | |
++|---|---|
++| upstream | <https://github.com/LibRaw/LibRaw>, branch `master` |
++| commit | `42f89c165763272a5482a254c446337f8048e0df` ("Planebuf limit: change bytes to items", 2026-11-16), the master head on 2026-11-17 |
++| tree | `865b3ac461d5b734e5bc54683e914ff8dd82b7da` |
++| reports itself as | `0.23.0-Snapshot202611` (`LibRaw::version()`) |
++| archive | `https://codeload.github.com/LibRaw/LibRaw/zip/<commit>`, SHA-256 `95a5c092fd12c16359b8a13afac58bf1b4aaad50e27d2c9221f275c496b79ca2` (downloaded twice on 2026-11-17, identical) |
++| licence | LGPL-2.1 or CDDL-1.0; SpektraLab takes the LGPL-2.1 option and stages `LICENSE.LGPL`, `COPYRIGHT` and a `LibRaw-SOURCE.txt` naming this commit |
++
++## Why master and not a release
++
++LibRaw's release tags stop at 0.22.3 (bug fixes cherry-picked onto the 0.22 branch). Every body the
++product needed for modern cameras is only on master: the Sony ARW 6 lossy decoder and the A7 V
++(`ILCE-7M5`), the Canon EOS R6 Mark III colour data and CR3 ColorData 66, the Fujifilm GFX 100RF and
++X-E5 tables, the Panasonic DC-S1 II, and a Nikon HE/HE\* decoder (`src/decoders/nikonhe.cpp`, new in
++snapshot 202611). The snapshot's Changelog lists every fix the 0.22.1, 0.22.2 and 0.22.3 releases
++carry (the TALOS-2026 fixes included), so taking master gives up none of them.
++
++## What this folder holds
++
++- `SHA256SUMS` -- the SHA-256 of every file of the pinned tree (227 files), in `sha256sum` format.
++  `engine/cmake/LibRaw.cmake` checks the tree it is pointed at against it at configure time and stops on
++  any missing, extra or edited file, before a single LibRaw object is compiled. A git checkout's own
++  `.git/` is not part of the comparison.
++- This README.
++
++The setup scripts check the tree independently: `setup-libraw.sh` checks the archive's SHA-256 *and*
++recomputes the git tree id from the archive's entries before extracting (or, without codeload.github.com,
++fetches the commit with git and checks commit and tree id), then compares every extracted file with the
++archive; `setup-libraw.ps1` checks the same archive SHA-256 and compares every file. Both refuse an
++existing tree that differs and never repair it. `engine/tests/raw_pin_guard.sh` shows each of those
++refusals happening (T-A3) and that the four places naming the pin agree.
++
++## The overlay that was here
++
++Until 2026-11-17 the pin was the 0.22.2 release plus a tracked overlay, `engine/third_party/libraw-arw6/`:
++twelve files backporting the Sony ARW 6 decoder, the A7 V camera id, crop and colour matrix, the EOS R6
++Mark III matrix and the Canon CR3 ColorData subversion 66 white balance. The pinned master carries all
++of it (the decoder differs from the backport only in its copyright comment), so the overlay was removed
++whole, and with it the CMake guard that refused a tree without it. Nothing of LibRaw is patched now.
++
++SpektraLab's own camera table (`engine/src/io/raw_camera.hpp`, an `adobe_coeff` override lending the
++GFX100RF the GFX 100 II matrix and the X-E5 the X-H2 one) went the same way: master has both entries
++with those coefficients. `engine/tests/raw_camera.cpp` now holds the pinned LibRaw to them.
++
++The evidence -- every fixture through both pins, pixel by pixel -- is in `RAW-SUPPORT-20261117.md`.
++
++## Moving the pin
++
++1. Pick the new commit; download its zip twice and compare the SHA-256; compute its tree id.
++2. Change the commit, tree and SHA-256 in `setup-libraw.sh`, `setup-libraw.ps1` and
++   `cmake/LibRaw.cmake` (and the version macros there if they moved), and the directory name in
++   `build-windows.ps1`, `windows_UI/build.ps1` and `.github/workflows/desktop.yml`.
++3. Regenerate `SHA256SUMS` from the verified tree:
++   `(cd build/deps/LibRaw-<commit> && find . -type f | sed 's|^\./||' | LC_ALL=C sort | while read -r f; do printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"; done) > engine/third_party/libraw-pin/SHA256SUMS`
++4. Run `engine/tests/raw_gate.sh` with `SPEKTRALAB_RAW_FIXTURES` set, update the expected-outcome table
++   in `engine/tests/raw_fixtures.py` and the pin comparison in `engine/tests/raw_pin_compare.sh` with
++   what changed and why, and write the dated RAW note.
+diff --git a/engine/third_party/libraw-pin/SHA256SUMS b/engine/third_party/libraw-pin/SHA256SUMS
+new file mode 100644
+index 0000000..e27ca9a
+--- /dev/null
++++ b/engine/third_party/libraw-pin/SHA256SUMS
+@@ -0,0 +1,227 @@
++2939d8e152ca3ffae6981ad5ee8099445f680b4ac745313d3b871ed314bc4e7e  .clang-format
++87c7fe08d8a8ed66ffb07a2d651f52869d5e5e3155557430d227510b5c4d75e9  CONTRIBUTING.md
++c91cd5a149e87f1c88e2ca8c31e66bab4ada32024ae3902fd7dccaf0250a42b4  COPYRIGHT
++01e4cc04854473bdc3a9a2c83cca332ba010f108316cfeddd82faef102071791  Changelog.txt
++170a7b78014b61d0c2f475482df1c1c6961ec41eabb7831597f562e7545cc72a  GoPro/dng-sdk-1_4-allow-VC5-validate.diff
++b5ec9852fbb1eb8bc091e1a71023ec1227fbbf2729a4d48952cd54598aebe105  GoPro/dng-sdk-1_6-1_7-hide-ccVc5-definitiion.diff
++eb3bcacfc2cc10a5d16fa10eeb2547c808ee312a708ca321f7e1b4c7d4132bc4  GoPro/dng-sdk-1_6-hide-ccVc5-definitiion.diff
++170a7b78014b61d0c2f475482df1c1c6961ec41eabb7831597f562e7545cc72a  GoPro/dng-sdk-allow-VC5-validate.diff
++6bb37a67f7f46a5a957f6c15347397e954a448b428520f52bfa2cc409763dddd  GoPro/gpr_read_image.cpp-dng16.diff
++9e09cedd9bda229461c81f34b06770eb34b914a622419ff40bc455cd159d11ce  GoPro/gpr_read_image.cpp-dng17.diff
++6bb37a67f7f46a5a957f6c15347397e954a448b428520f52bfa2cc409763dddd  GoPro/gpr_read_image.cpp.diff
++32484201e2317f07b2665f9b8b285ef91ffca088e801010b92b0ef67ac2a32db  GoPro/gpr_read_image.h-dng16.diff
++1dc5f8b84add940efad35087fca0c61256897b6e445f1a7bf5c08214a470a3f1  GoPro/gpr_read_image.h-dng17.diff
++32484201e2317f07b2665f9b8b285ef91ffca088e801010b92b0ef67ac2a32db  GoPro/gpr_read_image.h.diff
++b897268c33754214f361fb66cfb878528f122dc93381d70b118a8a4532ce85d8  INSTALL.md
++0e3098d2d54a12434715f6679ea408d57da5e8d613c385c58ecc6fe5d30cc81f  LICENSE.CDDL
++eea173a556abac0370461e57e12aab266894ea6be3874c2be05fd87871f75449  LICENSE.LGPL
++ae8e1347283d73c424062524fdcef00eaec2d29f4865449dc813ea51f61a176b  LibRaw.pro
++48af968346153b38ebd5953430f7cd2d013c209e51bd90b1fa2d44aa17c35dc2  LibRaw.sln
++9987f0f23cbf79cc370b6e3c5c476e036b7fbfede26197e51241d115fdccd427  Makefile.am
++54f33a7adc864088621d2383c8a21e1a3dd40a74b0f5c12197fb2ab3acf2a078  Makefile.devel
++4feeac2e4ee73b265f43c42ee857b84d254040a8a8d1f21bb56e05769dc95359  Makefile.devel.nopp
++fca585ab2585ef79943e0c25a42c407067b647a0f88d73daeedde9ff7b545973  Makefile.devel.noppr2i
++9325a979546623f55d5f672442fa3ffc7d0698244e99187b7cf9f47bacc37e86  Makefile.dist
++7a34cce2b06f8e53214f1b98064f035c6275cdebab8a64175a5eab146de507ed  Makefile.mingw
++13c7c3f53185416cdd472f9bfdcbd5fef4958d1959196dec019f9a35a63c6136  Makefile.msvc
++343b98888f88f1bde4ceb952fb4f6e32c598a0d2bc5ee4fca7bc566f06af56d2  README.DNGSDK.txt
++64b7c1166c46db9822ac53c6809d4ffd52728ca1b973e24c279f2c4aae141250  README.GoPro.txt
++46119a8c55a47cef017dd401c42f5f95ef40179d34b2098932f5a64bb422b840  README.RawSpeed.txt
++a11f28f25939cffc2bf2edcaf0ddc2fc865f718a54a5e6cb4dfb1bbe754ff85a  README.cmake
++a737665db77c1a78d4cdb6ef7fcd14b86986c2d9892986ad932cc5f886678355  README.demosaic-packs
++bcb4fe8657807a588c212cc72a1c92108301fc27d22ff202982194096731d2db  README.md
++657e8767d54d56f00b0436e683dfcca3068bbec7e4a462a601f98ac8671ad659  RawSpeed/rawspeed.cpucount-unix.patch
++7db13f00fa23a7394536a79e58c0c924545a94d74700aa863e11a16a9aeba2d5  RawSpeed/rawspeed.qmake-pro-files.patch
++3653b23a41a1b66f2ec5ce6940b583a0c43374d274e7feaa101152decbecedd6  RawSpeed/rawspeed.samsung-decoder.patch
++c9bf3148395f4cae648f17f469ba7a3f8d96d0ec95d4eab76ece645d4d8f131a  RawSpeed/rawspeed.uncompressed-color-dng.patch
++c787937d51198788b6e20119bdcf2272d872eb04ab55336f6f99554fc1072781  RawSpeed/rawspeed.win32-dll.patch
++7192bdbeeeb5cc0b64bd4a836c57054c9f984d395f0d59ff135d4f4e6340a1db  RawSpeed/rawspeed_xmldata.cpp
++94b3703f5b881d8800004565b7a07fdcfe2ec1fb6382f5828b56e56e4a3d8795  RawSpeed3/README.md
++fcbebe0d0e03ee3849fab63d5f115697fc5bcda124cdf56efe1f0de00826db0a  RawSpeed3/patches/01.CameraMeta-extensibility.patch
++865a63f2d42adfcb0728a556ca63c4822326d445f802e614e48e382aecf5cc7f  RawSpeed3/patches/02.Makernotes-processing.patch
++d7924108af23bcbd3a95cebdd29465b00172695f9a4bbf4a6de8f756af5394c4  RawSpeed3/patches/03.remove-limits-and-logging.patch
++44646383fc16c83b7c068452968b2e73c391201a0a01053a2b924cc4250ba7f1  RawSpeed3/patches/04.clang-cl-compatibility.patch
++048db1b2ed7735bfbb136a4f42ab726566ef0f31c5706899d72535cb7fe41313  RawSpeed3/patches/05.no-phase-one-correction.patch
++c14f9e2e1cf7cfd357d1863c1c7a06fdef164f3cc23d44cd6a35425e92f58226  RawSpeed3/rawspeed3_c_api/rawspeed3_capi.cpp
++9e5b612735e5c038311225969f8337ab7fc0c9cc99c9789783aab77e778600d2  RawSpeed3/rawspeed3_c_api/rawspeed3_capi.h
++53efdc6f7b22d9d03e4419236b1b2582f9d118e219cb4fee9ba2efeadb29e437  RawSpeed3/rawspeed3_c_api/rawspeed3_capi_test.cpp
++76924c4177cc154a27a73622bfcfe5c09e593b3aa33f5c8b199e5b031fc49f6d  RawSpeed3/rawspeed3_c_api/rsxml2c.sh
++75a11da44c802486bc6f65640aa48a730f0f684c5c07a42ba3cd1735eb3fb070  bin/.keep_me
++2ab557a3171a3704ea3c0c5b7ee880ee615c4470ba517a6f4c19c8facc56a955  buildfiles/4channels.pro
++2848beb2d25bc5ad6adc6187f9c5c4f4c61131a5900528b8cca69aac3a656e41  buildfiles/4channels.vcxproj
++273660bd774d7eee74d64f6505e80cb2ce4fd71c1c3d597e4db9ea3a2a999526  buildfiles/4channels.vcxproj.filters
++707dca83cef628978c2c4faf981718eb24ecc213155aa57e0e02b44497d8dd3a  buildfiles/dcraw_emu.pro
++448739f442e8b3f26037ad444b35e4121a2048a2ea0e797f332391f83272c3c9  buildfiles/dcraw_emu.vcxproj
++486c738f660a61f543bbd052c9046667bd93aa2a5e81b0e88a563bf99185496f  buildfiles/dcraw_emu.vcxproj.filters
++cbc36c21592914fe9aaff21f0f7f97c562bd11417ceb01c09c2640d39881bfb7  buildfiles/dcraw_half.pro
++946e6fd92b6571ba83848396e181292d10283001d39aaca390d539031d1c2497  buildfiles/dcraw_half.vcxproj
++d0815f9fac863c8d65f0b302a9ee8efebb72855c83a7fadca7c7bbdd007b750a  buildfiles/dcraw_half.vcxproj.filters
++890ee582d4871fd4214cea8e8fec560ce165c5632f8bd0d8067c9a31283864a3  buildfiles/half_mt.pro
++2f53bfb4773f0a006814b48abd2b63a14b938db288f71867597734cfb6c8805d  buildfiles/libraw-common-lib.pro
++7056f64a3a24c583e22330851cd42d3513e267a0bbe1614b7df96feac5888b8b  buildfiles/libraw-common.pro
++bdc1ecbea4d379c437bf0d0e55352400dfba49b3675fcdaee957d18a834e3944  buildfiles/libraw.pro
++cb7c9436005d078cd48e112dea5744a96321666b06696be427a8a75fef5fa481  buildfiles/libraw.vcxproj
++d739a140ed98a6f7e5008cb9788046d929b9b6429d57c202ba444559bf3413be  buildfiles/libraw.vcxproj.filters
++95a9d5729a50fa9aba2fd5bdae36e8ece3bffdf19a56d5b4cc235453572b157c  buildfiles/mem_image.pro
++8e1daca029ad29a2b96818b84ba9fe78d65f301d34aa5687a57780cf7f7fb5b6  buildfiles/mem_image.vcxproj
++de65e1ae07cefc81b6d5ea8a7b11fbf698e2e3357832c3937cbfbe42d11725b9  buildfiles/mem_image.vcxproj.filters
++756810eacff8f31232498e6aab41c6c4b731e3a04753163d6e1938a0455bb2b4  buildfiles/multirender_test.pro
++8be33c759d2c88a318d03a5eb717db2fe9ce31e1eda4929456af399fa065e68d  buildfiles/multirender_test.vcxproj
++33878b52c5646b23f510b60e17199bd3c26cedc24d14bc44175429ca3e7b718d  buildfiles/multirender_test.vcxproj.filters
++b9ae62a1d1fb3ecc1fcbc416c3a5bf7dd87069cb12fe1aeed93f6c16371ea126  buildfiles/openbayer_sample.pro
++f5f903386246ca5ffb1406f9a1378d3de66910add03e7cb24e3069e959540fdf  buildfiles/openbayer_sample.vcxproj
++a8f3d380b14be7d6ca50319f3d3efdaeacfc75a205733b903b8f8e294acfe0fb  buildfiles/openbayer_sample.vcxproj.filters
++23bb66e404a5a357760bc857085572d9b7af849d272dfb091c3c2c0978ee29c5  buildfiles/postprocessing_benchmark.pro
++52cfc8b63ea807d8655cedcf9390c5629c6bf1f9032a5e45c2803151779f1dd2  buildfiles/postprocessing_benchmark.vcxproj
++e79cd5aba35d3f93c48fa75dce0cb526fd01ab044bdbaed30b6a09bc662c68c5  buildfiles/postprocessing_benchmark.vcxproj.filters
++9e071c179864b2e46b2a6b2ad25424a50e6576adb65815f0ac2370c67147d04d  buildfiles/raw-identify.pro
++6494c5c7a44292e63998583a653a5b84c98a8cdddebc2b7d6c4fdf94c5b14110  buildfiles/raw-identify.vcxproj
++752744706ef72c319bfc5ed15e10b3a2ae69d905aef81e98234a261be2af5239  buildfiles/raw-identify.vcxproj.filters
++530a09c8466dacc78d39056606b33afe648df61d19d4865ad5cf516e7eb3ffe8  buildfiles/rawtextdump.pro
++bf01e998836ca801c69d3d2b4ff1015dac2da509c795bbe4933c5b6c5568273c  buildfiles/rawtextdump.vcxproj
++e7a13e71bc26cfbc1111c2e5d06e1c90563687496ab96256725d340c83eaf72c  buildfiles/rawtextdump.vcxproj.filters
++80802a821fe527a9a371c540dce6337db94907c4c3ba205c63576bb936dc862a  buildfiles/simple_dcraw.pro
++89e4d656b156e3b69f88e48f3c50b817a8ada8f6423a866db02bfd58035df384  buildfiles/simple_dcraw.vcxproj
++81172d8c65b9b9e5d829cf7de6eea6700fd051e84c3ce58b99ad8d0401d7f3a0  buildfiles/simple_dcraw.vcxproj.filters
++31046baa5aa63dcb94915d2fd7f18a60e96ff75257d9f0513b73ceeb5b4037aa  buildfiles/unprocessed_raw.pro
++c07e6c5b40852101615e06ee44c2efa5495c889141a725f7bf400939ad1e3275  buildfiles/unprocessed_raw.vcxproj
++fc88a9813ac5e2813a65e1b19cb3280149dcdea333c9416ceb9841910381b32b  buildfiles/unprocessed_raw.vcxproj.filters
++074aec13c8e44da9edc8c6dd81f0b824d4740e3830c4bbdb0b1eeea65860438d  clist2c.pl
++6b69158298a25fbe020e36f49429e76b84756c385714630e0fcbb8c0f2142a13  clist2html.pl
++2f3862154470c3e50cf83815f80f7f130747fb8565ead6d6601050a684d6f3e0  configure.ac
++ed726b7d1c9f565fc8cb26447865d89912eddb5e7743f33ec676f21ba1a9344f  doc/API-C.html
++28037427592371baae3cb48009d2bcf933dc18776923e7d1b5684982f8640c0f  doc/API-CXX.html
++d34b4ac94d77608528ad4aa4fd1f0a0e4ec8b52745e470ed8812b3dfc38c9547  doc/API-datastruct.html
++099c072a70362995d2bcde7173c6f1d4ab21af21cf131722f48d887f1c96626d  doc/API-notes.html
++6e39b97435a5bffaca3b3ff38b17303e7fb69a788c84dc1af2decb3fb58e4d8e  doc/API-overview.html
++e7fb2c6d23c46e80ca0f61abd6fd195e7cf3f69c31206d6d06853205f5210251  doc/Install-LibRaw.html
++51713a4bed72bdae5d42b47503510541e58c9d7fb4bd4083f95aa755479d1c27  doc/Samples-LibRaw.html
++6168ce83b3bbfc6d55458a0d4206b90f683b6a8c940848e3d6a54f549d6cd698  doc/Why-LibRaw.html
++31f78b9009570de21c6ab242fbc10b9d7084913d5dc4a9536afed178b3da5a7a  doc/index.html
++f9f1314865f099dfbff50e506ba24f4d3a1d128b0a8d774f7a1aa73a6292298e  export-dist.sh
++d9d088454ae984e5b5b6fa2f6df0cbb708e126d5f1abb7265da84a6ff1c40d70  internal/dcraw_defs.h
++cfde9739ba2299cb97bef246262bc5bf34ce33692aa9c83eef266f67bd855b7f  internal/dcraw_fileio_defs.h
++30c573bfab1e70f71427ee4b43e45482d70377aed8c3392457a341ed5512e1e6  internal/defines.h
++911fd174796b6d871b743becacccb57b703222f4664c569f4556fe516ae5fc49  internal/dmp_include.h
++62f9711ebf1cdc5e9e3af82e73c1097d4fc076c643c04294bb8990cb0bbd6f0e  internal/libraw_cameraids.h
++d55f9749f10fefac15102cf7d29477bd61bcbac8df4f241ac6240d2886810d06  internal/libraw_checked_buffer.h
++aceeddd5662650f539c7187b1ea65bfc7fbfc989bff70c0bb17dc8e57c6f4ad4  internal/libraw_cxx_defs.h
++ddb24c13b4922a8d7461af47329a4a34f25d0a1c218c5e1399a581c2aa00ced8  internal/libraw_internal_funcs.h
++208c3d8a55dfe2417027991f63249c3effc23f6505c4855f2791808858909c08  internal/losslessjpeg.h
++5d83005b2ba3ff559a1f39130c6ffa740721a627e90e8338bf43f2e542d5842c  internal/var_defines.h
++463650aee31a5f286ea00cfb29ccfda65426fe2085cbefb2082bf7919220d758  internal/x3f_tools.h
++e7f707874a22ab91701d47603c1ac0e67e0c8fad5fb34a7b4c311c410f8ad343  lib/Makefile
++6ee2a89b7ca189e9fbf7b914d5e889c5918039e85e63367ab47e5c8f399e3033  libraw.pc.in
++51c8fc75569945aa62165769fd5eecad6ea2e8ae0a9b49f0077da16ee4756546  libraw/libraw.h
++2954c1f99b0c7c0e1896bcd2303a5349dc7ca74d25212eecc5c4374310ac9eb6  libraw/libraw_alloc.h
++f94a5bd2911e09f4edf4d8642608e31a6674c5e8c7eb7459e7cf7291fb9622ab  libraw/libraw_const.h
++98f2667d48f0df67221c4baeb5bb3c3b3b148269a35a8677fdbcbd071510a316  libraw/libraw_datastream.h
++2d65cb6e722a93b8f23670f0e5b9bc3badb126e333b09e346603d6017816d55b  libraw/libraw_internal.h
++cee6a1ee00ea8528be1121096753e046569829fa6c277e8e0af116c471c05597  libraw/libraw_types.h
++7a0977a5bf2d5f926086023a150e7b981025f875ec963d68dac9b86e877e319b  libraw/libraw_version.h
++3eb5a7100526c3b4dc548d1774bcdf6962b2f5b51d56a77308368988ae22f021  libraw_r.pc.in
++a98198173c1e465fcfd41081594e5d718aeb473bdb69183976e30016f12b9ba1  m4/ax_openmp.m4
++d14e4688382d5d585bd25587b45984b36494e1df9eb3ebdb87effccda02eba84  mkdist.sh
++e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  object/.keep_me
++087b9295b27d26210c804cc4be4d7a96ea9155c8244c8be3034f792ee1bb718a  rsxml2c.sh
++d43c3184dd52e673991a8e46fa4690bc9e0271217ee822ab05ebcc43a3707f6a  samples/4channels.cpp
++c87092e038d6924d5b911ba066073db0da81d98e3dafbb09d11a1520c16b7b16  samples/Makefile
++bacd77b01d56a689de98408ccd887a9f19b65cc56c61f87b67a9ccb9513d5a99  samples/dcraw_emu.cpp
++abaafa5ecee11fabe0c2717abbb0d89154ae38ff12009ef25f472f14b0cc22cf  samples/dcraw_half.c
++649c47c7082d78027a835e3963ca9a4afc022d9107ac017891a7b22b3aec90ff  samples/half_mt.c
++561f36c8c949726f87070cd1f63aaced3c45c715f3f0e86a2dc6300369880680  samples/half_mt_win32.c
++f010d476171cee7059f3a79928d9347b6afb76c0520088bd763714e6aa4a9cdc  samples/mem_image_sample.cpp
++e4014c9e38881318764addb10b015f05086738ddabc2407a4694d479f253b27f  samples/multirender_test.cpp
++86ed1172e1d1f8fd633433ada3a957626665ab5c3a53bbd0c78e99f08a52c5f3  samples/openbayer_sample.cpp
++9bb18e8de94c26d01557cc9558d39fc2aa106e19e64f89023ce76c70175f6dc4  samples/postprocessing_benchmark.cpp
++80280049ea8772f856a488d95daf800bba7e8b30f88615ea407acc8ac9f109b9  samples/raw-identify.cpp
++60d5ef780735cc397d2a680d3607d9f077d4baa973b9e2a1a0fcdffd4881ef4c  samples/rawtextdump.cpp
++07711ab6d10afd4122d938f11bff6fdcf3cba34fdec494d11d28d4e4b85eb2c2  samples/simple_dcraw.cpp
++7691ce6767ccff2b1de0e123ff2bac8bd53d790c9ebd2cac484be61800867c0c  samples/unprocessed_raw.cpp
++881ce9bb8f586cc6918c5cebeb7d9477c843c24613b8f163adc1b05e46aabf2a  shlib-version.sh
++b6eb00d29221106d8f7260487fc3ecb873a35e6fadc2735ad8bfb12d1a1d0786  src/Makefile
++1a746410770ee5b328688e2cd808df3c5bacbd28dbdf783f0de91a3d521ee63b  src/decoders/canon_600.cpp
++9108610ac0c5c2c247b4c393cf7715595da04153859f48baffa512450adb1f9e  src/decoders/crx.cpp
++eac0858bd3a82aceffe094e64eb78a563f8194d6e727025c2fc90214daffc693  src/decoders/decoders_dcraw.cpp
++89839d395807917a89e147f32445013afec02fcf8a0edec7fa9b02210b54488b  src/decoders/decoders_libraw.cpp
++48c2600aba71d87f3b2ccbea272be3774b5a321fb59ce16a662427a41c269b83  src/decoders/decoders_libraw_dcrdefs.cpp
++8caaee710d011250d263352acc77e4d3429406c4b4bf8627f4d63f585de2cc96  src/decoders/dng.cpp
++ec2992c33429db2de2269215d1265af33f4865dda0d8cd7ca322224d7eed9757  src/decoders/fp_dng.cpp
++bd34a16f4fe7fd523863d41a50d06cb6c9af8b9b23c1aeccd5db3f3c93c260e5  src/decoders/fuji_compressed.cpp
++348f97d4ad3d5ee3916e84f0aae0e254714adb7fc66d349cea5c7a19d2ff6d66  src/decoders/generic.cpp
++947d51dcf9bba44a6f42789e9786e0db3209913fb1252fb0649ca0ee61a79542  src/decoders/kodak_decoders.cpp
++ed251bda102ad584592ba520fc5ad45e3ad77192e4bd54d738135d0914a6c764  src/decoders/load_mfbacks.cpp
++146ef6730983a505d24a994c73a32958d55332ec51db634b7c4b2c1af5cc5df3  src/decoders/nikonhe.cpp
++f65f85e8f716cc0e7e52314ab65c9fe993f21e7a6b88c7af235e4cd172ed212b  src/decoders/olympus14.cpp
++768bab3bfbd47a7238d9f3ce3454f03cdd7f7ebfd264c7037eda591abe543390  src/decoders/pana8.cpp
++2d4fbba4a11ffe4569fd2fff5611369b7ee22e666ddd04932149539219d98d9b  src/decoders/smal.cpp
++c59d0d1fef4b338b1034d5228f886f02280d8bf9e9aed65fd35d3ed291113823  src/decoders/sony_arw6.cpp
++5e3c23ac1f04556684dd495dd19257300fdf7a348ff3ccfa6c0f07643547c41b  src/decoders/sonycc.cpp
++d0315f2e920eee2b1c652b381668eac3bfe2f974fbd2f5c9569e32f45caf6554  src/decoders/unpack.cpp
++e0e0682ec21997e07c5ac94f0e24fd78425ffea35afcb0290d5de0012e478e13  src/decoders/unpack_thumb.cpp
++d2ae0946302068f096972baa2a940ae1613018501eac47e81737016bf5ffb185  src/decompressors/losslessjpeg.cpp
++234ec195d9aea3353792397a9d4563997b552926100069021260bfa473f10f05  src/demosaic/aahd_demosaic.cpp
++2bd7e4ea5623407d266954f4a405a67f8fb2d6625e2d809d84c2aa1c7075108a  src/demosaic/ahd_demosaic.cpp
++e02a3626c5794c40221bde1be4bd55ee0cad15c860013319969f0cbec682410f  src/demosaic/dcb_demosaic.cpp
++6203338d108919868ee8ad4d514712dbc3e438d150b608a7d6859a32a2a7f45c  src/demosaic/dht_demosaic.cpp
++64ceddd73a8b8440e6144aab671f468fe9d7fb59fa27d09052908ef25b08a6c4  src/demosaic/misc_demosaic.cpp
++43d0d89b9744106618f3341b044e5cf055c47525709bd0385440678ec81652bc  src/demosaic/xtrans_demosaic.cpp
++694d2d9d42af4cdf786c281f3f1a103888a35e01ef740a12e2fc18e8155cf386  src/integration/dngsdk_glue.cpp
++693685610ead9f5223c642598b55ba085c7f6a3018798e60dc8b90f8b0d42926  src/integration/rawspeed_glue.cpp
++81e158db593a1397076bf5f356d66f3eaaa8d286b4ca63051b2b8d5b9fc8f251  src/libraw_c_api.cpp
++c56ba9c8b0ca746953530b53717a1659bf8e1429d9d0fe28e9882899f39d4951  src/libraw_datastream.cpp
++33372575aa8254b3a917f3ac97e3fd70947b13575899a4bb23de082b5e981b22  src/metadata/adobepano.cpp
++cda7c81199a0ec3f2eabc55487ce9f39142f6640da739cef8a97fe1a89e1d432  src/metadata/canon.cpp
++5251d0944c152d24b77b4f4f094c7f1581b5f1175548a49343c88f6bbff418e6  src/metadata/ciff.cpp
++1f2db97753b94191c30d4f77feb70e15d5dec869ea1f6e843131562d02d8126a  src/metadata/cr3_parser.cpp
++ea24543a24ab6232465f823192e0adf82cf5d10025c717cffd67f8fec149e7ea  src/metadata/epson.cpp
++220f40cd58c1014c1705c2557d64901aecc04a6d93ac3bba300a192e4099da46  src/metadata/exif_gps.cpp
++22c4121fe77950204957f308ec3ff48eb51ce70524be29ae32e8f12920b89098  src/metadata/fuji.cpp
++84725e6b0836e126724366ad778d07e1e6b5712a56f324c0e4df0e63a74bac8c  src/metadata/hasselblad_model.cpp
++c67dcd2cc2beff0eea6464ad59a321e567461a1aa422f17636c71d546c638a5d  src/metadata/identify.cpp
++6eaf83dc4591b684827aaa44e48f37cd596e1dbe3486d97fb53ea100e85856e0  src/metadata/identify_tools.cpp
++81ea6fe904f7809f179ca36c4eb11f20943ffcaafc380af7bf189d8223ecfeb9  src/metadata/kodak.cpp
++c8ffd594173bd3da3cc7b1b0b3ab033b1ecb86c638c76b6ee386e121b3c8b431  src/metadata/leica.cpp
++10f70dcd104115ef71366f8441a8787fe841ee71d5aff8c396c7961f358fb570  src/metadata/makernotes.cpp
++dcf93f1be7d588f6cb885182fe2b5e9643c49c5a9817c2b428488d9a884189cf  src/metadata/mediumformat.cpp
++30a59a861b004e1d4d03105e77ded63b3e189759c16911020d6d7b62c45cdbbc  src/metadata/minolta.cpp
++79d753334b5545769152fe7731f57e8edd23ccef59803844fd1ff8830a8536bd  src/metadata/misc_parsers.cpp
++159bd6694e96d8bb4164710e558cb5786e4da8550485901b78e7b510fe811d62  src/metadata/nikon.cpp
++8c21c590cbda8468959076879bab94b6157681e7c9121752bf0989897d4ba67f  src/metadata/normalize_model.cpp
++fbc28444793365ecc0d521232c2e729a8ff758699b440b0f4a3102e15fb16bff  src/metadata/olympus.cpp
++32685516f3bd28e3281e31841f1aa9a8a012982c96cfd74f2d397962e7c8c79d  src/metadata/p1.cpp
++da58c9fb855af04aa53bc86602e268973fda8cee608e6d27901eda71b2e5e627  src/metadata/pentax.cpp
++46c3d5ffb64a25b02ae9983d927f6aa2270bf951f35001429e7b6b24fa378292  src/metadata/samsung.cpp
++32297307a04297eeb2e9af50be451a55e38c5c95648b12293a9cc364800c3064  src/metadata/sony.cpp
++7f81c07a6f00aed8dfe6d7d2db6b93182fb66ff6ad708addee5f7aec19d0b2c4  src/metadata/tiff.cpp
++6cd8c550e0a1f66f6573a68a6404597727251932a8be3080d803e9d081b2a657  src/postprocessing/aspect_ratio.cpp
++d7bc459dfcc722c62a2bb6a40509b01f22cc13838173dfbd9579ec45c8daa7c3  src/postprocessing/dcraw_process.cpp
++ac8f319c2f38359df5ea5a1be07f4edf71a5ccb29a146445d9f5830aec42a5d5  src/postprocessing/mem_image.cpp
++949404613d558549436b96a45f9832c75dfdc48467b33afe2ca537a159687782  src/postprocessing/postprocessing_aux.cpp
++190eab3551b45c50ac89ede3197a44719b086ea1d0a911bd237f738bf9c4f1a5  src/postprocessing/postprocessing_ph.cpp
++f4ee00e239ceb008e03b2a79264ea0b9f1bb0083812328c9675ebc8a0905b0d0  src/postprocessing/postprocessing_utils.cpp
++44b520afaaf8393a45bdc52657ed0e6641474a49174db9d73b3b3f7642f4f723  src/postprocessing/postprocessing_utils_dcrdefs.cpp
++1f7cb1117dd987180700dfdf81fd94f0d27f7b54c68b2662367c779c2a374aca  src/preprocessing/ext_preprocess.cpp
++09bd4816eac5c7047a06ca940e1c9c1db0f9e4724931b2c90c35d8a9472eca4f  src/preprocessing/preprocessing_ph.cpp
++3ea91f70ab090fbc00021ef1f0c612676ce03bcbfc28a30e08c270c486c12df3  src/preprocessing/raw2image.cpp
++8847f4e8c1a89ca0247195d4391d3264795c58af371f6fed37cb0c4ae70cca0c  src/preprocessing/subtract_black.cpp
++934ad6e16b57d6caff42b75c1a9c65ca863ca3cf63eb3bb3f9cfdfe1838057a7  src/tables/cameralist.cpp
++d47dca1fd2a83e8e03adb35bf82aaf1813fc03a8ed781e6c4abad479821a9a0d  src/tables/colorconst.cpp
++fc75c1c939ec97b2fa1efd62bd1369ad5788d128c2ccc560caaa00e6da95b0e7  src/tables/colordata.cpp
++963430d3d9c4024831fd2f79e5e5ae843c925f106ec7bc7d21ff465b51d4fb17  src/tables/wblists.cpp
++a4e32c4365af37388ead5036bc78fd1918ab4307532df39d399f09fc6deb4ac0  src/utils/curves.cpp
++7b7c44fa9ecc188bf2d04eb2b744b71ea2109c5e888750b8a335727177648475  src/utils/decoder_info.cpp
++1c5255a3e2ed36f09c6a229ac37a7d7a93c03a0859aa2cf7797ba641a2eedbe2  src/utils/init_close_utils.cpp
++32525832ead443b28597c5ec239d4cefc3421fa70e14bea54719c1305b638dd6  src/utils/open.cpp
++cb33947bdff40f8986b82d0c0a229b794690b41523aa64f73852670d624e61b4  src/utils/phaseone_processing.cpp
++2aad9064534daa700985724d1f6d23db4dbf5ec522ea36fc6c418cebadae59b8  src/utils/read_utils.cpp
++c5cb974788ba2bf1b7486d003d25b14f6b7f6da65e4852857a99edc4e167ab01  src/utils/thumb_utils.cpp
++206622779c9f8568393f35915dd0a5eaca356c3f5b23d701d1f84760b9dc1a1f  src/utils/utils_dcraw.cpp
++fd2de5428173b156331c7f83ce35f74675454e775dcbf97c77f9116759de3ca2  src/utils/utils_libraw.cpp
++6d87c0a6438e71aff9ef5f28de0a00423c391ac5e4749aa8d84f9fcc290aed69  src/write/apply_profile.cpp
++b48b1d02ffc2c01c65671a58dc139d45c3ba4153b16bee8958f0e5880bb57762  src/write/file_write.cpp
++67f3ecffc64c591402ddbfb75a6edde01e7c2a2e4d2ac9273070f80e6804ffaf  src/write/tiff_writer.cpp
++9ed100be49adc8398afdc47827125c150a0a9d614fdfd49dac1c4bb7d8bda3c9  src/write/write_ph.cpp
++452fc088589001d5035409cde4b72ef91bb28f221caddcfe089a51fc4b8d2e0e  src/x3f/x3f_parse_process.cpp
++ccb45d5e3ecbad0c4fb625b235a873f2f7a25d77364dbaf69e510329c3f0c1f6  src/x3f/x3f_utils_patched.cpp
++0ed807489c4f583a4143a957448b28ae641dd5ddd200b00d710bbb7394fbbe17  version.sh
 diff --git a/engine/third_party/volk/volk.c b/engine/third_party/volk/volk.c
 index 6a86f10..ba62608 100644
 --- a/engine/third_party/volk/volk.c
@@ -9380,3 +11556,192 @@ index 6a86f10..ba62608 100644
  #else
  	void* module = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
  	if (!module)
+diff --git a/engine/tools/windows_raw_unsupported.py b/engine/tools/windows_raw_unsupported.py
+deleted file mode 100644
+index d403c1a..0000000
+--- a/engine/tools/windows_raw_unsupported.py
++++ /dev/null
+@@ -1,183 +0,0 @@
+-"""Verify that an identified Nikon HE/HE* RAW is rejected honestly and cleanly.
+-
+-This test reads only container metadata before executing the native host. It
+-does not decode RAW pixels or extract a preview as a substitute. The source
+-file is kept read-only and every requested native output must remain absent.
+-Python is the test runner only, never part of the native RAW runtime.
+-"""
+-from __future__ import annotations
+-
+-import argparse
+-import hashlib
+-import json
+-import os
+-from pathlib import Path
+-import shutil
+-import struct
+-import subprocess
+-
+-
+-def require(value, message):
+-    if not value:
+-        raise ValueError(message)
+-
+-
+-def sha256(path):
+-    digest = hashlib.sha256()
+-    with path.open("rb") as stream:
+-        while block := stream.read(1024 * 1024):
+-            digest.update(block)
+-    return digest.hexdigest()
+-
+-
+-def nikon_metadata(path):
+-    """Read TIFF and Nikon MakerNote fields independently of LibRaw.
+-
+-    Nikon's HE/HE* files use compression tag 34713, which is also used for
+-    supported NEF compression. That TIFF tag alone must never classify HE.
+-    Require the Nikon compression field and JPEG-XS payload signature too.
+-    """
+-    data = path.read_bytes()
+-    require(data[:4] == b"II\x2a\0", "test requires little-endian classic TIFF NEF")
+-
+-    def chunk(offset, length):
+-        require(0 <= offset <= len(data) and 0 <= length <= len(data) - offset,
+-                "metadata field points outside the source file")
+-        return data[offset:offset + length]
+-
+-    def read_ifd(offset, base=0):
+-        count, = struct.unpack("<H", chunk(offset, 2))
+-        entries = chunk(offset + 2, count * 12)
+-        tags = {}
+-        for index in range(count):
+-            tag, kind, length, pointer = struct.unpack_from("<HHII", entries, index * 12)
+-            size = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8}.get(kind)
+-            if size is None:
+-                continue
+-            require(tag not in tags, "duplicate TIFF tag")
+-            start = offset + 2 + index * 12 + 8 if size * length <= 4 else base + pointer
+-            tags[tag] = (kind, length, start, chunk(start, size * length))
+-        return tags
+-
+-    def numbers(entry):
+-        kind, length, _, value = entry
+-        require(kind in (1, 3, 4), "expected unsigned numeric metadata field")
+-        return struct.unpack("<" + {1: "B", 3: "H", 4: "I"}[kind] * length, value)
+-
+-    def scalar(entry):
+-        value = numbers(entry)
+-        require(len(value) == 1, "expected scalar metadata field")
+-        return value[0]
+-
+-    root = read_ifd(struct.unpack("<I", chunk(4, 4))[0])
+-    exif = read_ifd(scalar(root[34665]))
+-    _, _, maker_offset, maker = exif[37500]
+-    require(maker[:6] == b"Nikon\0" and maker[10:14] == b"II\x2a\0",
+-            "unsupported Nikon MakerNote container")
+-    maker_base = maker_offset + 10
+-    maker_ifd = read_ifd(maker_base + struct.unpack("<I", chunk(maker_base + 4, 4))[0], maker_base)
+-    if 0x51 in maker_ifd:
+-        require(len(maker_ifd[0x51][3]) >= 12, "truncated Nikon compression MakerNote")
+-        compression = struct.unpack_from("<H", maker_ifd[0x51][3], 10)[0]
+-        compression_field = "Nikon MakerNote 0x0051, byte offset 10"
+-    else:
+-        require(0x93 in maker_ifd, "Nikon compression MakerNote is missing")
+-        compression = scalar(maker_ifd[0x93])
+-        compression_field = "Nikon MakerNote 0x0093"
+-    require(compression in (13, 14), "sample is not an HE/HE* NEF; do not reject ordinary Nikon RAW")
+-    raw_ifds = [read_ifd(offset) for offset in numbers(root[330])]
+-    raw_ifds = [tags for tags in raw_ifds if 254 in tags and scalar(tags[254]) == 0]
+-    require(len(raw_ifds) == 1, "expected exactly one primary RAW IFD")
+-    raw = raw_ifds[0]
+-    offset, byte_count = scalar(raw[273]), scalar(raw[279])
+-    require(0 < byte_count <= len(data) - offset, "invalid RAW strip extent")
+-    signature = chunk(offset, 4).hex()
+-    require(signature == "ff10ff50" and scalar(raw[259]) == 34713,
+-            "Nikon compression metadata and RAW payload signature disagree")
+-    width, height = scalar(raw[256]), scalar(raw[257])
+-    require(width > 0 and height > 0, "RAW dimensions are invalid")
+-    return {
+-        "make": root[271][3].rstrip(b"\0").decode("ascii"),
+-        "model": root[272][3].rstrip(b"\0").decode("ascii"),
+-        "raw_width": width, "raw_height": height, "raw_megapixels": width * height / 1e6,
+-        "raw_bits_per_sample": scalar(raw[258]), "tiff_compression": scalar(raw[259]),
+-        "nikon_nef_compression": compression,
+-        "nikon_nef_compression_name": {13: "High Efficiency (HE)", 14: "High Efficiency* (HE*)"}[compression],
+-        "compression_field": compression_field, "raw_strip_offset": offset,
+-        "raw_strip_bytes": byte_count, "raw_strip_signature": signature,
+-        "orientation": scalar(root[274]), "metadata_only": True,
+-        "decoded_pixels_produced": False,
+-    }
+-
+-
+-def main():
+-    parser = argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument("--input", type=Path, required=True)
+-    parser.add_argument("--driver", type=Path, required=True)
+-    parser.add_argument("--resources", type=Path, required=True)
+-    parser.add_argument("--output", type=Path, required=True)
+-    parser.add_argument("--expected-source-sha256")
+-    parser.add_argument("--modes", nargs="+", choices=("default", "compatible16", "headroom"),
+-                        default=["default", "compatible16", "headroom"])
+-    args = parser.parse_args()
+-    for key in ("input", "driver", "resources", "output"):
+-        setattr(args, key, getattr(args, key).resolve())
+-    require(args.input.is_file() and args.driver.is_file(), "RAW or native executable is missing")
+-    require(args.resources.is_dir(), "native resources are missing")
+-    require(not args.output.exists(), "test output must be fresh")
+-    source_hash = sha256(args.input)
+-    require(args.expected_source_sha256 is None or source_hash == args.expected_source_sha256.lower(),
+-            "RAW source differs from the expected sample")
+-    args.output.mkdir(parents=True)
+-    report = {"success": False, "raw_decode_supported": False, "rendered": False,
+-              "benchmark_available": False, "external_engine_parity": "not tested",
+-              "input": {"path": str(args.input), "bytes": args.input.stat().st_size, "sha256": source_hash},
+-              "driver_sha256": sha256(args.driver), "harness_sha256": sha256(Path(__file__)),
+-              "decode_modes": args.modes, "cases": []}
+-    try:
+-        report["metadata"] = nikon_metadata(args.input)
+-        unicode_source = args.output / "尼康 原图 🧪.NEF"
+-        shutil.copy2(args.input, unicode_source)
+-        environment = {key: value for key, value in os.environ.items()
+-                       if not key.upper().startswith(("PYTHON", "SPEKTRAFILM_"))}
+-        windows = Path(environment.get("SystemRoot", r"C:\Windows"))
+-        environment["PATH"] = str(windows / "System32") + os.pathsep + str(windows)
+-        for mode in args.modes:
+-            for name, source in (("original_path", args.input), ("unicode_path", unicode_source)):
+-                directory = args.output / f"{mode}-{name}"
+-                directory.mkdir()
+-                tiff, native_report, decoded = (directory / filename for filename in ("result.tif", "report.json", "decoded.f32"))
+-                command = [str(args.driver), "--input", str(source), "--output", str(tiff),
+-                           "--report", str(native_report), "--resources", str(args.resources),
+-                           "--decoded-output", str(decoded)]
+-                if mode != "default":
+-                    command += ["--decode-mode", mode]
+-                run = subprocess.run(command, env=environment, capture_output=True, timeout=60)
+-                case = {"path_case": name, "decode_mode": mode, "command": command,
+-                        "returncode": run.returncode, "stdout": run.stdout.decode("utf-8", "replace"),
+-                        "stderr": run.stderr.decode("utf-8", "replace")}
+-                report["cases"].append(case)
+-                require(run.returncode != 0, "unsupported Nikon compression was silently accepted")
+-                require("Nikon HE/HE* compression" in case["stderr"],
+-                        "native rejection did not identify the unsupported Nikon compression")
+-                require("lossless" in case["stderr"].lower(),
+-                        "native rejection omitted the supported NEF recording alternative")
+-                require(not list(directory.iterdir()), "unsupported RAW left output or temporary artifacts")
+-                case["no_output_or_temporary_files"] = True
+-                case["source_sha256_unchanged"] = sha256(source) == source_hash
+-                require(case["source_sha256_unchanged"], "native rejection modified the source RAW")
+-        require(sha256(args.input) == source_hash, "original RAW changed during validation")
+-        require(sha256(args.driver) == report["driver_sha256"], "native executable changed during validation")
+-        report["success"] = True
+-        report["scope"] = "Nikon HE/HE* identification and rejection only; no decoded fixture, no TIFF render, no render timing"
+-    except Exception as error:
+-        report["error"] = f"{type(error).__name__}: {error}"
+-        raise
+-    finally:
+-        (args.output / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+-    print(json.dumps({"success": True, "metadata": report["metadata"],
+-                      "cases_passed": len(report["cases"])}, ensure_ascii=True))
+-
+-
+-if __name__ == "__main__":
+-    main()
