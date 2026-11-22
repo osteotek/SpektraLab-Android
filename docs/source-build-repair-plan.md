@@ -212,6 +212,9 @@ rebuilt `.so` hashes to equal the shipped ones.
 5. `ci: require check-patch and document the source path` (Phase 4).
 6. Separate upstream PR for Windows build tooling integration, if desired.
 
+Merging later upstream SpektraLab engine changes into this patch is a separate
+workstream; see [`docs/upstream-merge-plan.md`](upstream-merge-plan.md).
+
 ## 7. Open questions
 
 1. Can the maintainer publish the private engine tree or a complete patch? This
