@@ -42,6 +42,7 @@ import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
+import app.spektralab.ui.panels.SessionRestore;
 import app.spektralab.ui.panels.InfoDialogs;
 import app.spektralab.ui.panels.ExportDialogs;
 import app.spektralab.ui.panels.PresetDialogs;
@@ -2125,10 +2126,10 @@ public class MainActivity extends Activity implements
     public static final class Frame {
         /** Not final: a revoked grant is repaired by pointing the chip at the
          *  private copy the user re-picks, and the look must survive that. */
-        Uri uri;
-        final boolean raw;
+        public Uri uri;
+        public final boolean raw;
         public String name;
-        Bitmap thumb;
+        public Bitmap thumb;
         public Look look = new Look();
         /**
          * Whether this frame was left on 原图.
@@ -2149,10 +2150,10 @@ public class MainActivity extends Activity implements
          * kept next to the frame rather than next to the URI because an export
          * can run hours later, and by then the grant may be gone.
          */
-        String liveClip;
+        public String liveClip;
         /** Microseconds into that clip where the still was taken. */
-        long liveTsUs;
-        Frame(Uri uri, boolean raw, String name) {
+        public long liveTsUs;
+        public Frame(Uri uri, boolean raw, String name) {
             this.uri = uri; this.raw = raw; this.name = name;
         }
     }
@@ -2170,8 +2171,8 @@ public class MainActivity extends Activity implements
      * context long before it reclaims a chat app, and `onCreate` had nothing
      * to rebuild from.
      */
-    private static final String PREFS_SESSION = "session";
-    private static final String KEY_SESSION = "state";
+    static final String PREFS_SESSION = "session";
+    static final String KEY_SESSION = "state";
     private static final String KEY_THUMBS = "thumbs";
 
     /** Eight floats as a JSON array; null reads back as eight zeroes. */
@@ -2192,7 +2193,7 @@ public class MainActivity extends Activity implements
 
     private static org.json.JSONObject lookToJson(Look l) { return LookJson.toJson(l); }
 
-    private static Look lookFromJson(org.json.JSONObject o) { return LookJson.fromJson(o); }
+    static Look lookFromJson(org.json.JSONObject o) { return LookJson.fromJson(o); }
 
     private java.io.File thumbFile(Uri uri) {
         return new java.io.File(getCacheDir(),
@@ -2206,7 +2207,7 @@ public class MainActivity extends Activity implements
         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:2498", ignored); }
     }
 
-    private Bitmap readThumb(Uri uri) {
+    Bitmap readThumb(Uri uri) {
         try {
             final java.io.File f = thumbFile(uri);
             if (!f.isFile()) return null;
@@ -2250,111 +2251,7 @@ public class MainActivity extends Activity implements
      * uses, so a restored RAW takes the RAW road and a restored JPEG the JPEG
      * one. `reopeningFrame` keeps it from appending a second copy.
      */
-    private boolean restoreSessionState() {
-        String raw = null;
-        try {
-            raw = getSharedPreferences(PREFS_SESSION, MODE_PRIVATE).getString(KEY_SESSION, null);
-        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:2549", ignored); }
-        if (raw == null || raw.isEmpty()) return false;
-        try {
-            final org.json.JSONObject root = new org.json.JSONObject(raw);
-            final org.json.JSONArray arr = root.optJSONArray("frames");
-            if (arr == null || arr.length() == 0) return false;
-            frames.clear();
-            for (int i = 0; i < arr.length(); ++i) {
-                final org.json.JSONObject o = arr.optJSONObject(i);
-                if (o == null) continue;
-                final String u = o.optString("uri", "");
-                if (u.isEmpty()) continue;
-                final Uri uri = Uri.parse(u);
-                final Frame frame = new Frame(uri, o.optBoolean("raw", false), o.optString("name", ""));
-                frame.look = lookFromJson(o.optJSONObject("look"));
-                // **Legacy sessions open on their print.** A frame saved before
-                // this flag existed had no way to say "I was looking at the
-                // source"; defaulting to true would bring every old edit back
-                // unrendered and read as lost work.
-                frame.original = o.optBoolean("orig", false);
-                // **The clip, if it is still there.** The file lives in
-                // `filesDir`, which survives the process but not "clear data";
-                // a missing one just means this frame exports as a still.
-                final String lc = o.optString("live", "");
-                if (!lc.isEmpty() && new java.io.File(lc).isFile()) {
-                    frame.liveClip = lc;
-                    frame.liveTsUs = o.optLong("lts", 0L);
-                }
-                frame.thumb = readThumb(uri);
-                frames.add(frame);
-            }
-            if (frames.isEmpty()) return false;
-            final int saved = root.optInt("current", -1);
-            final String savedUri = (saved >= 0 && saved < frames.size())
-                    ? frames.get(saved).uri.toString() : "";
-            // **A frame whose grant expired can never be opened again.** Left in
-            // the strip it re-ran `loadImage`, hit the same dialog, and kept the
-            // dead chip for the next launch; dropped here it costs one toast and
-            // the start is clean from then on.
-            int dropped = 0;
-            for (int i = frames.size() - 1; i >= 0; --i) {
-                if (!canReadUri(frames.get(i).uri)) {
-                    frames.remove(i);
-                    ++dropped;
-                }
-            }
-            if (dropped > 0) {
-                try {
-                    DebugSink.text("session", "dropped " + dropped + " unreadable frames");
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:2598", ignored); }
-                showInAppToast(dropped + tr("frame.photos_were_removed_from_the"));
-            }
-            if (frames.isEmpty()) return false;
-            // The saved index was an index into the old list. The frame itself
-            // is what has to come back, so it is looked up again by URI.
-            int pick = -1;
-            for (int i = 0; i < frames.size(); ++i) {
-                if (frames.get(i).uri.toString().equals(savedUri)) { pick = i; break; }
-            }
-            currentFrame = pick >= 0 ? pick : frames.size() - 1;
-            shelfCollapsed = root.optBoolean("collapsed", false);
-            rebuildFrameChips();
-            setShelfCollapsed(shelfCollapsed);
-            try {
-                DebugSink.text("session", "restored " + frames.size() + " frames, current=" + currentFrame);
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:2614", ignored); }
-            // The photograph is decoded off the shelf by the same road a chip
-            // takes. If the file is gone (moved, or a picker grant expired) the
-            // import reports it and the strip keeps the rest.
-            //
-            // `suppressBudgetDialog`: the user answered that question on the
-            // first import, and a restore is not a new decision. Without this
-            // every return from another app re-asked "this is 50 MP, shrink it?"
-            importBudgetAccepted = true;
-            suppressBudgetDialog = true;
-            // **Nothing is decoded while the app is on the desk.** The frame is
-            // opened when 去冲印 is pressed -- which also means a cold start no
-            // longer spends two seconds developing a photograph nobody asked to
-            // see yet.
-            if (lightTable != null) {
-                refreshLightTable();
-                return true;
-            }
-            // **Bring the frame back the way it was left.** A frame that was
-            // parked on 原图 must not come back developed just because it still
-            // carries a look -- that is the same jump the chips had.
-            final boolean restoredOriginal = frames.get(currentFrame).original;
-            reopenToOriginal = restoredOriginal;
-            loadImage(frames.get(currentFrame).uri, currentFrame);
-            // **A frame that had a film gets its print back.** The decode is
-            // the whole of `loadImage`; without this an edit that was safely
-            // on disk still came back as the original, because nothing ever
-            // asked for a render. The strip already says "this is the
-            // photograph you were working on" -- the canvas has to agree.
-            if (filmStock != null && !restoredOriginal) renderImage();
-            return true;
-        } catch (Throwable t) {
-            try { DebugSink.text("session", "restore failed: " + t); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:2646", ignored); }
-            return false;
-        }
-    }
+    private boolean restoreSessionState() { return SessionRestore.restoreSessionState(new SessionRestoreHostImpl(this)); }
 
     final java.util.List<Frame> frames = new java.util.ArrayList<>();
     private LinearLayout sourceBar, sourceRow, thumbStrip;
@@ -2362,7 +2259,7 @@ public class MainActivity extends Activity implements
     private View shelfHandle;
     private ImageView shelfHandleImage;
     private HorizontalScrollView thumbScroll;
-    private boolean shelfCollapsed = false;
+    boolean shelfCollapsed = false;
     /** Set while a chip is re-opening a frame, so the import does not append a
      *  second copy of a photograph the strip already has. */
     /** Set by `reopenFrameForced`: this frame was left on 原图, so do not render it. */
@@ -4940,7 +4837,7 @@ public class MainActivity extends Activity implements
     /** How many times the album repeats along the loop. */
     private static final int LT_PASSES = 3;
 
-    private View lightTable, editorRoot;
+    View lightTable, editorRoot;
     /** The two HUD pieces the crossing moves: the corner chips and 去冲印. */
     private View lightTopRight, lightGo;
     // ---- 观片台（灯箱拼贴）----
@@ -12368,7 +12265,7 @@ public class MainActivity extends Activity implements
     }
 
     /** Reread the album -- a new export has landed, or the desk was reopened. */
-    private void refreshLightTable() {
+    void refreshLightTable() {
         loadAlbum();
     }
 
@@ -14769,7 +14666,7 @@ public class MainActivity extends Activity implements
     /** Fold or unfold the photograph strip. Unfolded it costs 62 dp above the
      *  panels; folded it costs 20, and the canvas takes the difference -- the
      *  stage is the weighted child of the column, so nothing else has to move. */
-    private void setShelfCollapsed(boolean collapsed) {
+    void setShelfCollapsed(boolean collapsed) {
         if (shelfCollapsed == collapsed) return;
         // Nothing to fold into: with no photographs the handle would not be
         // drawn, and ＋ would go with the row -- a one-way trip.
@@ -25703,7 +25600,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void loadImage(Uri uri) {
+    void loadImage(Uri uri) {
         loadImage(uri, -1);
     }
 
@@ -25719,7 +25616,7 @@ public class MainActivity extends Activity implements
      * (SL-261111-D598: `frames=11 -> 12`, `current=7 -> 11`, two threads
      * decoding the same RAF).
      */
-    private void loadImage(Uri uri, int reopenIndex) {
+    void loadImage(Uri uri, int reopenIndex) {
         new ImportWorker(this).run(uri, reopenIndex);
     }
 
