@@ -549,12 +549,6 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     /// Where `reportPreviousExit` left the file, if there was one this launch.
     private String lastCrashFile = null;
 
-    // Compatibility with the extracted workers (re-ported architecture).
-    boolean reopeningFrame = false;
-    final app.spektralab.domain.ExportController exportController =
-            new app.spektralab.domain.ExportController();
-    final app.spektralab.domain.RenderController renderController =
-            new app.spektralab.domain.RenderController();
     app.spektralab.data.MediaStoreExport exportStore;
 
     /** Close the preview session under the render lock. */
