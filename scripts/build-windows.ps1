@@ -129,11 +129,16 @@ try {
         if (Test-Path "$localAssets\resources") {
             Get-ChildItem $localAssets -Exclude locales | Copy-Item -Destination "$stage\assets" -Recurse -Force
         } else {
-            # Offline by design: never download just to get assets. Prefer the
-            # patched engine checkout that setup-windows.ps1 / Build-Native
-            # create; only fall back to a cached release APK when there is no
-            # engine tree. This keeps -UsePrebuiltNative usable in a fresh
-            # clone that has run setup but never built the native library.
+            # Offline by design: never download just to get assets. A cached
+            # release APK is the complete, verified asset set (including the
+            # 48 compiled Vulkan shaders); use it when available. Otherwise
+            # stage from the patched engine checkout + native build tree so a
+            # fresh clone that has run setup still works.
+            $cached = $null
+            try { $cached = & "$root\scripts\cache-release.ps1" -BuildHome $BuildHome -Offline } catch { $cached = $null }
+            if ($cached) {
+                & $python $apkContents assets $stage $cached
+            } else {
             $patchHash = (Get-FileHash "$root\patches\engine-android.patch" -Algorithm SHA256).Hash.Substring(0, 12)
             $engineTree = if ($EngineCheckout) { (Resolve-Path $EngineCheckout).Path } else { "$BuildHome\engine-$patchHash" }
             if (Test-Path "$engineTree\engine\resources") {
@@ -172,12 +177,8 @@ try {
                     if (Test-Path $pair[0]) { Copy-Item $pair[0] -Destination "$resources\$($pair[1])" -Force }
                 }
             } else {
-                try {
-                    $cached = & "$root\scripts\cache-release.ps1" -BuildHome $BuildHome -Offline
-                } catch {
-                    throw 'No engine assets: run scripts/setup-windows.ps1 (creates the patched engine checkout), put them in app/src/main/assets/resources, or cache the release APK.'
-                }
-                & $python $apkContents assets $stage $cached
+                throw 'No engine assets: run scripts/setup-windows.ps1 (creates the patched engine checkout), put them in app/src/main/assets/resources, or cache the release APK.'
+            }
             }
         }
     } else {

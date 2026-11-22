@@ -1,10 +1,11 @@
 # Architectural improvement plan (post-1.7.0 adoption)
 
-**Status:** plan written; Phase 1 partially implemented. Larger phases require
-a working build/verify loop — the shell is currently blocked by hung `adb`
-processes (pwsh.exe spawn fails with "Access is denied"), so **nothing in this
-document has been compiled or verified yet**. Treat the Phase 1 edit as
-unverified work in progress.
+**Status:** Phase 0 PASSED (2026-11-22). Phase 1 partially implemented.
+
+Phase 0: after restoring the emulator and fixing the prebuilt APK's asset
+staging (prefer the cached release APK, which carries all 48 Vulkan shaders),
+`device-golden.ps1 -Bands 0,128,512` gives `e60490499b9a94eb` with the four
+wired workers. Offline verification and the APK build also pass.
 
 ### Phase 1 progress
 - Removed the dead direct-buffer compatibility surface from `SpektraLabEngine`
