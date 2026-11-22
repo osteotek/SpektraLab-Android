@@ -40,6 +40,7 @@ import app.spektralab.engine.TiffExif;
 import app.spektralab.ui.SheetDialogs;
 import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
+import app.spektralab.ui.panels.ViewPages;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -907,7 +908,7 @@ public class MainActivity extends Activity implements
     /** The two switch rows, so the page's dimming can skip them. */
     private View overscanRow, dateRow;
 
-    private static int uiToggleOff() { return darkTheme ? 0xFF7A736A : 0x66171717; }
+    static int uiToggleOff() { return darkTheme ? 0xFF7A736A : 0x66171717; }
 
     /**
      * Text that sits on the canvas.
@@ -2863,7 +2864,7 @@ public class MainActivity extends Activity implements
     /** Whether 原图 shows the decode as measured (off) or auto-levelled (on).
      *  Off by default because the caption promises 未调色: measured against
      *  Lightroom on a OnePlus 13 DNG, the old auto level sat 2.54 EV above it. */
-    private boolean rawAutoBright = false;
+    boolean rawAutoBright = false;
     /** The DNG's own display profile ([baselineEV, x0, y0, ...]) for this
      *  frame, or null. Phones ship `ProfileToneCurve`; cameras do not. */
     float[] sourceToneCurve = null;
@@ -2971,10 +2972,10 @@ public class MainActivity extends Activity implements
     // **The view layer.** These run on the finished print -- screen and every
     // exported file -- and are skipped entirely while all of them are zero, so
     // the engine's own output is byte-for-byte what it was.
-    private float viewTemperature = 0f, viewTint = 0f, viewExposure = 0f;
-    private float viewContrast = 0f, viewBrightness = 0f, viewSaturation = 0f;
-    private float viewHighlights = 0f, viewShadows = 0f;
-    private float viewBlack = 0f, viewWhite = 0f, viewVignette = 0f;
+    float viewTemperature = 0f, viewTint = 0f, viewExposure = 0f;
+    float viewContrast = 0f, viewBrightness = 0f, viewSaturation = 0f;
+    float viewHighlights = 0f, viewShadows = 0f;
+    float viewBlack = 0f, viewWhite = 0f, viewVignette = 0f;
     /** The camera's own exposure offset, in stops: applied by the engine. */
     float cameraEv = 0f;
     /**
@@ -3490,7 +3491,7 @@ public class MainActivity extends Activity implements
      * <p>Static and context-free on purpose: it is called from the class
      * initialiser, before `onCreate` and before anything has a Context.
      */
-    private static void markFile(String what) {
+    static void markFile(String what) {
         try {
             final java.io.File dir = new java.io.File("/sdcard/Android/media/app.spektralab");
             if (!dir.isDirectory()) dir.mkdirs();
@@ -3755,12 +3756,12 @@ public class MainActivity extends Activity implements
      * containers are refreshed while they are being looked at, and re-running
      * an entrance on a refresh is a stutter, not an entrance.
      */
-    private void enterPanel(final View panel, final int fromH) {
+    void enterPanel(final View panel, final int fromH) {
         enterPanel(panel, fromH, false);
     }
 
     /** `again` is for a container that is never hidden -- a rebuilt body. */
-    private void enterPanel(final View panel, final int fromH, boolean again) {
+    void enterPanel(final View panel, final int fromH, boolean again) {
         enterPanel(panel, fromH, again, 0);
     }
 
@@ -3768,7 +3769,7 @@ public class MainActivity extends Activity implements
      * @param capPx > 0 pins the arriving height. A sub-page of 边框 may never
      *              take the canvas with it, whatever it measures to.
      */
-    private void enterPanel(final View panel, final int fromH, boolean again, final int capPx) {
+    void enterPanel(final View panel, final int fromH, boolean again, final int capPx) {
         if (panel == null) return;
         if (!again && panel.getVisibility() == View.VISIBLE && panel.getAlpha() >= 1f
                 && panel.getTranslationY() == 0f) {
@@ -4876,7 +4877,7 @@ public class MainActivity extends Activity implements
      * eye is on while the block underneath is moving. `setTextColor` only
      * invalidates, so this costs no layout.
      */
-    private void tintText(final android.widget.TextView tv, final int to, final long ms) {
+    void tintText(final android.widget.TextView tv, final int to, final long ms) {
         if (tv == null) return;
         final int from = tv.getCurrentTextColor();
         if (from == to) return;
@@ -4934,7 +4935,7 @@ public class MainActivity extends Activity implements
      * carry live text that `refreshViewLock` rewrites, so their note is kept as
      * a detached `TextView` and read when the mark is tapped.
      */
-    private void attachBang(LinearLayout holder, final java.util.function.Supplier<String> text) {
+    void attachBang(LinearLayout holder, final java.util.function.Supplier<String> text) {
         if (holder == null || holder.getChildCount() == 0) return;
         final View row = holder.getChildAt(0);
         if (!(row instanceof android.view.ViewGroup)) return;
@@ -5114,7 +5115,7 @@ public class MainActivity extends Activity implements
     }
 
     /** Leaving: no travel and no fade -- the next thing is already on its way. */
-    private void hideAtOnce(View v) {
+    void hideAtOnce(View v) {
         if (v == null) return;
         cancelLine(v);
         cancelHeight(v);
@@ -15752,7 +15753,7 @@ public class MainActivity extends Activity implements
         return (float) Math.hypot(e.getX(0) - e.getX(1), e.getY(0) - e.getY(1));
     }
 
-    private View buildFilmPanel() { return PanelFactories.buildFilmPanel(new PanelHostImpl(this)); }
+    View buildFilmPanel() { return PanelFactories.buildFilmPanel(new PanelHostImpl(this)); }
 
     private String brandOf(String id) {
         if (id == null) return "other";
@@ -17465,24 +17466,24 @@ public class MainActivity extends Activity implements
     // numbers on the finished print keeps the film pipeline bit-exact -- with
     // every control at zero the pass is skipped.
 
-    private float viewVibrance = 0f;
+    float viewVibrance = 0f;
 
     // **HSL, eight bands.** Bands are hue ranges on a circle (red at 0, orange
     // 30, yellow 60, green 120, aqua 180, blue 240, purple 280, magenta 320), and
     // a hue between two of them is a mix of the two -- that is what stops a
     // slider from having a seam at 15 degrees. The three rows on 颜色 act on
     // whichever band is selected, so the page stays four sliders long.
-    private final float[] hslHue = new float[8];
-    private final float[] hslSat = new float[8];
-    private final float[] hslLum = new float[8];
-    private int hslBand = 0;
+    final float[] hslHue = new float[8];
+    final float[] hslSat = new float[8];
+    final float[] hslLum = new float[8];
+    int hslBand = 0;
     private TextView[] hslChips;
-    private static String[] HSL_BANDS = {tr("ui170.125"), tr("ui170.126"), tr("ui170.127"), tr("ui170.128"), tr("ui170.129"), tr("ui170.130"), tr("ui170.131"), tr("ui170.132")};
+    static String[] HSL_BANDS = {tr("ui170.125"), tr("ui170.126"), tr("ui170.127"), tr("ui170.128"), tr("ui170.129"), tr("ui170.130"), tr("ui170.131"), tr("ui170.132")};
 
     // **细节.** Both run on the finished print, both are luminance-only (the
     // delta is added to all three channels so an edge never grows a colour
     // fringe), and both are skipped entirely at zero.
-    private float viewSharpen = 0f;
+    float viewSharpen = 0f;
     /**
      * **暗房的遮挡（dodge）与加深（burn）。** 画面上一个圆形的局部曝光，
      * 羽化到看不见边界；正数是提亮，负数是压暗。
@@ -17632,13 +17633,13 @@ public class MainActivity extends Activity implements
         latHl = LAT_HL[i]; latSh = LAT_SH[i]; latCore = LAT_CORE[i];
         latScale = LAT_SCALE[i]; latReach = LAT_REACH[i];
     }
-    private float viewSharpenRadius = 1.0f;
-    private float viewSharpenMask = 0f;
-    private float viewTexture = 0f;
+    float viewSharpenRadius = 1.0f;
+    float viewSharpenMask = 0f;
+    float viewTexture = 0f;
 
     // Decode-time white balance. The only control here that re-reads the file:
     // a raw's balance is part of the demosaic, not of the print.
-    private int wbPreset = 0;                       // 0 as-shot, 1..5 preset, 6 custom
+    int wbPreset = 0;                       // 0 as-shot, 1..5 preset, 6 custom
     /** The camera gains that produced the preview, kept so an export can be
      *  decoded with the same white balance. `redecodeWithWhiteBalance` applies
      *  them inside LibRaw (demosaic-time), not through `spk_set_params`, so a
@@ -17650,28 +17651,28 @@ public class MainActivity extends Activity implements
     volatile boolean wbDecoding = false;
     private volatile boolean wbPending = false;
     private int wbGeneration = 0;
-    private float wbKelvin = 5500f, wbTint = 0f;
+    float wbKelvin = 5500f, wbTint = 0f;
     private static final int[] WB_KELVIN = {0, 5500, 6500, 7500, 3200, 4000, 0};
 
     /** Four-zone colour balance: hue in degrees, amount 0..1, lightness -1..1. */
     private final float[] cbHue = new float[4];
     private final float[] cbSat = new float[4];
-    private final float[] cbLum = new float[4];
+    final float[] cbLum = new float[4];
 
     /** Curve control points per channel: rgb, luma, red, green, blue. */
     final java.util.List<float[]>[] curvePoints = new java.util.List[5];
-    private int curveChannel = 0;
-    private CurveView curveView;
+    int curveChannel = 0;
+    CurveView curveView;
 
     /** Every row knows how to re-read its own field, so a Look can move them. */
-    private final java.util.List<Runnable> viewRefreshers = new java.util.ArrayList<>();
+    final java.util.List<Runnable> viewRefreshers = new java.util.ArrayList<>();
     // 0..3 are the strip's four pages; 4 曲线, 5 分级, 6 混色 are screens opened
     // from a page and never listed in the strip.
     final LinearLayout[] viewPages = new LinearLayout[7];
     /** 相机曝光 is a pre-film engine parameter; fotufilm has no such slot. */
-    private LinearLayout viewCameraEvBox;
+    LinearLayout viewCameraEvBox;
     /** The two 曝光 rows' one-line explanations; they differ per engine. */
-    private TextView viewCameraEvNote, viewExposureNote;
+    TextView viewCameraEvNote, viewExposureNote;
     /** The rendered result's RGB distribution; null until the panel is built. */
     HistogramView histogram = null;
     /** A display preference, not a look: it is stored beside the theme. */
@@ -17679,7 +17680,7 @@ public class MainActivity extends Activity implements
     /** Live frames between histogram refreshes (see `drawLivePreview`). */
     private int liveHistCounter;
     /** Which 光学 sub-page is showing; 重置 acts on this one only. */
-    private int viewPage = 0;
+    int viewPage = 0;
     TextView[] viewCatChips;
 
 
@@ -17937,18 +17938,18 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private LinearLayout buildViewPanel() { return PanelFactories.buildViewPanel(new PanelHostImpl(this)); }
+    LinearLayout buildViewPanel() { return PanelFactories.buildViewPanel(new PanelHostImpl(this)); }
 
     // **One per sub-page, and the count is the loop's bound.** A sixth page
     // with a five-slot list is an AIOOBE while the panel is being built.
     final CappedScroll[] viewScrolls = new CappedScroll[7];
 
     /** The six sub-pages of 光学, in the strip above the tool bar. */
-    private static String[] VIEW_PAGE_NAMES = {tr("optics.brightness"), tr("optics.color"), tr("optics.effects"), tr("ui170.145")};
+    static String[] VIEW_PAGE_NAMES = {tr("optics.brightness"), tr("optics.color"), tr("optics.effects"), tr("ui170.145")};
 
     /** Which tool screen is open (4 曲线 / 5 分级 / 6 混色), or -1. */
-    private int toolPage = -1;
-    private View[] hslSwatches;
+    int toolPage = -1;
+    View[] hslSwatches;
 
     /**
      * Open a tool that is not a page of the strip.
@@ -17958,7 +17959,7 @@ public class MainActivity extends Activity implements
      * with; they never appear in the tool row, because they are not the same
      * kind of thing as 亮度 or 颜色 -- they are one control's own view.
      */
-    private void openViewTool(int k) {
+    void openViewTool(int k) {
         if (k < 0 || k >= viewPages.length) return;
         toolPage = k;
         for (int i = 0; i < viewPages.length; ++i) {
@@ -17976,7 +17977,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The header a tool screen wears: its name, and the way out. */
-    private void toolHeader(LinearLayout page, String title) {
+    void toolHeader(LinearLayout page, String title) {
         final LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
@@ -17989,57 +17990,17 @@ public class MainActivity extends Activity implements
         page.addView(row, new LinearLayout.LayoutParams(-1, dp(34)));
     }
 
-    private void showViewPage(int page) {
-        if (page < 0 || page >= VIEW_PAGE_NAMES.length) page = 0;
-        toolPage = -1;
-        // The sub-page being left: its height is where the block grows from, so
-        // 亮度 -> 颜色 does not resize the photograph in one step either.
-        final int fromH = viewScrolls[viewPage] != null
-                && viewScrolls[viewPage].getVisibility() == View.VISIBLE
-                ? viewScrolls[viewPage].getHeight() : 0;
-        viewPage = page;
-        for (int i = 0; i < viewPages.length; ++i) {
-            final boolean on = i == page;
-            if (viewPages[i] != null) viewPages[i].setVisibility(on ? View.VISIBLE : View.GONE);
-            if (viewCatChips != null) tintText(viewCatChips[i], on ? UI_BLUE : UI_MUTED, MS_SOFT);
-            // The sub-pages are stacked in one vertical panel with only one of
-            // them visible, so the *scroll* is what changes height -- and the
-            // scroll is what has to move. 26 dp, not a page's 40: a sub-page is
-            // a smaller thing than a page, and the motion says so.
-            if (viewScrolls[i] == null) continue;
-            if (on) {
-                // **`again = true`: the guard at the top of `enterPanel` must
-                // not decide this.** All six scrolls are built visible and only
-                // their inner page is `GONE`, so on the first visit the incoming
-                // scroll already looks "shown", the whole arrival was skipped,
-                // and the swap was a cut: no height, no notches, no typing.
-                enterPanel(viewScrolls[i], fromH, true);
-                // A sub-page is a smaller thing than a page, so it rises a
-                // shorter distance -- 12 dp against a page's 40.
-                final View sc = viewScrolls[i];
-                sc.setTranslationY(dp(12));
-                sc.animate().translationY(0f)
-                        .setDuration(MS_SOFT)
-                        .setInterpolator(EASE_OUT)
-                        .start();
-            } else {
-                hideAtOnce(viewScrolls[i]);
-            }
-        }
-        syncSubRowActive();
-        markFile("view page=" + page + " fromH=" + fromH
-                + " h=" + (viewScrolls[page] == null ? -1 : viewScrolls[page].getHeight()));
-    }
+    void showViewPage(int page) { ViewPages.showViewPage(new ViewPagesHostImpl(this), page); }
 
     /** One slider: name and value on a line, the track under it. */
-    private LinearLayout adjustRow(LinearLayout parent, String title, float lo, float hi,
+    LinearLayout adjustRow(LinearLayout parent, String title, float lo, float hi,
                                    java.util.function.Supplier<Float> get,
                                    java.util.function.Consumer<Float> set,
                                    boolean redecode) {
         return adjustRow(parent, title, lo, hi, get, set, redecode, null);
     }
 
-    private LinearLayout adjustRow(LinearLayout parent, String title, float lo, float hi,
+    LinearLayout adjustRow(LinearLayout parent, String title, float lo, float hi,
                                    java.util.function.Supplier<Float> get,
                                    java.util.function.Consumer<Float> set,
                                    boolean redecode, String hint) {
@@ -18065,7 +18026,7 @@ public class MainActivity extends Activity implements
      * 放大曝光 has always been on one, because 1.0 is the neutral and a linear
      * track would put it at 20 % of the way along.
      */
-    private LinearLayout adjustRow(LinearLayout parent, String title, float lo, float hi,
+    LinearLayout adjustRow(LinearLayout parent, String title, float lo, float hi,
                                    java.util.function.Supplier<Float> get,
                                    java.util.function.Consumer<Float> set,
                                    boolean redecode, String hint,
@@ -18166,150 +18127,16 @@ public class MainActivity extends Activity implements
     /** The 光学 page's root and its "what this page is" line. */
     LinearLayout viewRoot;
     TextView viewLockNote;
-    private LinearLayout wbDecodeBox;
-    private TextView wbDecodeNote;
+    LinearLayout wbDecodeBox;
+    TextView wbDecodeNote;
     /** 白平衡那七个 chip。存成字段，因为它们的选中态不是一次性的。 */
-    private TextView[] wbChips;
+    TextView[] wbChips;
 
-    private void buildWhiteBalancePage(LinearLayout page) {
-        // **The decode half only exists for a RAW.** LibRaw applies the
-        // balance while demosaicing, so a JPEG has no negative to re-develop:
-        // the chips and both Kelvin sliders did nothing at all on `xxx.jpg`,
-        // which reads as tr("ui170.147"). The box is kept so the page can grey
-        // it out and say why once the file is known.
-        wbDecodeBox = new LinearLayout(this);
-        wbDecodeBox.setOrientation(LinearLayout.VERTICAL);
-        page.addView(wbDecodeBox, new LinearLayout.LayoutParams(-1, -2));
-        wbDecodeBox.addView(label(tr("optics.raw_white_balance"), 8, UI_INK, tfHan),
-                new LinearLayout.LayoutParams(-1, dp(22)));
-        final String[] names = {tr("optics.as_shot"), tr("optics.daylight"), tr("optics.cloudy"), tr("optics.shade"), tr("optics.tungsten"), tr("optics.fluorescent"), tr("optics.custom")};
-        final LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        final HorizontalScrollView scroll = new HorizontalScrollView(this);
-        scroll.setHorizontalScrollBarEnabled(false);
-        final TextView[] chips = new TextView[names.length];
-        for (int i = 0; i < names.length; ++i) {
-            final int preset = i;
-            final TextView chip = label(names[i], 8, i == 0 ? UI_BLUE : UI_MUTED, tfBody);
-            chip.setGravity(android.view.Gravity.CENTER);
-            chip.setBackground(outlineBox(i == 0));
-            chip.setOnClickListener(v -> {
-                wbPreset = preset;
-                refreshWbChips();
-                redecodeWithWhiteBalance();
-            });
-            final LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(58), dp(30));
-            lp.rightMargin = dp(4);
-            row.addView(chip, lp);
-            chips[i] = chip;
-        }
-        wbChips = chips;
-        scroll.addView(row, new android.widget.FrameLayout.LayoutParams(-2, -1));
-        wbDecodeBox.addView(scroll, new LinearLayout.LayoutParams(-1, dp(36)));
-        wbDecodeNote = label(tr("optics.these_controls_set_the_light")
-                + tr("optics.changing_them_decodes_the_image"), 7.5f, UI_MUTED, tfHan);
-        wbDecodeNote.setMaxLines(2);
-        wbDecodeBox.addView(wbDecodeNote, new LinearLayout.LayoutParams(-1, dp(32)));
-        adjustRow(wbDecodeBox, tr("optics.raw_temperature"), 2000f, 12000f, () -> wbKelvin, v -> wbKelvin = v, true,
-                tr("optics.light_source_temperature_3200_k"));
-        adjustRow(wbDecodeBox, tr("optics.raw_tint"), -150f, 150f, () -> wbTint, v -> wbTint = v, true,
-                tr("optics.green_magenta_balance_increase_to"));
-    }
+    void buildWhiteBalancePage(LinearLayout page) { ViewPages.buildWhiteBalancePage(new ViewPagesHostImpl(this), page); }
 
-     void buildTonePage(LinearLayout page) {
-        // **Two cells, not three.** 直方图 moved to the settings sheet -- it is
-        // a display preference, not a parameter of the picture, and it was
-        // taking a third of the page's first row. 复位 left with it: the 重置当前页
-        // in the heading already means exactly that.
-        //
-        // What is left is 曲线, which opens as a screen of its own (Lightroom
-        // gives it a tool and a 完成, not six rows in the middle of 亮度), and
-        // 原图提亮.
-        final LinearLayout toneGrid = new LinearLayout(this);
-        toneGrid.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(toneGrid, tr("optics.curves"), tr("ui170.148"), tv -> openViewTool(4));
+    void buildTonePage(LinearLayout page) { ViewPages.buildTonePage(new ViewPagesHostImpl(this), page); }
 
-        // **How the canvas reads the decode, not what the engine gets.**
-        // Off: the numbers exactly as LibRaw handed them, through sRGB only.
-        // On: the median goes to sRGB mid-grey (capped where p99.5 would clip)
-        // and the encoded shadows are lifted. That is how every raw was shown
-        // from 1.5.1 through 1.6.6a, after an import that came back at 2/255
-        // looked like a black rectangle -- but it also hides the picture's own
-        // exposure, and it ran 2.54 EV above Lightroom on the reference DNG.
-        final Square levelMark = new Square(this, UI_BLUE, uiToggleOff());
-        toggleCell(toneGrid, tr("optics.original_brightness"), tr("meter.auto"), levelMark, () -> rawAutoBright, on -> {
-            rawAutoBright = on;
-            getSharedPreferences("ui", MODE_PRIVATE).edit()
-                    .putBoolean("raw_auto_bright", on).apply();
-            refreshOriginalView();
-        });
-        page.addView(toneGrid, new LinearLayout.LayoutParams(-1, dp(46)));
-
-        // **Lightroom's six, in Lightroom's order.** 曝光度 / 对比度 / 高光 /
-        // 阴影 / 白色色阶 / 黑色色阶 is the panel a user already has in their
-        // hands on the other side of the screen. These rows were in the order
-        // they were written -- 亮度 between 对比 and 高光, and the two ends
-        // last -- so a hand that knows Lightroom kept landing on the wrong row.
-        //
-        // 相机曝光 stays first and is not a Lightroom row at all: it is the
-        // exposure the *engine* applies before the film, which the other engine
-        // has no slot for (and greys out there). 亮度 is not a Lightroom slider
-        // either; it stays at the end, because the engine has it and taking a
-        // control away is not an improvement.
-        viewCameraEvBox = adjustRow(page, tr("optics.camera_exposure"), -4f, 4f, () -> cameraEv, v -> cameraEv = v, false);
-        viewCameraEvNote = label("", 7.5f, UI_MUTED, tfHan);
-        viewCameraEvNote.setMaxLines(2);
-        attachBang(viewCameraEvBox, () -> viewCameraEvNote == null
-                ? "" : viewCameraEvNote.getText().toString());
-        final LinearLayout expBox = adjustRow(page, tr("ui170.149"), -3f, 3f,
-                () -> viewExposure, v -> viewExposure = v, false);
-        viewExposureNote = label("", 7.5f, UI_MUTED, tfHan);
-        viewExposureNote.setMaxLines(2);
-        attachBang(expBox, () -> viewExposureNote == null
-                ? "" : viewExposureNote.getText().toString());
-        adjustRow(page, tr("ui170.150"), -100f, 100f, () -> viewContrast, v -> viewContrast = v, false);
-        adjustRow(page, tr("optics.highlights"), -100f, 100f, () -> viewHighlights, v -> viewHighlights = v, false);
-        adjustRow(page, tr("optics.shade"), -100f, 100f, () -> viewShadows, v -> viewShadows = v, false);
-        adjustRow(page, tr("ui170.151"), 0f, 50f, () -> viewWhite, v -> viewWhite = v, false,
-                tr("ui170.152"));
-        adjustRow(page, tr("ui170.153"), 0f, 50f, () -> viewBlack, v -> viewBlack = v, false,
-                tr("ui170.154"));
-        adjustRow(page, tr("optics.brightness"), -100f, 100f, () -> viewBrightness, v -> viewBrightness = v, false,
-                tr("ui170.155"));
-    }
-
-     void buildColourPage(LinearLayout page) {
-        // **Lightroom's 颜色, top to bottom.** A row of bordered doors at the
-        // top -- HSL and 分级, the two buttons Lightroom puts there -- then the
-        // white balance, then 色温 / 色调 / 自然饱和度 / 饱和度.
-        //
-        // **HSL is not on this page any more.** Eight bands times three sliders
-        // is a screen, and Lightroom opens it as one: the 混色 screen shows the
-        // eight hue dots and the three rows for the band you picked, with a 完成
-        // to come back. Keeping a copy of those rows here as well means the same
-        // parameter has two homes and one of them is always stale.
-        final LinearLayout doors = new LinearLayout(this);
-        doors.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(doors, "HSL", HSL_BANDS[hslBand], tv -> openViewTool(6));
-        choiceCell(doors, tr("optics.grading"), tr("ui170.156"), tv -> openViewTool(5));
-        page.addView(doors, new LinearLayout.LayoutParams(-1, dp(46)));
-
-        buildWhiteBalancePage(page);
-        page.addView(label(tr("optics.color_2"), 8, UI_INK, tfHan),
-                new LinearLayout.LayoutParams(-1, dp(24)));
-        final TextView wbNote = label(
-                tr("optics.the_controls_above_re_decode")
-                + tr("optics.including_its_highlights"), 7.5f, UI_MUTED, tfHan);
-        wbNote.setMaxLines(2);
-        page.addView(wbNote, new LinearLayout.LayoutParams(-1, dp(32)));
-        adjustRow(page, tr("optics.temperature"), -100f, 100f, () -> viewTemperature, v -> viewTemperature = v, false,
-                tr("optics.warm_or_cool_the_finished"));
-        adjustRow(page, tr("optics.tint"), -100f, 100f, () -> viewTint, v -> viewTint = v, false,
-                tr("optics.adjust_the_finished_print_s"));
-        adjustRow(page, tr("optics.vibrance"), -100f, 100f, () -> viewVibrance, v -> viewVibrance = v, false,
-                tr("optics.boost_muted_colors_in_darker"));
-        adjustRow(page, tr("optics.saturation"), -100f, 100f, () -> viewSaturation, v -> viewSaturation = v, false);
-}
+    void buildColourPage(LinearLayout page) { ViewPages.buildColourPage(new ViewPagesHostImpl(this), page); }
 
     /**
      * 细节: sharpening and texture.
@@ -18326,70 +18153,15 @@ public class MainActivity extends Activity implements
      * <p>数量 / 半径 / 蒙版 under a 锐化 head, in that order. 纹理 left for 效果,
      * where Lightroom keeps it.
      */
-     void buildDetailPage(LinearLayout page) {
-        page.addView(label(tr("ui170.157"), 8, UI_INK, tfHan),
-                new LinearLayout.LayoutParams(-1, dp(24)));
-        adjustRow(page, tr("ui170.158"), 0f, 150f, () -> viewSharpen, v -> viewSharpen = v, false,
-                tr("ui170.159"));
-        adjustRow(page, tr("ui170.160"), 0.5f, 3f, () -> viewSharpenRadius,
-                v -> viewSharpenRadius = v, false,
-                tr("ui170.161"));
-        adjustRow(page, tr("ui170.162"), 0f, 100f, () -> viewSharpenMask, v -> viewSharpenMask = v, false,
-                tr("ui170.163"));
-        page.addView(label(tr("ui170.164")
-                + tr("ui170.165"),
-                7.5f, UI_MUTED, tfHan), new LinearLayout.LayoutParams(-1, dp(44)));
-    }
+    void buildDetailPage(LinearLayout page) { ViewPages.buildDetailPage(new ViewPagesHostImpl(this), page); }
 
-     void buildGradingPage(LinearLayout page) {
-        toolHeader(page, tr("optics.grading"));
-        // Four zones, one wheel -- Lightroom's shape: pick the tonal range,
-        // then drag a dot. Hue is the angle, saturation the distance from grey.
-        // **Lightroom's order and Lightroom's words.** 阴影 -> 中间调 -> 高光
-        // -> 全部, which is the order the panel lists them in; tr("optics.global") was this
-        // app's own name for the last one.
-        final String[] zones = {tr("optics.shade"), tr("optics.midtones"), tr("optics.highlights"), tr("meter.all")};
-        // Chip index -> the colour-balance zone it edits.
-        final int[] zoneIds = {1, 2, 3, 0};
-        final LinearLayout zoneRow = new LinearLayout(this);
-        zoneRow.setOrientation(LinearLayout.HORIZONTAL);
-        final TextView[] zoneChips = new TextView[zones.length];
-        for (int i = 0; i < zones.length; ++i) {
-            final int zone = zoneIds[i];
-            final TextView chip = label(zones[i], 8, zone == cbZone ? UI_BLUE : UI_MUTED, tfBody);
-            chip.setGravity(android.view.Gravity.CENTER);
-            chip.setOnClickListener(v -> {
-                cbZone = zone;
-                for (int k = 0; k < zoneChips.length; ++k)
-                    zoneChips[k].setTextColor(zoneIds[k] == cbZone ? UI_BLUE : UI_MUTED);
-                if (colorWheel != null) colorWheel.invalidate();
-                cbReadout = null;
-                refreshViewPanel();
-            });
-            final LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(26), 1f);
-            lp.rightMargin = dp(4);
-            zoneRow.addView(chip, lp);
-            zoneChips[i] = chip;
-        }
-        page.addView(zoneRow, new LinearLayout.LayoutParams(-1, dp(30)));
+    void buildGradingPage(LinearLayout page) { ViewPages.buildGradingPage(new ViewPagesHostImpl(this), page); }
 
-        colorWheel = new ColorWheel();
-        page.addView(colorWheel, new LinearLayout.LayoutParams(-1, dp(196)));
+    int cbZone = 0;
+    ColorWheel colorWheel;
+    TextView cbReadout;
 
-        cbReadout = label("", 8, UI_MUTED, tfBody);
-        cbReadout.setGravity(android.view.Gravity.CENTER);
-        page.addView(cbReadout, new LinearLayout.LayoutParams(-1, dp(20)));
-        refreshCbReadout();
-
-        adjustRow(page, tr("optics.luminance"), -1f, 1f, () -> cbLum[cbZone], v -> cbLum[cbZone] = v, false,
-                tr("optics.lighten_or_darken_this_tonal"));
-    }
-
-    private int cbZone = 0;
-    private ColorWheel colorWheel;
-    private TextView cbReadout;
-
-    private void refreshCbReadout() {
+    void refreshCbReadout() {
         if (cbReadout == null) return;
         final int hue = Math.round(cbHue[cbZone]);
         cbReadout.setText(String.format(java.util.Locale.US,
@@ -18400,7 +18172,7 @@ public class MainActivity extends Activity implements
      * The grading wheel: hue is the angle, saturation is how far the handle is
      * from the middle, and the middle is "no cast".
      */
-    private final class ColorWheel extends View {
+    public final class ColorWheel extends View {
         private Bitmap disc;
         private int discSize = 0;
         private int dragZone = -1;
@@ -18409,7 +18181,7 @@ public class MainActivity extends Activity implements
 
         ColorWheel() { super(MainActivity.this); }
 
-        private float radius() { return Math.min(getWidth(), getHeight()) / 2f - dp(6); }
+        float radius() { return Math.min(getWidth(), getHeight()) / 2f - dp(6); }
 
         private void buildDisc(int size) {
             disc = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
@@ -18586,44 +18358,13 @@ public class MainActivity extends Activity implements
      * this layer at all: grain is a property of the emulsion, and both print
      * panels own it.
      */
-     void buildEffectsPage(LinearLayout page) {
-        final String[] tabs = {tr("optics.effects"), tr("ui170.166")};
-        final LinearLayout tabRow = new LinearLayout(this);
-        tabRow.setOrientation(LinearLayout.HORIZONTAL);
-        effectChips = new TextView[tabs.length];
-        for (int i = 0; i < tabs.length; ++i) {
-            final int tab = i;
-            final TextView chip = label(tabs[i], 9, UI_MUTED, tfHan);
-            chip.setGravity(android.view.Gravity.CENTER);
-            chip.setOnClickListener(v -> showEffectTab(tab));
-            final LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(26), 1f);
-            lp.rightMargin = dp(2);
-            tabRow.addView(chip, lp);
-            effectChips[i] = chip;
-        }
-        page.addView(tabRow, new LinearLayout.LayoutParams(-1, dp(28)));
+    void buildEffectsPage(LinearLayout page) { ViewPages.buildEffectsPage(new ViewPagesHostImpl(this), page); }
 
-        effectPages = new LinearLayout[tabs.length];
-        for (int i = 0; i < tabs.length; ++i) {
-            final LinearLayout body = new LinearLayout(this);
-            body.setOrientation(LinearLayout.VERTICAL);
-            body.setVisibility(i == 0 ? View.VISIBLE : View.GONE);
-            page.addView(body, new LinearLayout.LayoutParams(-1, -2));
-            effectPages[i] = body;
-        }
-        adjustRow(effectPages[0], tr("ui170.167"), -100f, 100f, () -> viewTexture, v -> viewTexture = v, false,
-                tr("ui170.168"));
-        adjustRow(effectPages[0], tr("ui170.169"), -100f, 100f, () -> viewVignette, v -> viewVignette = v, false,
-                tr("ui170.170"));
-        fillGlowControls(effectPages[1]);
-        showEffectTab(0);
-    }
-
-    private LinearLayout[] effectPages;
-    private TextView[] effectChips;
+    LinearLayout[] effectPages;
+    TextView[] effectChips;
     private int effectTab;
 
-    private void showEffectTab(int tab) {
+    void showEffectTab(int tab) {
         effectTab = tab;
         if (effectPages != null) {
             for (int i = 0; i < effectPages.length; ++i) {
@@ -18641,7 +18382,7 @@ public class MainActivity extends Activity implements
     /** The eight hue dots of 混色, and whether one of them is picked. */
     private static final float[] HSL_HUES = {0f, 30f, 60f, 120f, 180f, 240f, 280f, 320f};
 
-    private void refreshHslSwatches() {
+    void refreshHslSwatches() {
         if (hslSwatches == null) return;
         for (int i = 0; i < hslSwatches.length; ++i) {
             final android.graphics.drawable.GradientDrawable d =
@@ -18655,69 +18396,9 @@ public class MainActivity extends Activity implements
     }
 
     /** 混色 -- Lightroom's screen: eight hue dots, then 色相 / 饱和度 / 明度. */
-     void buildHslPage(LinearLayout page) {
-        toolHeader(page, tr("ui170.171"));
-        final LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        hslSwatches = new View[HSL_BANDS.length];
-        for (int i = 0; i < HSL_BANDS.length; ++i) {
-            final int band = i;
-            final android.widget.FrameLayout cell = new android.widget.FrameLayout(this);
-            final View dot = new View(this);
-            dot.setOnClickListener(v -> {
-                hslBand = band;
-                refreshViewPanel();
-            });
-            cell.addView(dot, new android.widget.FrameLayout.LayoutParams(
-                    dp(24), dp(24), android.view.Gravity.CENTER));
-            cell.setOnClickListener(v -> {
-                hslBand = band;
-                refreshViewPanel();
-            });
-            row.addView(cell, new LinearLayout.LayoutParams(0, dp(40), 1f));
-            hslSwatches[i] = dot;
-        }
-        page.addView(row, new LinearLayout.LayoutParams(-1, dp(40)));
-        page.addView(label(tr("ui170.172"),
-                7.5f, UI_MUTED, tfHan), new LinearLayout.LayoutParams(-1, dp(26)));
-        adjustRow(page, tr("ui170.173"), -40f, 40f, () -> hslHue[hslBand], v -> hslHue[hslBand] = v, false,
-                tr("ui170.174"));
-        adjustRow(page, tr("optics.saturation"), -100f, 100f, () -> hslSat[hslBand], v -> hslSat[hslBand] = v, false,
-                tr("ui170.175"));
-        adjustRow(page, tr("ui170.176"), -100f, 100f, () -> hslLum[hslBand], v -> hslLum[hslBand] = v, false,
-                tr("ui170.177"));
-        viewRefreshers.add(this::refreshHslSwatches);
-        refreshHslSwatches();
-    }
+    void buildHslPage(LinearLayout page) { ViewPages.buildHslPage(new ViewPagesHostImpl(this), page); }
 
-     void buildCurvesPage(LinearLayout page) {
-        toolHeader(page, tr("optics.curves"));
-        final String[] channels = {"RGB", tr("optics.brightness"), "R", "G", "B"};
-        final LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        final TextView[] chips = new TextView[channels.length];
-        for (int i = 0; i < channels.length; ++i) {
-            final int ch = i;
-            final TextView chip = label(channels[i], 8, i == 0 ? UI_BLUE : UI_MUTED, tfBody);
-            chip.setGravity(android.view.Gravity.CENTER);
-            chip.setOnClickListener(v -> {
-                curveChannel = ch;
-                for (int k = 0; k < chips.length; ++k)
-                    chips[k].setTextColor(k == ch ? UI_BLUE : UI_MUTED);
-                if (curveView != null) curveView.invalidate();
-            });
-            final LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(26), 1f);
-            lp.rightMargin = dp(4);
-            row.addView(chip, lp);
-            chips[i] = chip;
-        }
-        page.addView(row, new LinearLayout.LayoutParams(-1, dp(28)));
-        curveView = new CurveView();
-        page.addView(curveView, new LinearLayout.LayoutParams(-1, dp(150)));
-        page.addView(label(tr("optics.drag_the_control_points_or"), 7.5f, UI_MUTED, tfHan),
-                new LinearLayout.LayoutParams(-1, dp(18)));
-    }
+    void buildCurvesPage(LinearLayout page) { ViewPages.buildCurvesPage(new ViewPagesHostImpl(this), page); }
 
     /** Type a value: Lightroom's "tap the number". */
     private void editNumber(String title, float lo, float hi, float current,
@@ -18772,7 +18453,7 @@ public class MainActivity extends Activity implements
         showThemed(numberDialog);
     }
 
-    private android.graphics.drawable.GradientDrawable outlineBox(boolean selected) {
+    android.graphics.drawable.GradientDrawable outlineBox(boolean selected) {
         android.graphics.drawable.GradientDrawable box = new android.graphics.drawable.GradientDrawable();
         box.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
         box.setCornerRadius(0f);
@@ -18869,7 +18550,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 白平衡 chip 的选中态：每一条会改 `wbPreset` 的路径都要来这一趟。 */
-    private void refreshWbChips() {
+    void refreshWbChips() {
         if (wbChips == null) return;
         for (int k = 0; k < wbChips.length; ++k) {
             final boolean on = k == wbPreset;
@@ -18941,7 +18622,7 @@ public class MainActivity extends Activity implements
      * turns a Kelvin temperature into channel gains for this sensor -- then the
      * session is closed and the file decoded again at the same size.
      */
-    private void redecodeWithWhiteBalance() {
+    void redecodeWithWhiteBalance() {
         if (!isRawFile || rawFilePath == null) {
             // A JPEG has no negative to re-develop. Saying so once is better
             // than a control that silently does nothing.
@@ -19064,7 +18745,7 @@ public class MainActivity extends Activity implements
     }
 
     /** A square you draw the curve in: drag a point, tap to add, hold to remove. */
-    private final class CurveView extends View {
+    public final class CurveView extends View {
         // **Room for the numbers.** The plot used to sit 10 dp from every edge,
         // which left nowhere to print an axis: the curve was a shape with no
         // scale, and "is this point at 128 or at 140" could only be guessed.
@@ -19321,7 +19002,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private LinearLayout buildOpticsPanel() { return PanelFactories.buildOpticsPanel(new PanelHostImpl(this)); }
+    LinearLayout buildOpticsPanel() { return PanelFactories.buildOpticsPanel(new PanelHostImpl(this)); }
 
     /** Which page of the print panel is in front; the strip shows the same one. */
     private int printGroup = 0;
@@ -19666,7 +19347,7 @@ public class MainActivity extends Activity implements
 
     /** One cell of the six-control grid: a name and its value, a third of the
      *  width. Six of these used to be six full-width rows. */
-    private TextView choiceCell(LinearLayout row, String title, String value,
+    TextView choiceCell(LinearLayout row, String title, String value,
                                 java.util.function.Consumer<TextView> onTap) {
         LinearLayout cell = new LinearLayout(this);
         cell.setOrientation(LinearLayout.VERTICAL);
@@ -19688,7 +19369,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The same cell for a two-state switch: its name, then the word and the square. */
-    private void toggleCell(LinearLayout row, String title, String valueText, Square mark,
+    void toggleCell(LinearLayout row, String title, String valueText, Square mark,
                             java.util.function.BooleanSupplier isOn,
                             java.util.function.Consumer<Boolean> onChange) {
         LinearLayout cell = new LinearLayout(this);
@@ -19928,7 +19609,7 @@ public class MainActivity extends Activity implements
      * get their own page, laid out the way a picture editor does it: ratios as
      * shapes you can see, rotation as a dial you can feel.
      */
-    private LinearLayout buildComposePanel() { return PanelFactories.buildComposePanel(new PanelHostImpl(this)); }
+    LinearLayout buildComposePanel() { return PanelFactories.buildComposePanel(new PanelHostImpl(this)); }
 
      TextView composeTabView(String text, int page) {
         final TextView tv = label(text, 12, UI_MUTED, tfHan);
@@ -20945,7 +20626,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private LinearLayout buildFormatPanel() { return PanelFactories.buildFormatPanel(new PanelHostImpl(this)); }
+    LinearLayout buildFormatPanel() { return PanelFactories.buildFormatPanel(new PanelHostImpl(this)); }
 
     // ---------------------------------------------------------------- glow
     /**
@@ -20966,7 +20647,7 @@ public class MainActivity extends Activity implements
      * page of another tool does not get its own slot in the bar. It lives
      * inside 效果 now: the switch, the style, the six sliders.
      */
-    private void fillGlowControls(LinearLayout body) {
+    void fillGlowControls(LinearLayout body) {
         glowMark = new Square(this, UI_BLUE, uiToggleOff());
         body.addView(toggleRow(tr("ui170.210"), glowMark, () -> glowOn, v -> {
             glowOn = v;
@@ -21405,7 +21086,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private LinearLayout buildEdgePanel() { return PanelFactories.buildEdgePanel(new PanelHostImpl(this)); }
+    LinearLayout buildEdgePanel() { return PanelFactories.buildEdgePanel(new PanelHostImpl(this)); }
 
      LinearLayout.LayoutParams cardLp() {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(176), -2);
@@ -22514,7 +22195,7 @@ public class MainActivity extends Activity implements
         syncSubRowActive();
     }
 
-    private void syncSubRowActive() {
+    void syncSubRowActive() {
         if (subRow == null) return;
         subRow.setActive(subBarKind == 1 ? fotuGroup
                 : subBarKind == 3 ? printGroup : viewPage);
@@ -25244,14 +24925,14 @@ public class MainActivity extends Activity implements
 
     /** A 12 px square that fills when on: the page has no switch, and a filled
      *  square is the same vocabulary the tabs use. */
-    private static class Square extends View {
+    public static class Square extends View {
         private final android.graphics.Paint paint =
                 new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         private final int onColor, offColor;
         private final float stroke;
         private boolean lit;
 
-        Square(android.content.Context context, int onColor, int offColor) {
+        public Square(android.content.Context context, int onColor, int offColor) {
             super(context);
             this.onColor = onColor;
             this.offColor = offColor;
@@ -28787,7 +28468,7 @@ public class MainActivity extends Activity implements
      * engine's working numbers, and `nativeCopyArgbRange` is what applies the
      * gain and the transfer function. No render, no parameter, no export.
      */
-    private void refreshOriginalView() {
+    void refreshOriginalView() {
         if (!uiReady || session == null) return;
         new Thread(() -> {
             Bitmap b = null;
@@ -32447,9 +32128,9 @@ public class MainActivity extends Activity implements
      * Each page now holds one physical stage of the chain, in the order the
      * light goes through it.
      */
-    private View buildFotuPanel() { return PanelFactories.buildFotuPanel(new PanelHostImpl(this)); }
+    View buildFotuPanel() { return PanelFactories.buildFotuPanel(new PanelHostImpl(this)); }
 
-    private void buildFotuPanelInto(LinearLayout panel) { PanelFactories.buildFotuPanelInto(new PanelHostImpl(this), panel); }
+    void buildFotuPanelInto(LinearLayout panel) { PanelFactories.buildFotuPanelInto(new PanelHostImpl(this), panel); }
 
     /**
      * One page of it. Rebuilt on every switch, so the widgets read the fields.
