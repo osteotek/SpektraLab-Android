@@ -5,6 +5,7 @@ param(
     [string]$OutputDirectory,
     [switch]$UseReleaseNative,
     [switch]$UsePrebuiltNative,
+    [switch]$WithFotufilm,
     [switch]$SideBySide,
     [string]$EngineCheckout,
     [string]$ReleaseKeystore,
@@ -35,6 +36,28 @@ if (Test-Path $localeCheck) { & $python $localeCheck }
 if (($UseReleaseNative -and $EngineCheckout) -or
     ($UsePrebuiltNative -and ($UseReleaseNative -or $EngineCheckout))) {
     throw 'Choose one native source: -UseReleaseNative, -UsePrebuiltNative, or -EngineCheckout.'
+}
+
+# The second engine's native libraries and assets are not in this repository
+# (the host needs third-party Halide AOT artefacts). The published v1.7.0 APK
+# is the binary source for the optional full build.
+function Get-FotufilmApk {
+    $meta = Get-Content -Raw (Join-Path $root 'app/build/fotufilm-source.json') | ConvertFrom-Json
+    $sha = $meta.sha256
+    $apk = Join-Path $BuildHome $meta.apk
+    if (!(Test-Path -LiteralPath $apk) -or
+        (Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant() -ne $sha) {
+        $url = $meta.url
+        $part = "$apk.part"
+        curl.exe --fail --location --silent --show-error --retry 2 $url -o $part
+        if (!(Test-Path -LiteralPath $part) -or
+            (Get-FileHash -LiteralPath $part -Algorithm SHA256).Hash.ToLowerInvariant() -ne $sha) {
+            throw "v1.7.0 Fotufilm source APK failed SHA-256 verification: $url"
+        }
+        Move-Item $part $apk -Force
+    }
+    Write-Host "Using v1.7.0 release APK as the Fotufilm binary source."
+    return $apk
 }
 
 function Build-Native {
@@ -192,6 +215,10 @@ try {
         & $python "$root\app\build\gen-stock-catalog.py" $resources
         Copy-Item "$native\libspektrafilm_engine.so" $abiDir
     }
+    if ($WithFotufilm) {
+        $fotuApk = Get-FotufilmApk
+        & $python "$root\app\build\stage-fotufilm.py" $fotuApk $stage
+    }
     if (Test-Path "$main\locales" -PathType Container) {
         New-Item -ItemType Directory "$stage\assets\locales" | Out-Null
         Copy-Item "$main\locales\*.json" "$stage\assets\locales"
@@ -263,14 +290,17 @@ try {
               elseif ($UseReleaseNative) { 'release-native-debug' }
               elseif ($UsePrebuiltNative) { 'prebuilt-native-debug' }
               else { 'windows-debug' }
+    if ($WithFotufilm) { $suffix += '-with-fotufilm' }
     if ($SideBySide) { $suffix += '-side-by-side' }
     $outputDir = New-Item -ItemType Directory -Path $OutputDirectory -Force
     $output = Join-Path $outputDir.FullName "SpektraLab-$suffix.apk"
     Copy-Item "$stage\aligned.apk" $output -Force
     # A regression in packaging (e.g. storing libs instead of deflating them)
-    # used to double the APK. Keep the guard next to the artifact.
+    # used to double the APK. Keep the guard next to the artifact. The full
+    # variant legitimately carries ~12 MB of Fotufilm assets.
     $apkSize = (Get-Item -LiteralPath $output).Length
-    if ($apkSize -gt 20MB) { throw "APK is $([math]::Round($apkSize/1MB,1)) MB; expected under 20 MB." }
+    $limit = if ($WithFotufilm) { 48MB } else { 20MB }
+    if ($apkSize -gt $limit) { throw "APK is $([math]::Round($apkSize/1MB,1)) MB; expected under $([math]::Round($limit/1MB,0)) MB." }
     Write-Host "APK: $output ($([math]::Round($apkSize/1MB,1)) MB)"
 } finally {
     Remove-Item -LiteralPath $stage -Recurse -Force

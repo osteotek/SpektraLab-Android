@@ -167,3 +167,25 @@ same-repository PRs). It needs these repository secrets:
 
 Fork PRs skip the job because GitHub does not expose secrets to them. The
 offline verification job is independent and still runs on every trigger.
+
+## Full build with Fotufilm
+
+The default and `-UsePrebuiltNative` builds ship only the first engine; the
+app therefore reports "fotufilm-native 未加载" in About. Fotufilm's native
+libraries and ~46 MB asset tree are not in this repository (the host depends
+on third-party Halide AOT artefacts that are not redistributed). The published
+v1.7.0 APK is the binary source for the optional full variant:
+
+```powershell
+.\scripts\build-windows.ps1 -WithFotufilm -UsePrebuiltNative -SideBySide
+# -> app/build/SpektraLab-prebuilt-native-debug-with-fotufilm-side-by-side.apk
+```
+
+`-WithFotufilm` can be combined with any native-source choice. It verifies the
+SHA-256 in `app/build/fotufilm-source.json`, downloads the v1.7.0 APK if not
+cached, and stages four libraries (`libfotufilm_jni.so`, `libfotufilmhost.so`,
+`libfotufilmcodecs.so`, `libc++_shared.so`) plus `assets/fotufilm/**` via
+`app/build/stage-fotufilm.py`. The APK is ~26 MB, so the size guard is 48 MB
+for this variant (20 MB otherwise). Verified on the emulator: About reports
+"fotufilm-native 1.0 · 47 支胶片 · 14 种媒介", the engine chooser appears for
+twin films, and golden bands 0/128/512 remain `e60490499b9a94eb`.
