@@ -41,6 +41,25 @@ if (($UseReleaseNative -and $EngineCheckout) -or
 # The second engine's native libraries and assets are not in this repository
 # (the host needs third-party Halide AOT artefacts). The published v1.7.0 APK
 # is the binary source for the optional full build.
+# The upstream 445e314 CMake kernel list omits several shaders whose .comp
+# sources are present and which the 1.7.0i JNI still requests (notably
+# spk_hue_correct). Compile every source whose .spv is missing, with the same
+# glslang flags the engine uses. Works for both source and prebuilt staging.
+function Add-MissingShaders {
+    param([string]$EngineRoot, [string]$ShaderOut)
+    $glslang = "$BuildHome\glslang\bin\glslang.exe"
+    $shaderSrc = Join-Path $EngineRoot 'engine\src\shaders\vulkan'
+    if (!(Test-Path $glslang) -or !(Test-Path $shaderSrc) -or !(Test-Path $ShaderOut)) { return }
+    $extra = 0
+    foreach ($f in Get-ChildItem $shaderSrc -Filter '*.comp') {
+        $spirv = Join-Path $ShaderOut ($f.BaseName + '.spv')
+        if (Test-Path $spirv) { continue }
+        & $glslang -V --target-env vulkan1.0 "-I$shaderSrc" -o $spirv $f.FullName | Out-Null
+        if (Test-Path $spirv) { ++$extra }
+    }
+    Write-Host "additional Vulkan shaders compiled: $extra"
+}
+
 function Get-FotufilmApk {
     $meta = Get-Content -Raw (Join-Path $root 'app/build/fotufilm-source.json') | ConvertFrom-Json
     $sha = $meta.sha256
@@ -121,6 +140,7 @@ $nativeArgs = @(
 $nativeArgs = $nativeArgs -replace '\\', '/'
 & $cmake -S "$root\app\build\windows-native" -B $native @toolchain @nativeArgs | Out-Host
 & $cmake --build $native --target spektrafilm_engine --parallel $Jobs | Out-Host
+Add-MissingShaders -EngineRoot $engine -ShaderOut "$native\engine\resources\vulkan"
 return $native
 }
 
@@ -161,6 +181,11 @@ try {
             try { $cached = & "$root\scripts\cache-release.ps1" -BuildHome $BuildHome -Offline } catch { $cached = $null }
             if ($cached) {
                 & $python $apkContents assets $stage $cached
+                # The pinned 1.7.0i payload predates several kernels the JNI
+                # still requests. Top them up from the patched engine source.
+                $patchHash = (Get-FileHash "$root\patches\engine-android.patch" -Algorithm SHA256).Hash.Substring(0, 12)
+                $engineTree = if ($EngineCheckout) { (Resolve-Path $EngineCheckout).Path } else { "$BuildHome\engine-$patchHash" }
+                Add-MissingShaders -EngineRoot $engineTree -ShaderOut "$stage\assets\resources\vulkan"
             } else {
             $patchHash = (Get-FileHash "$root\patches\engine-android.patch" -Algorithm SHA256).Hash.Substring(0, 12)
             $engineTree = if ($EngineCheckout) { (Resolve-Path $EngineCheckout).Path } else { "$BuildHome\engine-$patchHash" }

@@ -21471,7 +21471,7 @@ public class MainActivity extends Activity implements
     }
 
     private static String meterName(String id) {
-        if (id == null || id.isEmpty()) return tr("crash.close");
+        if (id == null || id.isEmpty()) return tr("meter.off");
         for (int i = 0; i < METER_IDS.length; ++i) if (METER_IDS[i].equals(id)) return METER_NAMES[i];
         return id;
     }
@@ -31931,7 +31931,14 @@ public class MainActivity extends Activity implements
 
     private String bundleVersion() {
         try {
-            return String.valueOf(getPackageManager().getPackageInfo(getPackageName(), 0).versionCode);
+            final android.content.pm.PackageInfo info =
+                    getPackageManager().getPackageInfo(getPackageName(), 0);
+            // A reinstall keeps the same version code but can carry different
+            // assets (a rebuilt .spv, a new profile). Keying only on versionCode
+            // left a stale unpacked tree in place and the engine then asked for
+            // a shader that was in the APK but not on disk. Install time
+            // identifies this exact APK.
+            return info.versionCode + ":" + info.lastUpdateTime;
         } catch (Throwable t) {
             return "0";
         }

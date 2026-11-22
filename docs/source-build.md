@@ -32,6 +32,16 @@ A source-built APK was installed on `emulator-5554` and checked with
 **`e60490499b9a94eb`**, identical to the release and prebuilt builds. Binary
 identity across toolchains is not expected; pixel equivalence is the gate.
 
+The engine's upstream 445e314 CMake kernel list omits several shaders whose
+`.comp` sources are present (`spk_hue_correct`, `spk_canary`,
+`spk_highlights_only`, `spk_mask_epilogue`, `spk_mask_reduce`). The JNI still
+requests them, so `scripts/build-windows.ps1` compiles any missing kernel with
+the same glslang flags *after* the CMake build (and after prebuilt asset
+staging). Both source and `-UsePrebuiltNative` APKs therefore ship 53 shaders,
+including `spk_hue_correct.spv`. The on-device unpack marker also includes the
+APK install time, so a rebuilt APK with the same version code refreshes its
+unpacked asset tree instead of reusing a stale one.
+
 The engine patch is self-contained now:
 
 ```

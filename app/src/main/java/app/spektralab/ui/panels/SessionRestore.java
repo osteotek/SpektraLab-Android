@@ -58,7 +58,16 @@ public final class SessionRestore {
             // the start is clean from then on.
             int dropped = 0;
             for (int i = host.getFrames().size() - 1; i >= 0; --i) {
-                if (!host.canReadUriHostCall(host.getFrames().get(i).uri)) {
+                final Uri frameUri = host.getFrames().get(i).uri;
+                // A cold start may carry a file:// URI from an ACTION_VIEW
+                // import. ContentResolver.openInputStream cannot always reopen
+                // one after the grant ends, but the shared-storage file itself
+                // is still there - keep that frame instead of dropping it.
+                final boolean readable = host.canReadUriHostCall(frameUri)
+                        || ("file".equals(frameUri.getScheme())
+                            && frameUri.getPath() != null
+                            && new java.io.File(frameUri.getPath()).canRead());
+                if (!readable) {
                     host.getFrames().remove(i);
                     ++dropped;
                 }
