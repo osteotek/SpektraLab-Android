@@ -7,6 +7,14 @@ staging (prefer the cached release APK, which carries all 48 Vulkan shaders),
 `device-golden.ps1 -Bands 0,128,512` gives `e60490499b9a94eb` with the four
 wired workers. Offline verification and the APK build also pass.
 
+Phase 2 progress: `BatchImportWorker` and `BatchExportWorker` now depend only on
+narrow `BatchImportHost` / `BatchExportHost` interfaces implemented by
+`MainActivity`, rather than on the whole Activity. Verified: offline checks and
+golden bands 0/512 unchanged. The four pixel-path workers still use `HostWorker`
+and remain coupled to `MainActivity`; converting each needs a ~80-member host
+interface and carries a much higher regression risk, so it is deferred behind
+Phases 3–4.
+
 ### Phase 1 progress
 - Removed the dead direct-buffer compatibility surface from `SpektraLabEngine`
   (`nativeBufferAddress` JNI declaration, `allocDirect`, `freeDirect`,

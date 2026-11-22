@@ -5,24 +5,26 @@ import android.view.View;
 import app.spektralab.engine.SpektraLabEngine;
 
 /** Worker extracted from MainActivity; delegates Android/Activity access to host. */
-final class BatchExportWorker extends HostWorker {
-    BatchExportWorker(MainActivity host) { super(host); }
+final class BatchExportWorker {
+    private final BatchExportHost host;
+
+    BatchExportWorker(BatchExportHost host) { this.host = host; }
 
     void run(String format, String tier) {
-        if (host.batchExportRunning) {
+        if (host.batchExportRunning()) {
             host.showInAppToast(tr("export.batch_export_is_already_running"));
             return;
         }
-        if (host.frames.size() < 2) {
+        if (host.frames().size() < 2) {
             host.showInAppToast(tr("export.only_one_photo_is_available"));
             return;
         }
         host.saveLookIntoFrames();
-        final int total = host.frames.size();
-        final int home = host.currentFrame;
-        host.batchExportRunning = true;
-        host.batchExportAbort = false;
-        if (host.abortBatchPill != null) host.abortBatchPill.setVisibility(View.VISIBLE);
+        final int total = host.frames().size();
+        final int home = host.currentFrame();
+        host.setBatchExportRunning(true);
+        host.setBatchExportAbort(false);
+        if (host.abortBatchPill() != null) host.abortBatchPill().setVisibility(View.VISIBLE);
         // **Stop the shelf that is already running.** `startPrefetch` refuses
         // to start a new one while a batch is going, but the queue the last
         // import kicked off keeps painting twenty-five cards -- and the trail
@@ -30,12 +32,12 @@ final class BatchExportWorker extends HostWorker {
         // inside the export: twenty-five pipeline rebuilds competing for the
         // same pool with a 12.6 MP render that is about to allocate.
         host.stopPrefetch();
-        if (host.sharePill != null) host.sharePill.setVisibility(View.GONE);
+        if (host.sharePill() != null) host.sharePill().setVisibility(View.GONE);
         new Thread(() -> {
             int ok = 0, failed = 0;
             try {
             for (int i = 0; i < total; ++i) {
-                if (host.batchExportAbort) break;
+                if (host.batchExportAbort()) break;
                 final int index = i;
                 // **The strip can shrink while the batch runs.** `total` was
                 // captured when the loop started; deleting a chip (or the
@@ -44,8 +46,8 @@ final class BatchExportWorker extends HostWorker {
                 // `IndexOutOfBoundsException: Index 3 out of bounds for length
                 // 3` on the batch thread -- which looks like "批量导出结束了，
                 // 然后报错" and loses the remaining frames.
-                if (index >= host.frames.size()) { ++failed; continue; }
-                final MainActivity.Frame frame = host.frames.get(index);
+                if (index >= host.frames().size()) { ++failed; continue; }
+                final MainActivity.Frame frame = host.frames().get(index);
                 final String name = frame.name == null
                         ? tr("export.photo") + (i + 1) + tr("export.suffix") : frame.name;
                 if (frame.look == null || frame.look.filmStock == null) {
@@ -53,10 +55,10 @@ final class BatchExportWorker extends HostWorker {
                     continue;
                 }
                 UiDispatcher.post(() -> {
-                    if (host.statusText != null) {
-                        host.statusText.setText(tr("export.batch_export") + (index + 1) + "/" + total + ": " + name);
+                    if (host.statusText() != null) {
+                        host.statusText().setText(tr("export.batch_export") + (index + 1) + "/" + total + ": " + name);
                     }
-                    if (host.exportProgressBar != null) host.exportProgressBar.setVisibility(View.VISIBLE);
+                    if (host.exportProgressBar() != null) host.exportProgressBar().setVisibility(View.VISIBLE);
                 });
                 // **State the Look before the decode, every frame.** `loadImage`
                 // also applies it, but only while `reopeningFrame` survives the
@@ -91,7 +93,7 @@ final class BatchExportWorker extends HostWorker {
                     // the import opened, while every later frame is re-decoded.
                     host.reopenFrameForced(index);
                 }, 5000);
-                if (!host.pollUntil(() -> host.session != null, 180000)) {
+                if (!host.pollUntil(() -> host.session() != null, 180000)) {
                     ++failed;
                     Diagnostics.log("batch-export", "open failed " + index + " " + name, "get:14353");
                     continue;
@@ -107,7 +109,7 @@ final class BatchExportWorker extends HostWorker {
                 host.uiWait(() -> {
                     host.closeSessionSafely();
                 }, 5000);
-                try { if (host.engine != null) host.engine.trimPool(); } catch (Throwable spkIgnored) { Diagnostics.ignored("get:14369", spkIgnored); }
+                try { if (host.engine() != null) host.engine().trimPool(); } catch (Throwable spkIgnored) { Diagnostics.ignored("get:14369", spkIgnored); }
                 // **The next frame starts from zero.** The decoded raw cache
                 // holds one frame's unpacked plane, and the heap still carries
                 // the last frame's bitmaps; six frames of that is what made the
@@ -120,14 +122,14 @@ final class BatchExportWorker extends HostWorker {
                 // every later batch is refused and every error dialog is eaten.
                 final int fok = ok, ffail = failed;
                 UiDispatcher.post(() -> {
-                    host.batchExportRunning = false;
-                    if (host.abortBatchPill != null) host.abortBatchPill.setVisibility(View.GONE);
-                    if (host.exportProgressBar != null) host.exportProgressBar.setVisibility(View.GONE);
+                    host.setBatchExportRunning(false);
+                    if (host.abortBatchPill() != null) host.abortBatchPill().setVisibility(View.GONE);
+                    if (host.exportProgressBar() != null) host.exportProgressBar().setVisibility(View.GONE);
                     final String msg = tr("export.batch_export_finished") + fok + tr("export.succeeded")
                             + (ffail > 0 ? ", " + ffail + tr("export.failed_no_film_selected_or") : "");
-                    if (host.statusText != null) host.statusText.setText(msg);
+                    if (host.statusText() != null) host.statusText().setText(msg);
                     host.showInAppToast(msg);
-                    if (home >= 0 && home < host.frames.size()) {
+                    if (home >= 0 && home < host.frames().size()) {
                         final int back = home;
                         host.reopenFrame(back);
                         // **The restore has to render.** `loadImage` deliberately
@@ -135,7 +137,7 @@ final class BatchExportWorker extends HostWorker {
                         // on "RENDERING / Decoding RAW…" after a batch that had
                         // already finished.
                         new Thread(() -> {
-                            if (!host.pollUntil(() -> host.session != null, 120000)) return;
+                            if (!host.pollUntil(() -> host.session() != null, 120000)) return;
                             UiDispatcher.post(() -> {
                                 // **800, not 2048.** Six full-size exports leave
                                 // the pool carrying a gigabyte of lookup tables
@@ -145,7 +147,7 @@ final class BatchExportWorker extends HostWorker {
                                 // "it dies when it goes back to the first frame".
                                 // The frame is a preview at this point anyway;
                                 // tapping a film re-renders at full size.
-                                if (back < host.frames.size() && host.filmStock != null) host.renderImage(host.LIVE_LONG_EDGE);
+                                if (back < host.frames().size() && host.filmStock() != null) host.renderImage(host.LIVE_LONG_EDGE);
                             });
                         }, "SpektraLab-batch-restore").start();
                     }

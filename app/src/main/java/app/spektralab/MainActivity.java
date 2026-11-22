@@ -41,7 +41,7 @@ import java.util.List;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements BatchImportHost, BatchExportHost {
     SpektraLabEngine engine;
     /** This GPU's limits, read once per engine. Drives the import cap and the export tiers. */
     DeviceProbe probe = DeviceProbe.parse("{}");
@@ -556,11 +556,28 @@ public class MainActivity extends Activity {
     app.spektralab.data.MediaStoreExport exportStore;
 
     /** Close the preview session under the render lock. */
-    void closeSessionSafely() {
+    @Override public void closeSessionSafely() {
         synchronized (renderMutex) {
             if (session != null) { session.close(); session = null; }
         }
     }
+
+    // --- BatchExportHost -------------------------------------------------
+    @Override public TextView abortBatchPill() { return abortBatchPill; }
+    @Override public TextView sharePill() { return sharePill; }
+    @Override public ProgressBar exportProgressBar() { return exportProgressBar; }
+    @Override public boolean batchExportRunning() { return batchExportRunning; }
+    @Override public void setBatchExportRunning(boolean value) { batchExportRunning = value; }
+    @Override public boolean batchExportAbort() { return batchExportAbort; }
+    @Override public void setBatchExportAbort(boolean value) { batchExportAbort = value; }
+    @Override public String filmStock() { return filmStock; }
+    @Override public SpektraLabEngine engine() { return engine; }
+    @Override public SpektraLabEngine.Session session() { return session; }
+
+    // --- BatchImportHost (field getters; methods are satisfied directly) ---
+    @Override public android.widget.TextView statusText() { return statusText; }
+    @Override public java.util.List<Frame> frames() { return frames; }
+    @Override public int currentFrame() { return currentFrame; }
 
     // Device-golden test hooks (re-ported from the 1.6.2m line).
     static int testBandRows = 0;
@@ -2567,7 +2584,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    void saveSessionState() {
+    @Override public void saveSessionState() {
         try {
             final org.json.JSONArray arr = new org.json.JSONArray();
             for (Frame f : frames) {
@@ -14363,7 +14380,7 @@ public class MainActivity extends Activity {
     }
 
     /** All in-app messages use this paper/ink toast, never Android's Toast. */
-    void showInAppToast(final CharSequence message) {
+    public void showInAppToast(final CharSequence message) {
         if (message == null || message.length() == 0) return;
         if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
             runOnUiThread(() -> showInAppToast(message));
@@ -14902,7 +14919,7 @@ public class MainActivity extends Activity {
      *  while the render used 1.40 is worse than no slider. `setBarProgress`
      *  goes through `onProgressChanged`, so the number and the field move
      *  together. */
-    void applyLook(Look look) {
+    @Override public void applyLook(Look look) {
         if (look == null) return;
         filmStock = look.filmStock;
         printStock = look.printStock;
@@ -15294,7 +15311,7 @@ public class MainActivity extends Activity {
         return look;
     }
 
-    void saveLookIntoFrames() {
+    @Override public void saveLookIntoFrames() {
         if (currentFrame < 0 || currentFrame >= frames.size()) return;
         final Frame f = frames.get(currentFrame);
         f.look = captureLook();
@@ -15399,7 +15416,7 @@ public class MainActivity extends Activity {
     }
 
     /** One chip per opened frame, newest at the right, the open one ringed. */
-    void rebuildFrameChips() {
+    @Override public void rebuildFrameChips() {
         refreshLiveBadge();
         if (thumbStrip == null) return;
         thumbStrip.removeAllViews();
@@ -15521,7 +15538,7 @@ public class MainActivity extends Activity {
 
     /** Re-open a frame from the strip. Same entry point the picker uses, so a
      *  RAW chip and a JPEG chip take exactly the roads they took the first time. */
-    void reopenFrame(int index) {
+    @Override public void reopenFrame(int index) {
         CrashTrail.markNow(this, "frame:reopen " + index + " of " + frames.size());
         if (index < 0 || index >= frames.size()) return;
         if (index == currentFrame && session != null) return;
@@ -15537,7 +15554,7 @@ public class MainActivity extends Activity {
      * while the other five were re-decoded. Reported: the first export came out
      * about two stops darker than its own preview, and the other five matched.
      */
-    void reopenFrameForced(int index) {
+    @Override public void reopenFrameForced(int index) {
         if (index < 0 || index >= frames.size()) return;
         final Frame frame = frames.get(index);
         saveLookIntoFrames();
@@ -25150,7 +25167,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    void stopPrefetch() {
+    @Override public void stopPrefetch() {
         prefetchGeneration++;
         prefetchRunning = false;
         prefetchSpkRunning = false;
@@ -33142,7 +33159,7 @@ public class MainActivity extends Activity {
 
     void renderImage() { renderImage(PREVIEW_LONG_EDGE); }
 
-    void renderImage(int longEdge) {
+    @Override public void renderImage(int longEdge) {
         new RenderWorker(this).run(longEdge);
     }
 
@@ -34751,7 +34768,7 @@ public class MainActivity extends Activity {
     volatile boolean batchExportAbort = false;
 
     /** Take the grant, or keep a copy that survives a restart. Null on failure. */
-    Uri persistOrCopy(Uri uri) {
+    @Override public Uri persistOrCopy(Uri uri) {
         try {
             getContentResolver().takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -34783,7 +34800,7 @@ public class MainActivity extends Activity {
     }
 
     /** Add a chip without decoding anything. False when it is already there. */
-    boolean addFrameOnly(Uri uri) {
+    @Override public boolean addFrameOnly(Uri uri) {
         if (uri == null) return false;
         for (Frame f : frames) {
             if (f.uri != null && f.uri.toString().equals(uri.toString())) return false;
@@ -34802,7 +34819,7 @@ public class MainActivity extends Activity {
         new BatchImportWorker(this).run(uris);
     }
 
-    void uiWait(Runnable r, long ms) {
+    @Override public void uiWait(Runnable r, long ms) {
         final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
         runOnUiThread(() -> {
             try { r.run(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:36139", ignored); } finally { latch.countDown(); }
@@ -34811,7 +34828,7 @@ public class MainActivity extends Activity {
         catch (InterruptedException ignored) { }
     }
 
-    boolean pollUntil(java.util.function.BooleanSupplier cond, long ms) {
+    @Override public boolean pollUntil(java.util.function.BooleanSupplier cond, long ms) {
         final long end = nowMs() + ms;
         while (nowMs() < end) {
             if (cond.getAsBoolean()) return true;
@@ -35434,7 +35451,7 @@ public class MainActivity extends Activity {
         }, "export-original").start();
     }
 
-    void exportImage(String format, String tier, final Runnable onDone) {
+    @Override public void exportImage(String format, String tier, final Runnable onDone) {
         new ExportWorker(this).run(format, tier, onDone);
     }
 
