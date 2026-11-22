@@ -42,6 +42,7 @@ import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
+import app.spektralab.ui.panels.FotuGroups;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -129,8 +130,8 @@ public class MainActivity extends Activity implements
     private volatile boolean fotuLivePending;
     private volatile int fotuLiveGeneration;
     private LinearLayout fotuPanel;
-    private final java.util.List<Runnable> fotuRefreshers = new java.util.ArrayList<>();
-    private android.widget.TextView fotuPushValue;
+    final java.util.List<Runnable> fotuRefreshers = new java.util.ArrayList<>();
+    android.widget.TextView fotuPushValue;
     /** The value a dial prints while a finger is on it: over the whole activity. */
     private android.widget.TextView dialValue;
     /** The file the second engine reads. It takes a path, not a descriptor. */
@@ -139,9 +140,9 @@ public class MainActivity extends Activity implements
     String fotuSourceDead;
     // The frame's own tone controls, as state: captureLook/applyLook move them
     // in and out of a Look exactly like every other slider's value.
-    private float fotuEv, fotuHighlights, fotuShadows, fotuSaturation = 1f, fotuVibrance;
-    private float fotuWarmth, fotuTint, fotuFlare, fotuGradeLift, fotuGradeGain;
-    private float fotuExpired, fotuBleach, fotuPush;
+    float fotuEv, fotuHighlights, fotuShadows, fotuSaturation = 1f, fotuVibrance;
+    float fotuWarmth, fotuTint, fotuFlare, fotuGradeLift, fotuGradeGain;
+    float fotuExpired, fotuBleach, fotuPush;
     /**
      * The three controls that reach the configuration directly.
      *
@@ -151,52 +152,52 @@ public class MainActivity extends Activity implements
      * on the film's measured amplitude, the other two are one slot each -- and they travel as
      * `--mul` / `--slot` writes that land after that re-derivation.
      */
-    private float fotuGrain = 1f, fotuPreflash, fotuFringe;
+    float fotuGrain = 1f, fotuPreflash, fotuFringe;
     // The film model's own grain: the reference lays 17 levels of one tile and samples it, so
     // it looks like film rather than like noise. Off by default -- laying a stock's tiles is
     // fifteen seconds the first time, and the clump model costs nothing.
-    private boolean fotuFilmGrain;
+    boolean fotuFilmGrain;
     // The grain model's own geometry: how coarse the crystals read (`size`), how much
     // colour separation the three records keep (`colour`), and how wide a piece of film each
     // pixel averages (`softness`). 1 is the coating as measured.
-    private float fotuGrainSize = 1f, fotuGrainColour = 1f, fotuGrainSoft = 1f;
+    float fotuGrainSize = 1f, fotuGrainColour = 1f, fotuGrainSoft = 1f;
     // Shadow and Highlight Detail: the print's own hold, as printing light.
-    private float fotuShadowDetail = 0f, fotuHighlightDetail = 0f;
-    private float fotuPrintCorrection = 0f;
+    float fotuShadowDetail = 0f, fotuHighlightDetail = 0f;
+    float fotuPrintCorrection = 0f;
     // Each record's share of the grain: red, green and blue sensitive. 1 everywhere keeps the
     // coating as measured; pulling one down thins that layer's crystals alone.
-    private float fotuGrainR = 1f, fotuGrainG = 1f, fotuGrainB = 1f;
-    private Square fotuFilmGrainMark;
-    private Square fotuPrinterMark, fotuLocalToneMark, fotuRebateMark;
+    float fotuGrainR = 1f, fotuGrainG = 1f, fotuGrainB = 1f;
+    Square fotuFilmGrainMark;
+    Square fotuPrinterMark, fotuLocalToneMark, fotuRebateMark;
     /**
      * The couplers as geometry rather than as one number: a reach per interlayer,
      * a self-retention scale, and the fringe the diffusion throws past the
      * coating's own. 1 everywhere is the pack as measured.
      */
-    private float fotuCouplerReach = 1f, fotuCouplerRG = 1f, fotuCouplerGB = 1f, fotuCouplerSelf = 1f;
+    float fotuCouplerReach = 1f, fotuCouplerRG = 1f, fotuCouplerGB = 1f, fotuCouplerSelf = 1f;
     /** The grade on the encoded signal, a condenser head, and the print's viewing lamp. */
-    private float fotuEncodedGrade = 0f, fotuCondenser = 0f;
-    private String fotuPrintLight = "";
+    float fotuEncodedGrade = 0f, fotuCondenser = 0f;
+    String fotuPrintLight = "";
     /** The simulated optical printer: lamp, the two dichroic dials, and its own exposure. */
-    private float fotuPrinter = 0f, fotuPrinterLamp = 3200f, fotuPrinterM = 0.4f, fotuPrinterY = 0.5f,
+    float fotuPrinter = 0f, fotuPrinterLamp = 3200f, fotuPrinterM = 0.4f, fotuPrinterY = 0.5f,
             fotuPrinterEv = 0f;
     /** The release printer's three lights, in printer points; 25 is the stock's aim. */
-    private float fotuPrinterR = 25f, fotuPrinterG = 25f, fotuPrinterB = 25f;
+    float fotuPrinterR = 25f, fotuPrinterG = 25f, fotuPrinterB = 25f;
     /** Target Tone: 1 keys the tone controls to the region a pixel sits in, 0 to its own luma. */
-    private float fotuLocalTone = 1f;
+    float fotuLocalTone = 1f;
     /** Digital Reference's transfer style: auto-levels (default), graded-print, reference-exposure. */
-    private String fotuDigitalRef = "";
+    String fotuDigitalRef = "";
     /** The share of the published granularity carried by the coarse clump field. */
-    private float fotuMottle = 0f;
-    private float fotuFringeRadius = 100f;
+    float fotuMottle = 0f;
+    float fotuFringeRadius = 100f;
     /** The print's output levels, as encoded values: where black and white land. */
-    private float fotuBlackPoint = 0f, fotuWhitePoint = 1f;
-    private float fotuPrinterPreflash = 0f;
+    float fotuBlackPoint = 0f, fotuWhitePoint = 1f;
+    float fotuPrinterPreflash = 0f;
     /** Halation lives in the physics, not the configuration: a multiplier on the stock's sigma. */
-    private float fotuHalation = 1f;
-    private float fotuHalationColour = 0f;
+    float fotuHalation = 1f;
+    float fotuHalationColour = 0f;
     /** The coupler strength, whose stored scale is `v <= 1 ? v : 2 - 1/v`. */
-    private float fotuCouplers = 1f;
+    float fotuCouplers = 1f;
     // The last file that reached the gallery, so it can be handed straight to
     // another app. A picker that filters by MIME will not show a TIFF on a ROM
     // whose picture list does not know the type; an explicit ACTION_SEND does,
@@ -1059,7 +1060,7 @@ public class MainActivity extends Activity implements
     String overscanFormat = "135";
     private boolean dateOn = false;
     String dateText = null;
-    private Square overscanMark, dateMark, pairMark, pairToneMark;
+    Square overscanMark, dateMark, pairMark, pairToneMark;
     private View pairRow;
     private LinearLayout pairBox;
     private SeekBar pairSplitBar, pairHighKneeBar, pairHighRoomBar,
@@ -3684,7 +3685,7 @@ public class MainActivity extends Activity implements
      * 280 dp, so a page's natural height is the capped one -- the same number
      * the layout will arrive at.
      */
-    private static int naturalHeight(View v, int width) {
+    static int naturalHeight(View v, int width) {
         v.measure(View.MeasureSpec.makeMeasureSpec(Math.max(1, width), View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
         return v.getMeasuredHeight();
@@ -3709,12 +3710,12 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void animateHeightTo(final View v, int from, int to) {
+    void animateHeightTo(final View v, int from, int to) {
         animateHeightTo(v, from, to, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, null);
     }
 
     /** `endHeight` is where the view's height lands; `then` runs after it does. */
-    private void animateHeightTo(final View v, int from, int to,
+    void animateHeightTo(final View v, int from, int to,
                                  final int endHeight, final Runnable then) {
         cancelHeight(v);
         final android.animation.ValueAnimator a = android.animation.ValueAnimator.ofInt(from, to);
@@ -4784,7 +4785,7 @@ public class MainActivity extends Activity implements
      * "the rows arrive one at a time", and every one of them has been read as a
      * table being drawn. The beat in this page comes from the bars.
      */
-    private void componentArrival(final View panel) {
+    void componentArrival(final View panel) {
         if (panel == null) return;
         cancelLine(panel);
         final java.util.List<View> rows = new java.util.ArrayList<>();
@@ -5916,7 +5917,7 @@ public class MainActivity extends Activity implements
      * screen, so it never runs twice and never pulses while the wall is
      * thrown.
      */
-    private final java.util.HashMap<String, Long> arrived = new java.util.HashMap<>();
+    final java.util.HashMap<String, Long> arrived = new java.util.HashMap<>();
 
     private final java.util.LinkedHashMap<String, Bitmap[]> softPrints =
             new java.util.LinkedHashMap<String, Bitmap[]>(16, 0.75f, true) {
@@ -7913,7 +7914,7 @@ public class MainActivity extends Activity implements
         /** Told whenever the light moves, so the HUD can follow it. */
         Runnable litChanged;
 
-        void setLit(boolean on) {
+        public void setLit(boolean on) {
             final float to = on ? 1f : 0f;
             if (litTo == to) return;
             litFrom = litT;
@@ -21460,7 +21461,7 @@ public class MainActivity extends Activity implements
         private final int cap;
 
         /** The most this box will ever ask for, in px. */
-        int cap() { return cap; }
+        public int cap() { return cap; }
 
         public CappedScroll(android.content.Context context, int cap) {
             super(context);
@@ -21684,7 +21685,7 @@ public class MainActivity extends Activity implements
      * carry two copies of this sequence -- which is how the cards ended up
      * changing the gate without cropping the picture to it.
      */
-    private void applyGate(String id) {
+    void applyGate(String id) {
         if (!isFotuStock(filmStock) && isPrintFrameGauge(id)) {
             showInAppToast(tr("ui170.258"));
             return;
@@ -24749,7 +24750,7 @@ public class MainActivity extends Activity implements
             stroke = Math.max(1f, getResources().getDisplayMetrics().density);
         }
 
-        void setLit(boolean on) {
+        public void setLit(boolean on) {
             lit = on;
             invalidate();
         }
@@ -24793,7 +24794,7 @@ public class MainActivity extends Activity implements
         return row;
     }
 
-    private View toggleRow(String labelText, Square mark,
+    View toggleRow(String labelText, Square mark,
                            java.util.function.BooleanSupplier isOn,
                            java.util.function.Consumer<Boolean> onChange) {
         LinearLayout row = new LinearLayout(this);
@@ -31670,7 +31671,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 推拉显影: only the steps the stock's pack actually lists. */
-    private void showFotuPushPicker() {
+    void showFotuPushPicker() {
         if (fotuRoot == null) {
             ensureFotuRootAsync(this::showFotuPushPicker);
             return;
@@ -31703,7 +31704,7 @@ public class MainActivity extends Activity implements
         });
     }
 
-    private void refreshFotuPush() {
+    void refreshFotuPush() {
         if (fotuPushValue == null) return;
         fotuPushValue.setText(Math.abs(fotuPush) < 1e-4f ? tr("ui170.465")
                 : String.format(java.util.Locale.US, tr("ui170.468"), fotuPush));
@@ -31775,7 +31776,7 @@ public class MainActivity extends Activity implements
      * engine's own cost makes honest.
      */
     /** One menu row: the title, the current choice, and a sheet of the rest. */
-    private void fotuChoiceRow(LinearLayout parent, String title, String hint,
+    void fotuChoiceRow(LinearLayout parent, String title, String hint,
                                final String[] ids, final String[] labels,
                                final java.util.function.Supplier<String> get,
                                final java.util.function.Consumer<String> set) {
@@ -31821,7 +31822,7 @@ public class MainActivity extends Activity implements
 
     }
 
-    private View[] fotuRow(LinearLayout parent, String title, final float lo, final float hi,
+    View[] fotuRow(LinearLayout parent, String title, final float lo, final float hi,
                          final java.util.function.Supplier<Float> get,
                          final java.util.function.Consumer<Float> set, String hint) {
         final LinearLayout line = new LinearLayout(this);
@@ -31887,9 +31888,9 @@ public class MainActivity extends Activity implements
     private static String[] FOTU_GROUPS = {
             tr("ui170.469"), tr("ui170.470"), tr("navigation.film"), tr("print.knob.grain"), tr("print.knob.halation"), tr("ui170.471"), tr("ui170.066"),
     };
-    private int fotuGroup = 0;
+    int fotuGroup = 0;
     /** Which group's body is on screen; -1 until the panel is first built. */
-    private int fotuGroupShown = -1;
+    int fotuGroupShown = -1;
     /** Which cascade owns the rows; an older one's clean-up checks this. */
     private int panelMotionGen = 0;
     /** The sketch on screen now, which page owns it, and the rows it hid. */
@@ -31952,84 +31953,10 @@ public class MainActivity extends Activity implements
      * frame of a restored session. A call that arrives on the wrong thread is
      * posted instead of run.
      */
-     void showFotuGroup(int index) {
-        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
-            final int wanted = index;
-            runOnUiThread(() -> showFotuGroup(wanted));
-            return;
-        }
-        final boolean moved = index != fotuGroupShown;
-        fotuGroup = index;
-        fotuGroupShown = index;
-        if (fotuBody == null) return;
-        // 影调 -> 色彩 is a different number of rows, so the block's height moves
-        // here too and the photograph above would jump with it. The height that
-        // moves is read further down, off the box that is actually visible.
-        syncSubRowActive();
-        if (fotuGroupTabs != null) {
-            for (int i = 0; i < fotuGroupTabs.length; ++i) {
-                // A colour change is an `invalidate`, not a measure, so these
-                // travel with the height instead of snapping ahead of it.
-                tintText(fotuGroupTabs[i], i == index ? UI_INK : UI_MUTED, MS_SOFT);
-                underline(fotuGroupTabs[i], i == index);
-            }
-        }
-        fotuRefreshers.clear();
-        fotuBody.removeAllViews();
-        // The push row only exists on one page; a stale reference would have
-        // `refreshFotuPush` writing into a detached label.
-        fotuPushValue = null;
-        try {
-            if (index == 0) buildFotuToneGroup();
-            else if (index == 1) buildFotuColourGroup();
-            else if (index == 2) buildFotuFilmGroup();
-            else if (index == 3) buildFotuGrainGroup();
-            else if (index == 4) buildFotuHalationGroup();
-            else if (index == 5) buildFotuLensGroup();
-            else buildFotuPaperGroup();
-        } catch (Throwable t) {
-            // **A page that cannot be built is a line of text, not a crash.**
-            // This runs on the launch path, where an exception takes the whole
-            // activity with it -- and the report then never leaves the device.
-            fotuRefreshers.clear();
-            fotuBody.removeAllViews();
-            fotuBody.addView(label(tr("ui170.186") + t, 8f, UI_INK, tfHan));
-            try {
-                DebugSink.text("fotupanel", "group " + index + ": " + t + "\n"
-                        + android.util.Log.getStackTraceString(t));
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:33721", ignored); }
-        }
-        // **The body was rebuilt in place -- same view, new children.** So this
-        // is one of the two callers that has to force the entrance: `fotuBody`
-        // is never hidden, and the "already on screen" guard would skip it.
-        if (moved) {
-            fotuBody.animate().cancel();
-            fotuBody.setAlpha(1f);
-            fotuBody.setTranslationY(0f);
-            componentArrival(fotuBody);
-            // **The height that visibly changes is the scroll's.** `fotuBody`
-            // lives inside a `CappedScroll`, so `enterPanel(fotuBody, ...)` was
-            // travelling a height nobody can see: the box stayed pinned at its
-            // cap and 影调 -> 色彩 arrived with no height animation at all.
-            // Both ends are capped first, then the box travels between them, and
-            // the canvas above breathes like it does on every other page.
-            final View box = fotuBody.getParent() instanceof View
-                    ? (View) fotuBody.getParent() : null;
-            final int cap = box instanceof CappedScroll
-                    ? ((CappedScroll) box).cap() : Integer.MAX_VALUE;
-            final int w = fotuBody.getWidth() > 0 ? fotuBody.getWidth()
-                    : (box != null ? box.getWidth() : 0);
-            final int was = box != null ? box.getHeight() : 0;
-            final int want = w > 0 ? Math.min(naturalHeight(fotuBody, w), cap) : 0;
-            if (box != null && want > 0 && was > 0 && want != was) {
-                animateHeightTo(box, was, want);
-            }
-        }
-        refreshFotuPush();
-    }
+    void showFotuGroup(int index) { FotuGroups.showFotuGroup(new FotuGroupsHostImpl(this), index); }
 
     /** Whether the sheet in use is the digital reference, asked safely. */
-    private boolean fotuScreenMedium() {
+    boolean fotuScreenMedium() {
         try {
             return FotuFilm.SCREEN.equals(fotuMedium());
         } catch (Throwable t) {
@@ -32048,15 +31975,15 @@ public class MainActivity extends Activity implements
      * and their touches refused until 「胶片颗粒模型」 is on, and the line under
      * the switch says so.
      */
-    private final java.util.List<View> grainGated = new java.util.ArrayList<>();
-    private TextView fotuGrainNote;
+    final java.util.List<View> grainGated = new java.util.ArrayList<>();
+    TextView fotuGrainNote;
 
-    private void gateGrain(View[] row) {
+    void gateGrain(View[] row) {
         if (row == null) return;
         for (View v : row) if (v != null) grainGated.add(v);
     }
 
-    private void refreshGrainGates() {
+    void refreshGrainGates() {
         final boolean on = fotuFilmGrain;
         for (View v : grainGated) {
             // `setEnabledDeep` is the app's one answer to "dimmed is not the same
@@ -32073,189 +32000,25 @@ public class MainActivity extends Activity implements
     }
 
     /** 影调: what the print's tone curve does, including the region switch. */
-    private void buildFotuToneGroup() {
-        fotuRow(fotuBody, tr("optics.exposure"), -2f, 2f, () -> fotuEv, v -> fotuEv = v,
-                tr("ui170.478")
-                + tr("ui170.479"));
-        // **Only the screen medium has one.** The styles are how a
-        // negative becomes a *picture* rather than a print, and the host
-        // consults them only when it is building the screen tables -- on
-        // paper they change nothing, so offering them there is a switch
-        // that does not move.
-        if (fotuScreenMedium()) {
-            fotuChoiceRow(fotuBody, tr("ui170.480"), tr("ui170.481"),
-                    new String[]{"", "graded-print", "reference-exposure"},
-                    new String[]{tr("ui170.482"), tr("ui170.483"), tr("ui170.484")},
-                    () -> fotuDigitalRef == null ? "" : fotuDigitalRef, v -> fotuDigitalRef = v);
-        }
-        fotuRow(fotuBody, tr("optics.highlights"), -1f, 1f, () -> fotuHighlights, v -> fotuHighlights = v, tr("ui170.485"));
-        fotuRow(fotuBody, tr("optics.shade"), -1f, 1f, () -> fotuShadows, v -> fotuShadows = v, tr("ui170.486"));
-        // It is the *region* switch for the two sliders below it: with
-        // both at zero the host never reads it, which is why it sat at
-        // the top of the panel doing nothing.
-        // **The mark is made here, not held from some earlier build.** It used
-        // to be a field assigned once, back when this page was one flat column;
-        // the pages rebuild, so the field has to follow the square that is
-        // actually in the hierarchy. Leaving it null is an NPE inside
-        // `toggleRow` on the launch path -- the app did not open.
-        fotuLocalToneMark = new Square(this, UI_BLUE, uiToggleOff());
-        fotuBody.addView(toggleRow(tr("ui170.487"), fotuLocalToneMark, () -> fotuLocalTone > 0.5f, on -> {
-            fotuLocalTone = on ? 1f : 0f;
-            renderImage();
-        }));
-        fotuRow(fotuBody, tr("ui170.488"), 0f, 1f, () -> fotuShadowDetail, v -> fotuShadowDetail = v,
-                tr("ui170.489"));
-        fotuRow(fotuBody, tr("ui170.490"), 0f, 1f, () -> fotuHighlightDetail, v -> fotuHighlightDetail = v,
-                tr("ui170.491"));
-        fotuRow(fotuBody, tr("ui170.492"), 0f, 1f, () -> fotuPrintCorrection, v -> fotuPrintCorrection = v,
-                tr("ui170.493"));
-        fotuRow(fotuBody, tr("ui170.494"), 0f, 0.5f, () -> fotuBlackPoint, v -> fotuBlackPoint = v,
-                tr("ui170.495"));
-        fotuRow(fotuBody, tr("ui170.496"), 0.5f, 1f, () -> fotuWhitePoint, v -> fotuWhitePoint = v,
-                tr("ui170.497"));
-    }
+    private void buildFotuToneGroup() { FotuGroups.buildFotuToneGroup(new FotuGroupsHostImpl(this)); }
 
     /** 色彩: saturation and the grade, on top of what the film and paper did. */
-    private void buildFotuColourGroup() {
-        fotuRow(fotuBody, tr("optics.saturation"), 0f, 2f, () -> fotuSaturation, v -> fotuSaturation = v, tr("ui170.498"));
-        fotuRow(fotuBody, tr("ui170.499"), -1f, 1f, () -> fotuVibrance, v -> fotuVibrance = v, tr("ui170.500"));
-        fotuRow(fotuBody, tr("optics.temperature"), -1f, 1f, () -> fotuWarmth, v -> fotuWarmth = v, tr("ui170.501"));
-        fotuRow(fotuBody, tr("optics.tint"), -1f, 1f, () -> fotuTint, v -> fotuTint = v, tr("ui170.502"));
-        fotuRow(fotuBody, tr("print.knob.interlayer_inhibition"), 0f, 2f, () -> fotuCouplers, v -> fotuCouplers = v,
-                tr("ui170.503"));
-        fotuRow(fotuBody, tr("ui170.504"), -1f, 1f, () -> fotuGradeLift, v -> fotuGradeLift = v, null);
-        fotuRow(fotuBody, tr("ui170.505"), -1f, 1f, () -> fotuGradeGain, v -> fotuGradeGain = v, null);
-        // Meaningful once lift or gain is away from zero.
-        fotuChoiceRow(fotuBody, tr("ui170.506"), tr("ui170.507"),
-                new String[]{"", "encoded"}, new String[]{tr("ui170.508"), tr("ui170.509")},
-                () -> fotuEncodedGrade > 0.5f ? "encoded" : "", v -> fotuEncodedGrade = v.isEmpty() ? 0f : 1f);
-    }
+    private void buildFotuColourGroup() { FotuGroups.buildFotuColourGroup(new FotuGroupsHostImpl(this)); }
 
     /** 胶片: how the negative was shot and how it has aged. */
-    private void buildFotuFilmGroup() {
-        fotuRow(fotuBody, tr("ui170.510"), 0f, 0.25f, () -> fotuPreflash, v -> fotuPreflash = v, tr("ui170.511"));
-        fotuRow(fotuBody, tr("ui170.512"), 0f, 20f, () -> fotuExpired, v -> fotuExpired = v, tr("ui170.513"));
-        fotuRow(fotuBody, tr("ui170.514"), 0f, 1f, () -> fotuBleach, v -> fotuBleach = v, tr("ui170.515"));
-
-        final LinearLayout pushRow = new LinearLayout(this);
-        pushRow.setOrientation(LinearLayout.HORIZONTAL);
-        pushRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        pushRow.setPadding(0, dp(6), 0, dp(6));
-        pushRow.addView(label(tr("ui170.467"), 9, UI_INK, tfHan), new LinearLayout.LayoutParams(0, -2, 1f));
-        fotuPushValue = label("", 9, UI_BLUE, tfBody);
-        pushRow.addView(fotuPushValue);
-        pushRow.addView(label(" ↓", 10, UI_BLUE, tfBody));
-        pushRow.setClickable(true);
-        pushRow.setOnClickListener(v -> showFotuPushPicker());
-        fotuBody.addView(pushRow, new LinearLayout.LayoutParams(-1, dp(34)));
-    }
+    private void buildFotuFilmGroup() { FotuGroups.buildFotuFilmGroup(new FotuGroupsHostImpl(this)); }
 
     /** 颗粒: the emulsion's crystals, both models. */
-    private void buildFotuGrainGroup() {
-        fotuFilmGrainMark = new Square(this, UI_BLUE, uiToggleOff());
-        fotuBody.addView(toggleRow(tr("ui170.516"), fotuFilmGrainMark,
-                () -> fotuFilmGrain, on -> {
-                    fotuFilmGrain = on;
-                    refreshGrainGates();
-                    renderImage();
-                }));
-        grainGated.clear();
-        fotuGrainNote = label("", 7.5f, UI_MUTED, tfHan);
-        fotuGrainNote.setPadding(dp(2), dp(2), dp(2), dp(8));
-        fotuBody.addView(fotuGrainNote, new LinearLayout.LayoutParams(-1, -2));
-        fotuRow(fotuBody, tr("ui170.517"), 0f, 2f, () -> fotuGrain, v -> fotuGrain = v,
-                tr("ui170.518"));
-        fotuRow(fotuBody, tr("ui170.519"), 0.5f, 2f, () -> fotuGrainSize, v -> fotuGrainSize = v,
-                tr("ui170.520"));
-        // **The five that only exist under the tile model.** 彩色颗粒, 扫描柔度 and
-        // the three layer shares are slots the host reads while it samples a laid
-        // out tile bank; on the default clump model they used to slide and change
-        // no pixel at all. They are gated now, not merely annotated.
-        gateGrain(fotuRow(fotuBody, tr("ui170.521"), 0f, 1f, () -> fotuGrainColour, v -> fotuGrainColour = v,
-                tr("ui170.522")));
-        gateGrain(fotuRow(fotuBody, tr("ui170.523"), 0.5f, 2f, () -> fotuGrainSoft, v -> fotuGrainSoft = v,
-                tr("ui170.524")));
-        gateGrain(fotuRow(fotuBody, tr("ui170.525"), 0f, 2f, () -> fotuGrainR, v -> fotuGrainR = v,
-                tr("ui170.526")));
-        gateGrain(fotuRow(fotuBody, tr("ui170.527"), 0f, 2f, () -> fotuGrainG, v -> fotuGrainG = v,
-                tr("ui170.528")));
-        gateGrain(fotuRow(fotuBody, tr("ui170.529"), 0f, 2f, () -> fotuGrainB, v -> fotuGrainB = v,
-                tr("ui170.530")));
-        fotuRow(fotuBody, tr("ui170.531"), 0f, 0.9f, () -> fotuMottle, v -> fotuMottle = v,
-                tr("ui170.532"));
-        refreshGrainGates();
-    }
+    private void buildFotuGrainGroup() { FotuGroups.buildFotuGrainGroup(new FotuGroupsHostImpl(this)); }
 
     /** 光晕: light that came back off the base, and the layers' cross-talk. */
-    private void buildFotuHalationGroup() {
-        fotuRow(fotuBody, tr("print.knob.halation"), 0f, 4f, () -> fotuHalation, v -> fotuHalation = v,
-                tr("ui170.533"));
-        fotuRow(fotuBody, tr("ui170.534"), 0f, 1f, () -> fotuHalationColour, v -> fotuHalationColour = v,
-                tr("ui170.535"));
-        fotuRow(fotuBody, tr("ui170.536"), 0f, 3f, () -> fotuCouplerReach, v -> fotuCouplerReach = v,
-                tr("ui170.537"));
-        fotuRow(fotuBody, tr("ui170.538"), 0f, 3f, () -> fotuCouplerRG, v -> fotuCouplerRG = v,
-                tr("ui170.539"));
-        fotuRow(fotuBody, tr("ui170.540"), 0f, 3f, () -> fotuCouplerGB, v -> fotuCouplerGB = v,
-                tr("ui170.541"));
-        fotuRow(fotuBody, tr("ui170.542"), 0f, 3f, () -> fotuCouplerSelf, v -> fotuCouplerSelf = v,
-                tr("ui170.543"));
-    }
+    private void buildFotuHalationGroup() { FotuGroups.buildFotuHalationGroup(new FotuGroupsHostImpl(this)); }
 
     /** 镜头: what happened in front of the film. */
-    private void buildFotuLensGroup() {
-        fotuRow(fotuBody, tr("print.knob.glare"), 0f, 1f, () -> fotuFlare, v -> fotuFlare = v, tr("ui170.544"));
-        fotuRow(fotuBody, tr("ui170.545"), 0f, 1f, () -> fotuFringe, v -> fotuFringe = v,
-                tr("ui170.546"));
-        fotuRow(fotuBody, tr("ui170.547"), 20f, 300f, () -> fotuFringeRadius, v -> fotuFringeRadius = v,
-                tr("ui170.548"));
-        fotuChoiceRow(fotuBody, tr("ui170.549"), tr("ui170.550"),
-                new String[]{"", "condenser"}, new String[]{tr("ui170.551"), tr("ui170.552")},
-                () -> fotuCondenser > 0.5f ? "condenser" : "", v -> fotuCondenser = v.isEmpty() ? 0f : 1f);
-    }
+    private void buildFotuLensGroup() { FotuGroups.buildFotuLensGroup(new FotuGroupsHostImpl(this)); }
 
     /** 相纸: the enlarger and the sheet, which is where the print is made. */
-    private void buildFotuPaperGroup() {
-        // **Two switches, one row.** Same rule as the other engine's 影调 page:
-        // two of them stacked cost 96 dp of a 250 dp page to say "on" twice.
-        final LinearLayout paperCells = new LinearLayout(this);
-        paperCells.setOrientation(LinearLayout.HORIZONTAL);
-        fotuRebateMark = new Square(this, UI_BLUE, uiToggleOff());
-        toggleCell(paperCells, tr("border.film_border"), tr("ui170.553"), fotuRebateMark, () -> overscanOn, on -> {
-            overscanOn = on;
-            if (overscanMark != null) overscanMark.setLit(on);
-            // **The picture takes the gate's shape.** The host lays the frame in
-            // the gate and refuses a shape that is not the gate's (its own
-            // E-1305); `applyGate` is the cut that makes it one.
-            if (on) applyGate(overscanFormat); else renderFotu();
-        });
-        fotuPrinterMark = new Square(this, UI_BLUE, uiToggleOff());
-        toggleCell(paperCells, tr("ui170.554"), tr("ui170.555"), fotuPrinterMark,
-                () -> fotuPrinter > 0.5f, on -> {
-                    fotuPrinter = on ? 1f : 0f;
-                    renderImage();
-                });
-        fotuBody.addView(paperCells, new LinearLayout.LayoutParams(-1, dp(46)));
-        fotuRow(fotuBody, tr("ui170.556"), 2800f, 3600f, () -> fotuPrinterLamp, v -> fotuPrinterLamp = v,
-                tr("ui170.557"));
-        fotuRow(fotuBody, tr("ui170.558"), 0f, 1.2f, () -> fotuPrinterM, v -> fotuPrinterM = v,
-                tr("ui170.559"));
-        fotuRow(fotuBody, tr("print.knob.yellow_filter"), 0f, 1.2f, () -> fotuPrinterY, v -> fotuPrinterY = v,
-                tr("ui170.560"));
-        fotuRow(fotuBody, tr("ui170.561"), -6f, 6f, () -> fotuPrinterEv, v -> fotuPrinterEv = v,
-                tr("ui170.562"));
-        fotuRow(fotuBody, tr("ui170.563"), 1f, 50f, () -> fotuPrinterR, v -> fotuPrinterR = v,
-                tr("ui170.564"));
-        fotuRow(fotuBody, tr("ui170.565"), 1f, 50f, () -> fotuPrinterG, v -> fotuPrinterG = v,
-                tr("ui170.566"));
-        fotuRow(fotuBody, tr("ui170.567"), 1f, 50f, () -> fotuPrinterB, v -> fotuPrinterB = v,
-                tr("ui170.568"));
-        fotuRow(fotuBody, tr("ui170.569"), 0f, 0.1f, () -> fotuPrinterPreflash, v -> fotuPrinterPreflash = v,
-                tr("ui170.570"));
-        fotuChoiceRow(fotuBody, tr("ui170.571"), tr("ui170.572"),
-                new String[]{"", "d65", "tungsten"}, new String[]{tr("ui170.573"), tr("ui170.574"), tr("ui170.575")},
-                () -> fotuPrintLight, v -> fotuPrintLight = v);
-    }
+    private void buildFotuPaperGroup() { FotuGroups.buildFotuPaperGroup(new FotuGroupsHostImpl(this)); }
 
     void renderImage() { renderImage(PREVIEW_LONG_EDGE); }
 
