@@ -42,6 +42,7 @@ import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
+import app.spektralab.ui.panels.ExportDialogs;
 import app.spektralab.ui.panels.PresetDialogs;
 import app.spektralab.ui.panels.PickerSheets;
 import app.spektralab.ui.panels.SettingsDialogs;
@@ -24393,134 +24394,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void showExportDialog() {
-        exportHeals = 0;
-        if (batchExportRunning) {
-            // **The only cancel.** A batch can run for ten minutes; without a
-            // way out the user's choice is to kill the app.
-            showActionSheet(tr("file.batch_export_in_progress"), tr("file.photos_are_exported_one_at"),
-                    new String[]{tr("file.stop_batch_export"), tr("file.continue")}, which -> {
-                        if (which == 0) batchExportAbort = true;
-                    });
-            return;
-        }
-        if (session == null) {
-            showInAppToast(tr("film.import_a_photo_first"));
-            return;
-        }
-        final String full = (sourceWidth > 0 && sourceHeight > 0)
-                ? tr("file.full_size") + sourceWidth + "×" + sourceHeight : tr("file.full_size_2");
-        // No ceiling to warn about: the export renders the frame that was
-        // imported, and that may be the file's own size. What is worth saying
-        // is that it takes time, not that it will be refused.
-        final String fullNote = tr("file.original_dimensions_large_images_are");
-        // What the driver says it can take, as opposed to what this build
-        // currently lets through. The two were only ever visible as one number,
-        // and it was always the smaller -- so a phone reporting 2 GiB of
-        // maxStorageBufferRange looked like it was capped at 15 MP for no
-        // stated reason. Name both, and say which one is temporary.
-        final String driverLine;
-        if (probe.maxStorageBufferRange > 0) {
-            final double driverMp = probe.maxStorageBufferRange / 12.0 * 0.80 / 1e6;
-            final double budgetMp = maxImportPixels() / 1e6;
-            driverLine = String.format(java.util.Locale.US,
-                    tr("file.driver_buffer_limit_0f_mib"),
-                    probe.maxStorageBufferRange / 1048576.0, budgetMp);
-        } else {
-            driverLine = probe.valid ? tr("file.the_driver_did_not_report") : tr("file.could_not_read_device_information");
-        };
-        // One sheet, six rows. It was two -- format, then size -- and the first
-        // thing that did was hide tr("ui170.303") behind a tap that nobody
-        // expects from a menu that used to end in it.
-        final boolean limited = probe.isLimited();
-        // "the gallery says it is corrupt" is a question this sheet can answer
-        // before the file is written, not after: Android's picture viewer does
-        // not read 16-bit TIFF at all, and the phone's Lightroom does.
-        // DNG is shipped as a file for a desktop, and says so on the tin. The
-        // phone's Lightroom refuses every linear DNG this writer produces --
-        // four containers, two photometrics, 600x400 through 3000x2000, a
-        // correct XYZ(D50) colour matrix, a camera-shaped IFD0 preview -- with
-        // "failed to load the development version", which Adobe lists as a
-        // known Android bug. Rather than let that read as our defect, the row
-        // and the note name the destination and close the question.
-        final String note = isFotuStock(filmStock)
-                ? tr("ui170.304")
-                  + "\n" + driverLine
-                : tr("ui170.305")
-                  + tr("ui170.306")
-                  + "\nUltra HDR 是同一张 JPEG 加一份增益图：HDR 屏上高光更亮，"
-                  + tr("ui170.307")
-                  + tr("ui170.308")
-                  + "\n实况照片：成片始终是全尺寸，区别在动图 —— 原生按相机录的像素，"
-                  + tr("ui170.309")
-                  + "\n要 16 位 TIFF（给 Lightroom 拉高光）或 DNG，进「更多格式」。"
-                  + "\n" + driverLine;
-        final boolean batchable = frames.size() > 1;
-        final java.util.ArrayList<String> rows = new java.util.ArrayList<>();
-        // **Rows and keys, side by side.** The dispatch used to be arithmetic on the
-        // index (`which >= 3 ? tiff : jpeg`, `which == 6 ? tifflin`), which only
-        // worked while both engines offered the same list. A row now says what it
-        // is, and the engine that answers it is named in the key.
-        //
-        // **One sheet per intent.** This was a single list of eight rows in which
-        // `JPEG · 预览画质 · 长边 3400` and `TIFF 16 位 · 预览画质 · 长边 3400`
-        // differed by four characters -- and a field report (SL-261118-C2FF) has
-        // the app exporting a 16-bit TIFF twice while the owner believes he asked
-        // for a JPEG. Whether that was a mis-tap or not, a menu that cannot tell
-        // the two apart is our defect: the size rows now come first and name the
-        // format in a suffix, and TIFF / DNG are one tap away behind 「更多格式」.
-        final java.util.ArrayList<String> keys = new java.util.ArrayList<>();
-        if (batchable) {
-            rows.add(tr("file.export_all") + frames.size() + tr("file.photos_full_size_jpeg"));
-            keys.add("batch");
-        }
-        rows.add(tr("ui170.310"));     keys.add("spk|jpeg|preview");
-        // **Enable HDR, as a file.** A paper's shoulder compresses the top
-        // stops into a fraction of its last stop of reflectance; the gain map
-        // gives them back on a screen that can show them, and the picture
-        // underneath stays the JPEG above, byte for byte. It needs the first
-        // engine's medium ramp, so fotufilm does not offer it.
-        // **Not for a negative with no paper.** 「无相纸 · 负片本身」 has no print
-        // stage at all, so there is no shoulder to give back -- and the picture
-        // is an orange negative. A reversal frame keeps the row: its curve is
-        // the film's own scan, which is exactly what upstream's §19.1 does.
-        if (!isFotuStock(filmStock) && !PAPER_SCAN.equals(printStock)) {
-            rows.add(tr("ui170.311")); keys.add("spk|uhdr|preview");
-            // **The same file at the frame's own pixels.** The gain map is built
-            // from the encoded rows either way, so the only difference is the
-            // render and the JPEG: ~6 s on a 20 MP frame against ~3 s.
-            rows.add(tr("ui170.312"));       keys.add("spk|uhdr|full");
-        }
-        rows.add(tr("ui170.313"));           keys.add("spk|jpeg|full");
-        rows.add(tr("ui170.314"));                keys.add("spk|jpeg|live");
-        final String livePath = liveClipForCurrentFrame();
-        if (livePath != null) {
-            // **Two clips, not two stills.** Both rows write the still at the
-            // frame's own pixels -- the moving half is what differs, and the
-            // number in the label is the clip's own long edge, read out of the
-            // file. A clip that is already 1440 gets one row, because a second
-            // one would do exactly the same work under a different name.
-            final int clipEdge = liveClipLongEdge(livePath);
-            if (clipEdge > LIVE_CLIP_MAX_EDGE) {
-                rows.add(tr("ui170.315") + LIVE_CLIP_FULL_EDGE + tr("ui170.316"));
-                keys.add("spk|jpeg|full|live|" + LIVE_CLIP_FULL_EDGE);
-                rows.add(tr("ui170.315") + LIVE_CLIP_MAX_EDGE + tr("ui170.317"));
-                keys.add("spk|jpeg|full|live|" + LIVE_CLIP_MAX_EDGE);
-            } else {
-                rows.add(tr("ui170.315")
-                        + (clipEdge > 0 ? clipEdge + "p" : tr("ui170.318")) + "）");
-                keys.add("spk|jpeg|full|live|" + LIVE_CLIP_FULL_EDGE);
-            }
-        }
-        rows.add(tr("ui170.319"));     keys.add("more");
-        showActionSheet(tr("file.export_photo"), note, rows.toArray(new String[0]), which0 -> {
-            if (which0 < 0 || which0 >= keys.size()) return;
-            final String[] key = keys.get(which0).split("\\|");
-            if ("batch".equals(key[0])) { startBatchExport("jpeg", "full"); return; }
-            if ("more".equals(key[0])) { showExportFormatSheet(); return; }
-            beginExport(key);
-        });
-    }
+    void showExportDialog() { ExportDialogs.showExportDialog(new ExportDialogsHostImpl(this)); }
 
     /**
      * The formats nobody meant to pick.
@@ -24531,30 +24405,7 @@ public class MainActivity extends Activity implements
      * tr("ui170.320") and tr("ui170.321") are neighbours produces
      * exactly the report this came from.
      */
-    private void showExportFormatSheet() {
-        final java.util.ArrayList<String> rows = new java.util.ArrayList<>();
-        final java.util.ArrayList<String> keys = new java.util.ArrayList<>();
-        if (isFotuStock(filmStock)) {
-            // The second engine writes linear light and nothing else -- no encoded
-            // 16-bit path, because a viewer that cannot read the ICC would show the
-            // raw light as a bright, washed picture.
-            rows.add(tr("ui170.322")); keys.add("fotu|tifflin|full");
-        } else {
-            rows.add(tr("ui170.323"));            keys.add("spk|tiff|preview");
-            rows.add(tr("file.16_bit_tiff_full_size"));           keys.add("spk|tiff|full");
-            rows.add(tr("ui170.324")); keys.add("spk|tifflin|full");
-            rows.add(tr("file.dng_full_size_desktop_only"));  keys.add("spk|dng|full");
-        }
-        showActionSheet(tr("ui170.325"),
-                tr("ui170.326")
-                        + "DNG 用手机版 Lightroom 打开会报错，那是 Adobe 的已知问题，不必反馈。\n"
-                        + tr("ui170.327")
-                        + tr("ui170.328"),
-                rows.toArray(new String[0]), which -> {
-                    if (which < 0 || which >= keys.size()) return;
-                    beginExport(keys.get(which).split("\\|"));
-                });
-    }
+    void showExportFormatSheet() { ExportDialogs.showExportFormatSheet(new ExportDialogsHostImpl(this)); }
 
     /**
      * One tap, one export -- and say which one.
@@ -24564,7 +24415,7 @@ public class MainActivity extends Activity implements
      * Naming the format and the size on screen is what turns a mis-tap into
      * "oh, that was TIFF" instead of a bug report.
      */
-    private void beginExport(String[] key) {
+    void beginExport(String[] key) {
         // **A second tap while the first is still rendering.** The row closes the
         // sheet immediately and the render runs for half a minute, so a tap that
         // did not appear to do anything gets repeated -- and both went through,
@@ -25629,7 +25480,7 @@ public class MainActivity extends Activity implements
         return probe;
     }
 
-    private int debugPixelCapMp() {
+    int debugPixelCapMp() {
         try {
             return getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).getInt(DEBUG_CAP_MP, 0);
         } catch (Throwable ignored) { return 0; }
@@ -25638,13 +25489,13 @@ public class MainActivity extends Activity implements
     /** The range the *running* engine was created with; 0 when not simulated. */
     private int appliedSimMib = 0;
 
-    private int debugStorageLimitMib() {
+    int debugStorageLimitMib() {
         try {
             return getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).getInt(DEBUG_SIM_MIB, 0);
         } catch (Throwable ignored) { return 0; }
     }
 
-    private void setDebugStorageLimitMib(int mib) {
+    void setDebugStorageLimitMib(int mib) {
         try {
             getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).edit().putInt(DEBUG_SIM_MIB, mib).apply();
         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:27550", ignored); }
@@ -25652,13 +25503,13 @@ public class MainActivity extends Activity implements
         catch (Throwable ignored) { Diagnostics.ignored("MainActivity:27552", ignored); }
     }
 
-    private int debugBandCap() {
+    int debugBandCap() {
         try {
             return getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).getInt(DEBUG_BAND_CAP, 0);
         } catch (Throwable ignored) { return 0; }
     }
 
-    private void setDebugBandCap(int elements) {
+    void setDebugBandCap(int elements) {
         try {
             getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).edit().putInt(DEBUG_BAND_CAP, elements).apply();
         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:27564", ignored); }
@@ -25666,7 +25517,7 @@ public class MainActivity extends Activity implements
         catch (Throwable ignored) { Diagnostics.ignored("MainActivity:27566", ignored); }
     }
 
-    private void setDebugPixelCapMp(int mp) {
+    void setDebugPixelCapMp(int mp) {
         try {
             getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).edit().putInt(DEBUG_CAP_MP, mp).apply();
         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:27572", ignored); }
@@ -25683,36 +25534,10 @@ public class MainActivity extends Activity implements
      * ceiling and the hard cap have had their say -- picking 50 MP on a phone
      * with 4.5 GB free legitimately lands at half that.
      */
-    void showPixelCapSheet() {
-        final int[] caps = {0, 20, 30, 40, 50};
-        final int[] sims = {0, 128, 256};
-        final int[] bands = {0, 16777216, 100000000};
-        final int currentCap = debugPixelCapMp();
-        final int currentSim = debugStorageLimitMib();
-        final int currentBand = debugBandCap();
-        final java.util.List<String> labels = new java.util.ArrayList<>();
-        for (int v : caps)
-            labels.add((v == currentCap ? "· " : "") + (v == 0 ? tr("import.pixel_cap_automatic") : tr("import.pixel_cap") + v + " MP"));
-        for (int v : sims)
-            labels.add((v == currentSim ? "· " : "") + (v == 0 ? tr("import.simulated_driver_buffer_limit_off") : tr("import.simulated_driver_buffer_limit") + v + " MiB"));
-        for (int v : bands)
-            labels.add((v == currentBand ? "· " : "") + (v == 0 ? tr("import.band_limit_engine_default_2m")
-                    : (v >= 100000000 ? tr("import.band_limit_off_one_band") : tr("import.band_limit") + (v / 1000000) + tr("import.m_elements"))));
-        final long memoryCap = DeviceProbe.maxPixelsByMemory(availableMemoryBytes());
-        final String note = tr("import.the_pixel_cap_only_affects")
-                + String.format(java.util.Locale.US, "%.0f", memoryCap / 1e6)
-                + tr("import.mp_and_the_hard_cap")
-                + tr("import.restart_the_app_to_apply");
-        showActionSheet(tr("settings.debug_pixel_cap_and_buffer"), note, labels.toArray(new String[0]), which -> {
-            if (which < caps.length) setDebugPixelCapMp(caps[which]);
-            else if (which < caps.length + sims.length) setDebugStorageLimitMib(sims[which - caps.length]);
-            else setDebugBandCap(bands[which - caps.length - sims.length]);
-            showAbout();
-        });
-    }
+    void showPixelCapSheet() { ExportDialogs.showPixelCapSheet(new ExportDialogsHostImpl(this)); }
 
     /** 「关于」现在是设置里的一页；这个名字留给所有旧调用点。 */
-    private void showAbout() { SettingsDialogs.showAbout(new SettingsDialogsHostImpl(this)); }
+    void showAbout() { SettingsDialogs.showAbout(new SettingsDialogsHostImpl(this)); }
 
     // ================================================================ 设置
     //
@@ -30495,7 +30320,7 @@ public class MainActivity extends Activity implements
     // =====================================================================
 
     /** A phone clip is already 1440 on its long edge; anything larger is downscaled. */
-    private static final int LIVE_CLIP_MAX_EDGE = 1440;
+    static final int LIVE_CLIP_MAX_EDGE = 1440;
     /**
      * 「原生」动图的上限：4K。
      *
@@ -30503,7 +30328,7 @@ public class MainActivity extends Activity implements
      * because H.264's level 5.1 tops out at 9.4 MP a frame and a phone encoder
      * that is handed 12 MP answers with silence, not an error.
      */
-    private static final int LIVE_CLIP_FULL_EDGE = 2160;
+    static final int LIVE_CLIP_FULL_EDGE = 2160;
 
     /** A carved-out clip waiting to be attached to the frame being imported. */
     public static final class LiveClip {
@@ -30557,7 +30382,7 @@ public class MainActivity extends Activity implements
 
     /** The clip of the frame on the canvas, or null when it has none. */
     /** The clip's own long edge, or 0 when it cannot be read. Cached per path. */
-    private int liveClipLongEdge(String path) {
+    int liveClipLongEdge(String path) {
         if (path == null) return 0;
         final Integer hit = liveClipDims.get(path);
         if (hit != null) return hit;
@@ -32132,7 +31957,7 @@ public class MainActivity extends Activity implements
      * balance and its meter, and a parallel path would drift from it. The cost
      * is that the canvas shows each frame as it is processed.
      */
-    private void startBatchExport(String format, String tier) {
+    void startBatchExport(String format, String tier) {
         new BatchExportWorker(this).run(format, tier);
     }
 
