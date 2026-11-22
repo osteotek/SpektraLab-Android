@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.Square;
 
 /** Narrow Activity surface for the ViewPages builders. Implemented by ViewPagesHostImpl. */
 public interface ViewPagesHost {
@@ -129,7 +130,7 @@ public interface ViewPagesHost {
     void showEffectTabHostCall(int a0);
     void syncSubRowActiveHostCall();
     void tintTextHostCall(android.widget.TextView a0, int a1, long a2);
-    void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, app.spektralab.MainActivity.Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5);
+    void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5);
     void toolHeaderHostCall(android.widget.LinearLayout a0, java.lang.String a1);
     int uiToggleOffViaHost();
     app.spektralab.MainActivity.ColorWheel newColorWheel();

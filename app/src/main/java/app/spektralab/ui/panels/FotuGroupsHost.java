@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.Square;
 
 /** Narrow Activity surface for the FotuGroups builders. Implemented by FotuGroupsHostImpl. */
 public interface FotuGroupsHost {
@@ -40,8 +41,8 @@ public interface FotuGroupsHost {
     void setFotuExpired(float value);
     boolean getFotuFilmGrain();
     void setFotuFilmGrain(boolean value);
-    app.spektralab.MainActivity.Square getFotuFilmGrainMark();
-    void setFotuFilmGrainMark(app.spektralab.MainActivity.Square value);
+    Square getFotuFilmGrainMark();
+    void setFotuFilmGrainMark(Square value);
     float getFotuFlare();
     void setFotuFlare(float value);
     float getFotuFringe();
@@ -84,8 +85,8 @@ public interface FotuGroupsHost {
     void setFotuHighlights(float value);
     float getFotuLocalTone();
     void setFotuLocalTone(float value);
-    app.spektralab.MainActivity.Square getFotuLocalToneMark();
-    void setFotuLocalToneMark(app.spektralab.MainActivity.Square value);
+    Square getFotuLocalToneMark();
+    void setFotuLocalToneMark(Square value);
     float getFotuMottle();
     void setFotuMottle(float value);
     float getFotuPreflash();
@@ -106,8 +107,8 @@ public interface FotuGroupsHost {
     void setFotuPrinterLamp(float value);
     float getFotuPrinterM();
     void setFotuPrinterM(float value);
-    app.spektralab.MainActivity.Square getFotuPrinterMark();
-    void setFotuPrinterMark(app.spektralab.MainActivity.Square value);
+    Square getFotuPrinterMark();
+    void setFotuPrinterMark(Square value);
     float getFotuPrinterPreflash();
     void setFotuPrinterPreflash(float value);
     float getFotuPrinterR();
@@ -116,8 +117,8 @@ public interface FotuGroupsHost {
     void setFotuPrinterY(float value);
     android.widget.TextView getFotuPushValue();
     void setFotuPushValue(android.widget.TextView value);
-    app.spektralab.MainActivity.Square getFotuRebateMark();
-    void setFotuRebateMark(app.spektralab.MainActivity.Square value);
+    Square getFotuRebateMark();
+    void setFotuRebateMark(Square value);
     java.util.List<java.lang.Runnable> getFotuRefreshers();
     float getFotuSaturation();
     void setFotuSaturation(float value);
@@ -136,8 +137,8 @@ public interface FotuGroupsHost {
     java.util.List<android.view.View> getGrainGated();
     java.lang.String getOverscanFormat();
     void setOverscanFormat(java.lang.String value);
-    app.spektralab.MainActivity.Square getOverscanMark();
-    void setOverscanMark(app.spektralab.MainActivity.Square value);
+    Square getOverscanMark();
+    void setOverscanMark(Square value);
     boolean getOverscanOn();
     void setOverscanOn(boolean value);
     android.graphics.Typeface getTfBody();
@@ -166,8 +167,8 @@ public interface FotuGroupsHost {
     void showFotuPushPickerHostCall();
     void syncSubRowActiveHostCall();
     void tintTextHostCall(android.widget.TextView a0, int a1, long a2);
-    void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, app.spektralab.MainActivity.Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5);
-    android.view.View toggleRowHostCall(java.lang.String a0, app.spektralab.MainActivity.Square a1, java.util.function.BooleanSupplier a2, java.util.function.Consumer<java.lang.Boolean> a3);
+    void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5);
+    android.view.View toggleRowHostCall(java.lang.String a0, Square a1, java.util.function.BooleanSupplier a2, java.util.function.Consumer<java.lang.Boolean> a3);
     int uiToggleOffViaHost();
     void underlineViaHost(android.widget.TextView a0, boolean a1);
     void runOnUiThreadHostCall(Runnable r);

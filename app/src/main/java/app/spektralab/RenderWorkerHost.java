@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.HistogramView;
 
 // Narrow Activity surface used by RenderWorker. Implemented by MainActivity.
 // Extracted in architecture Phase 2; maintained by hand from here on.
@@ -22,8 +23,8 @@ interface RenderWorkerHost {
     void setGeometryRotation(float value);
     int getGeometrySeq();
     void setGeometrySeq(int value);
-    app.spektralab.MainActivity.HistogramView getHistogram();
-    void setHistogram(app.spektralab.MainActivity.HistogramView value);
+    HistogramView getHistogram();
+    void setHistogram(HistogramView value);
     java.lang.String getLastImportError();
     void setLastImportError(java.lang.String value);
     android.graphics.Bitmap getLastRenderedBitmap();

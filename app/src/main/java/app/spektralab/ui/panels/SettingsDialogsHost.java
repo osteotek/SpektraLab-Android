@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.HistogramView;
 
 /** Narrow Activity surface for the SettingsDialogs builders. Implemented by SettingsDialogsHostImpl. */
 public interface SettingsDialogsHost {
@@ -19,8 +20,8 @@ public interface SettingsDialogsHost {
     void setUI_PAPER(int value);
     boolean getDarkTheme();
     void setDarkTheme(boolean value);
-    app.spektralab.MainActivity.HistogramView getHistogram();
-    void setHistogram(app.spektralab.MainActivity.HistogramView value);
+    HistogramView getHistogram();
+    void setHistogram(HistogramView value);
     boolean getHistogramOn();
     void setHistogramOn(boolean value);
     app.spektralab.DeviceProbe getProbe();

@@ -1,7 +1,7 @@
 package app.spektralab.ui;
+import app.spektralab.ui.HistogramView;
 
 import app.spektralab.ui.UiPalette;
-import app.spektralab.ui.HistogramView;
 
 public final class CurveView extends android.view.View {
         // **Room for the numbers.** The plot used to sit 10 dp from every edge,

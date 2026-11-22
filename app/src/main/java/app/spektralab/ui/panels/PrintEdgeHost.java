@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.Square;
 
 /** Narrow Activity surface for the PrintEdge builders. Implemented by PrintEdgeHostImpl. */
 public interface PrintEdgeHost {
@@ -66,8 +67,8 @@ public interface PrintEdgeHost {
     void setDateInsetY(float value);
     android.widget.SeekBar getDateInsetYBar();
     void setDateInsetYBar(android.widget.SeekBar value);
-    app.spektralab.MainActivity.Square getDateMark();
-    void setDateMark(app.spektralab.MainActivity.Square value);
+    Square getDateMark();
+    void setDateMark(Square value);
     boolean getDateOn();
     void setDateOn(boolean value);
     android.widget.LinearLayout getDatePage();
@@ -118,14 +119,14 @@ public interface PrintEdgeHost {
     void setEdgeRoot(android.widget.LinearLayout value);
     android.widget.LinearLayout getEdgeShapeRow();
     void setEdgeShapeRow(android.widget.LinearLayout value);
-    app.spektralab.MainActivity.Square getEdgeTextMark();
-    void setEdgeTextMark(app.spektralab.MainActivity.Square value);
+    Square getEdgeTextMark();
+    void setEdgeTextMark(Square value);
     boolean getEdgeTextOn();
     void setEdgeTextOn(boolean value);
     android.widget.TextView getEdgeValue();
     void setEdgeValue(android.widget.TextView value);
-    app.spektralab.MainActivity.Square getEdrMark();
-    void setEdrMark(app.spektralab.MainActivity.Square value);
+    Square getEdrMark();
+    void setEdrMark(Square value);
     float getEdrOn();
     void setEdrOn(float value);
     app.spektralab.engine.SpektraLabEngine getEngine();
@@ -144,13 +145,13 @@ public interface PrintEdgeHost {
     void setFrameSeed(int value);
     float getHueCorrection();
     void setHueCorrection(float value);
-    app.spektralab.MainActivity.Square getHueOwnMark();
-    void setHueOwnMark(app.spektralab.MainActivity.Square value);
+    Square getHueOwnMark();
+    void setHueOwnMark(Square value);
     java.util.List<android.view.View> getLatGated();
     java.lang.String getOverscanFormat();
     void setOverscanFormat(java.lang.String value);
-    app.spektralab.MainActivity.Square getOverscanMark();
-    void setOverscanMark(app.spektralab.MainActivity.Square value);
+    Square getOverscanMark();
+    void setOverscanMark(Square value);
     boolean getOverscanOn();
     void setOverscanOn(boolean value);
     boolean getOverscanPair();
@@ -167,8 +168,8 @@ public interface PrintEdgeHost {
     void setPairHighRoom(float value);
     android.widget.SeekBar getPairHighRoomBar();
     void setPairHighRoomBar(android.widget.SeekBar value);
-    app.spektralab.MainActivity.Square getPairMark();
-    void setPairMark(app.spektralab.MainActivity.Square value);
+    Square getPairMark();
+    void setPairMark(Square value);
     android.view.View getPairRow();
     void setPairRow(android.view.View value);
     float getPairShadowKnee();
@@ -185,8 +186,8 @@ public interface PrintEdgeHost {
     void setPairSplitBar(android.widget.SeekBar value);
     boolean getPairTone();
     void setPairTone(boolean value);
-    app.spektralab.MainActivity.Square getPairToneMark();
-    void setPairToneMark(app.spektralab.MainActivity.Square value);
+    Square getPairToneMark();
+    void setPairToneMark(Square value);
     float getPfFx();
     void setPfFx(float value);
     android.widget.SeekBar getPfFxBar();
@@ -218,8 +219,8 @@ public interface PrintEdgeHost {
     void setSession(app.spektralab.engine.SpektraLabEngine.Session value);
     boolean getShowingOriginal();
     void setShowingOriginal(boolean value);
-    app.spektralab.MainActivity.Square getSpotMark();
-    void setSpotMark(app.spektralab.MainActivity.Square value);
+    Square getSpotMark();
+    void setSpotMark(Square value);
     boolean getSpotOn();
     void setSpotOn(boolean value);
     android.graphics.Typeface getTfBody();
@@ -282,8 +283,8 @@ public interface PrintEdgeHost {
     void showInAppToastHostCall(java.lang.CharSequence a0);
     void showPfPickerHostCall();
     void syncSubRowActiveHostCall();
-    void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, app.spektralab.MainActivity.Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5);
-    android.view.View toggleRowHostCall(java.lang.String a0, app.spektralab.MainActivity.Square a1, java.util.function.BooleanSupplier a2, java.util.function.Consumer<java.lang.Boolean> a3);
+    void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5);
+    android.view.View toggleRowHostCall(java.lang.String a0, Square a1, java.util.function.BooleanSupplier a2, java.util.function.Consumer<java.lang.Boolean> a3);
     void turnByHostCall(int a0);
     int uiToggleOffViaHost();
     void runOnUiThreadHostCall(Runnable r);

@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.HistogramView;
 
 /** Plugin-free implementation of the panel host, kept out of MainActivity
  * so the Activity remains lifecycle + wiring only. */
@@ -9,8 +10,8 @@ final class PanelHostImpl implements app.spektralab.ui.panels.PanelHost {
     @Override public void openEdgePageHostCall(int a0) { activity.openEdgePageHostCall(a0); }
     @Override public app.spektralab.engine.SpektraLabEngine getEngine() { return activity.getEngine(); }
     @Override public void setEngine(app.spektralab.engine.SpektraLabEngine value) { activity.setEngine(value); }
-    @Override public app.spektralab.MainActivity.HistogramView getHistogram() { return activity.getHistogram(); }
-    @Override public void setHistogram(app.spektralab.MainActivity.HistogramView value) { activity.setHistogram(value); }
+    @Override public HistogramView getHistogram() { return activity.getHistogram(); }
+    @Override public void setHistogram(HistogramView value) { activity.setHistogram(value); }
     @Override public float getPrintExposure() { return activity.getPrintExposure(); }
     @Override public void setPrintExposure(float value) { activity.setPrintExposure(value); }
 

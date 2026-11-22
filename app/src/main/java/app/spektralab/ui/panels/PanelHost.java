@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.HistogramView;
 
 /** Narrow Activity surface used by the extracted 1.7.0 panel builders.
  * Implemented by MainActivity; maintained by hand after extraction. */
@@ -76,8 +77,8 @@ public interface PanelHost {
     void setHalationScatter(float value);
     float getHighlightRoom();
     void setHighlightRoom(float value);
-    app.spektralab.MainActivity.HistogramView getHistogram();
-    void setHistogram(app.spektralab.MainActivity.HistogramView value);
+    HistogramView getHistogram();
+    void setHistogram(HistogramView value);
     float getHlKnee();
     void setHlKnee(float value);
     boolean getHlManual();

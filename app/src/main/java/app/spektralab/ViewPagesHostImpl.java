@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.Square;
 
 /** Delegating implementation of ViewPagesHost. */
 final class ViewPagesHostImpl implements app.spektralab.ui.panels.ViewPagesHost {
@@ -132,7 +133,7 @@ final class ViewPagesHostImpl implements app.spektralab.ui.panels.ViewPagesHost 
     @Override public void showEffectTabHostCall(int a0) { activity.showEffectTab(a0); }
     @Override public void syncSubRowActiveHostCall() { activity.syncSubRowActive(); }
     @Override public void tintTextHostCall(android.widget.TextView a0, int a1, long a2) { activity.tintText(a0, a1, a2); }
-    @Override public void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, app.spektralab.MainActivity.Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5) { activity.toggleCell(a0, a1, a2, a3, a4, a5); }
+    @Override public void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5) { activity.toggleCell(a0, a1, a2, a3, a4, a5); }
     @Override public void toolHeaderHostCall(android.widget.LinearLayout a0, java.lang.String a1) { activity.toolHeader(a0, a1); }
     @Override public int uiToggleOffViaHost() { return activity.uiToggleOff(); }
     @Override public app.spektralab.MainActivity.ColorWheel newColorWheel() { return activity.new ColorWheel(); }

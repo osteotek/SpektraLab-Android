@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.Square;
 
 /** Delegating implementation of PrintEdgeHost. */
 final class PrintEdgeHostImpl implements app.spektralab.ui.panels.PrintEdgeHost {
@@ -69,8 +70,8 @@ final class PrintEdgeHostImpl implements app.spektralab.ui.panels.PrintEdgeHost 
     @Override public void setDateInsetY(float value) { activity.dateInsetY = value; }
     @Override public android.widget.SeekBar getDateInsetYBar() { return activity.dateInsetYBar; }
     @Override public void setDateInsetYBar(android.widget.SeekBar value) { activity.dateInsetYBar = value; }
-    @Override public app.spektralab.MainActivity.Square getDateMark() { return activity.dateMark; }
-    @Override public void setDateMark(app.spektralab.MainActivity.Square value) { activity.dateMark = value; }
+    @Override public Square getDateMark() { return activity.dateMark; }
+    @Override public void setDateMark(Square value) { activity.dateMark = value; }
     @Override public boolean getDateOn() { return activity.dateOn; }
     @Override public void setDateOn(boolean value) { activity.dateOn = value; }
     @Override public android.widget.LinearLayout getDatePage() { return activity.datePage; }
@@ -121,14 +122,14 @@ final class PrintEdgeHostImpl implements app.spektralab.ui.panels.PrintEdgeHost 
     @Override public void setEdgeRoot(android.widget.LinearLayout value) { activity.edgeRoot = value; }
     @Override public android.widget.LinearLayout getEdgeShapeRow() { return activity.edgeShapeRow; }
     @Override public void setEdgeShapeRow(android.widget.LinearLayout value) { activity.edgeShapeRow = value; }
-    @Override public app.spektralab.MainActivity.Square getEdgeTextMark() { return activity.edgeTextMark; }
-    @Override public void setEdgeTextMark(app.spektralab.MainActivity.Square value) { activity.edgeTextMark = value; }
+    @Override public Square getEdgeTextMark() { return activity.edgeTextMark; }
+    @Override public void setEdgeTextMark(Square value) { activity.edgeTextMark = value; }
     @Override public boolean getEdgeTextOn() { return activity.edgeTextOn; }
     @Override public void setEdgeTextOn(boolean value) { activity.edgeTextOn = value; }
     @Override public android.widget.TextView getEdgeValue() { return activity.edgeValue; }
     @Override public void setEdgeValue(android.widget.TextView value) { activity.edgeValue = value; }
-    @Override public app.spektralab.MainActivity.Square getEdrMark() { return activity.edrMark; }
-    @Override public void setEdrMark(app.spektralab.MainActivity.Square value) { activity.edrMark = value; }
+    @Override public Square getEdrMark() { return activity.edrMark; }
+    @Override public void setEdrMark(Square value) { activity.edrMark = value; }
     @Override public float getEdrOn() { return activity.edrOn; }
     @Override public void setEdrOn(float value) { activity.edrOn = value; }
     @Override public app.spektralab.engine.SpektraLabEngine getEngine() { return activity.engine; }
@@ -147,13 +148,13 @@ final class PrintEdgeHostImpl implements app.spektralab.ui.panels.PrintEdgeHost 
     @Override public void setFrameSeed(int value) { activity.frameSeed = value; }
     @Override public float getHueCorrection() { return activity.hueCorrection; }
     @Override public void setHueCorrection(float value) { activity.hueCorrection = value; }
-    @Override public app.spektralab.MainActivity.Square getHueOwnMark() { return activity.hueOwnMark; }
-    @Override public void setHueOwnMark(app.spektralab.MainActivity.Square value) { activity.hueOwnMark = value; }
+    @Override public Square getHueOwnMark() { return activity.hueOwnMark; }
+    @Override public void setHueOwnMark(Square value) { activity.hueOwnMark = value; }
     @Override public java.util.List<android.view.View> getLatGated() { return activity.latGated; }
     @Override public java.lang.String getOverscanFormat() { return activity.overscanFormat; }
     @Override public void setOverscanFormat(java.lang.String value) { activity.overscanFormat = value; }
-    @Override public app.spektralab.MainActivity.Square getOverscanMark() { return activity.overscanMark; }
-    @Override public void setOverscanMark(app.spektralab.MainActivity.Square value) { activity.overscanMark = value; }
+    @Override public Square getOverscanMark() { return activity.overscanMark; }
+    @Override public void setOverscanMark(Square value) { activity.overscanMark = value; }
     @Override public boolean getOverscanOn() { return activity.overscanOn; }
     @Override public void setOverscanOn(boolean value) { activity.overscanOn = value; }
     @Override public boolean getOverscanPair() { return activity.overscanPair; }
@@ -170,8 +171,8 @@ final class PrintEdgeHostImpl implements app.spektralab.ui.panels.PrintEdgeHost 
     @Override public void setPairHighRoom(float value) { activity.pairHighRoom = value; }
     @Override public android.widget.SeekBar getPairHighRoomBar() { return activity.pairHighRoomBar; }
     @Override public void setPairHighRoomBar(android.widget.SeekBar value) { activity.pairHighRoomBar = value; }
-    @Override public app.spektralab.MainActivity.Square getPairMark() { return activity.pairMark; }
-    @Override public void setPairMark(app.spektralab.MainActivity.Square value) { activity.pairMark = value; }
+    @Override public Square getPairMark() { return activity.pairMark; }
+    @Override public void setPairMark(Square value) { activity.pairMark = value; }
     @Override public android.view.View getPairRow() { return activity.pairRow; }
     @Override public void setPairRow(android.view.View value) { activity.pairRow = value; }
     @Override public float getPairShadowKnee() { return activity.pairShadowKnee; }
@@ -188,8 +189,8 @@ final class PrintEdgeHostImpl implements app.spektralab.ui.panels.PrintEdgeHost 
     @Override public void setPairSplitBar(android.widget.SeekBar value) { activity.pairSplitBar = value; }
     @Override public boolean getPairTone() { return activity.pairTone; }
     @Override public void setPairTone(boolean value) { activity.pairTone = value; }
-    @Override public app.spektralab.MainActivity.Square getPairToneMark() { return activity.pairToneMark; }
-    @Override public void setPairToneMark(app.spektralab.MainActivity.Square value) { activity.pairToneMark = value; }
+    @Override public Square getPairToneMark() { return activity.pairToneMark; }
+    @Override public void setPairToneMark(Square value) { activity.pairToneMark = value; }
     @Override public float getPfFx() { return activity.pfFx; }
     @Override public void setPfFx(float value) { activity.pfFx = value; }
     @Override public android.widget.SeekBar getPfFxBar() { return activity.pfFxBar; }
@@ -221,8 +222,8 @@ final class PrintEdgeHostImpl implements app.spektralab.ui.panels.PrintEdgeHost 
     @Override public void setSession(app.spektralab.engine.SpektraLabEngine.Session value) { activity.session = value; }
     @Override public boolean getShowingOriginal() { return activity.showingOriginal; }
     @Override public void setShowingOriginal(boolean value) { activity.showingOriginal = value; }
-    @Override public app.spektralab.MainActivity.Square getSpotMark() { return activity.spotMark; }
-    @Override public void setSpotMark(app.spektralab.MainActivity.Square value) { activity.spotMark = value; }
+    @Override public Square getSpotMark() { return activity.spotMark; }
+    @Override public void setSpotMark(Square value) { activity.spotMark = value; }
     @Override public boolean getSpotOn() { return activity.spotOn; }
     @Override public void setSpotOn(boolean value) { activity.spotOn = value; }
     @Override public android.graphics.Typeface getTfBody() { return activity.tfBody; }
@@ -285,8 +286,8 @@ final class PrintEdgeHostImpl implements app.spektralab.ui.panels.PrintEdgeHost 
     @Override public void showInAppToastHostCall(java.lang.CharSequence a0) { activity.showInAppToast(a0); }
     @Override public void showPfPickerHostCall() { activity.showPfPicker(); }
     @Override public void syncSubRowActiveHostCall() { activity.syncSubRowActive(); }
-    @Override public void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, app.spektralab.MainActivity.Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5) { activity.toggleCell(a0, a1, a2, a3, a4, a5); }
-    @Override public android.view.View toggleRowHostCall(java.lang.String a0, app.spektralab.MainActivity.Square a1, java.util.function.BooleanSupplier a2, java.util.function.Consumer<java.lang.Boolean> a3) { return activity.toggleRow(a0, a1, a2, a3); }
+    @Override public void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5) { activity.toggleCell(a0, a1, a2, a3, a4, a5); }
+    @Override public android.view.View toggleRowHostCall(java.lang.String a0, Square a1, java.util.function.BooleanSupplier a2, java.util.function.Consumer<java.lang.Boolean> a3) { return activity.toggleRow(a0, a1, a2, a3); }
     @Override public void turnByHostCall(int a0) { activity.turnBy(a0); }
     @Override public int uiToggleOffViaHost() { return activity.uiToggleOff(); }
     @Override public void runOnUiThreadHostCall(Runnable r) { activity.runOnUiThread(r); }

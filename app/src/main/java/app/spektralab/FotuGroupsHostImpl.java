@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.Square;
 
 /** Delegating implementation of FotuGroupsHost. */
 final class FotuGroupsHostImpl implements app.spektralab.ui.panels.FotuGroupsHost {
@@ -43,8 +44,8 @@ final class FotuGroupsHostImpl implements app.spektralab.ui.panels.FotuGroupsHos
     @Override public void setFotuExpired(float value) { activity.fotuExpired = value; }
     @Override public boolean getFotuFilmGrain() { return activity.fotuFilmGrain; }
     @Override public void setFotuFilmGrain(boolean value) { activity.fotuFilmGrain = value; }
-    @Override public app.spektralab.MainActivity.Square getFotuFilmGrainMark() { return activity.fotuFilmGrainMark; }
-    @Override public void setFotuFilmGrainMark(app.spektralab.MainActivity.Square value) { activity.fotuFilmGrainMark = value; }
+    @Override public Square getFotuFilmGrainMark() { return activity.fotuFilmGrainMark; }
+    @Override public void setFotuFilmGrainMark(Square value) { activity.fotuFilmGrainMark = value; }
     @Override public float getFotuFlare() { return activity.fotuFlare; }
     @Override public void setFotuFlare(float value) { activity.fotuFlare = value; }
     @Override public float getFotuFringe() { return activity.fotuFringe; }
@@ -87,8 +88,8 @@ final class FotuGroupsHostImpl implements app.spektralab.ui.panels.FotuGroupsHos
     @Override public void setFotuHighlights(float value) { activity.fotuHighlights = value; }
     @Override public float getFotuLocalTone() { return activity.fotuLocalTone; }
     @Override public void setFotuLocalTone(float value) { activity.fotuLocalTone = value; }
-    @Override public app.spektralab.MainActivity.Square getFotuLocalToneMark() { return activity.fotuLocalToneMark; }
-    @Override public void setFotuLocalToneMark(app.spektralab.MainActivity.Square value) { activity.fotuLocalToneMark = value; }
+    @Override public Square getFotuLocalToneMark() { return activity.fotuLocalToneMark; }
+    @Override public void setFotuLocalToneMark(Square value) { activity.fotuLocalToneMark = value; }
     @Override public float getFotuMottle() { return activity.fotuMottle; }
     @Override public void setFotuMottle(float value) { activity.fotuMottle = value; }
     @Override public float getFotuPreflash() { return activity.fotuPreflash; }
@@ -109,8 +110,8 @@ final class FotuGroupsHostImpl implements app.spektralab.ui.panels.FotuGroupsHos
     @Override public void setFotuPrinterLamp(float value) { activity.fotuPrinterLamp = value; }
     @Override public float getFotuPrinterM() { return activity.fotuPrinterM; }
     @Override public void setFotuPrinterM(float value) { activity.fotuPrinterM = value; }
-    @Override public app.spektralab.MainActivity.Square getFotuPrinterMark() { return activity.fotuPrinterMark; }
-    @Override public void setFotuPrinterMark(app.spektralab.MainActivity.Square value) { activity.fotuPrinterMark = value; }
+    @Override public Square getFotuPrinterMark() { return activity.fotuPrinterMark; }
+    @Override public void setFotuPrinterMark(Square value) { activity.fotuPrinterMark = value; }
     @Override public float getFotuPrinterPreflash() { return activity.fotuPrinterPreflash; }
     @Override public void setFotuPrinterPreflash(float value) { activity.fotuPrinterPreflash = value; }
     @Override public float getFotuPrinterR() { return activity.fotuPrinterR; }
@@ -119,8 +120,8 @@ final class FotuGroupsHostImpl implements app.spektralab.ui.panels.FotuGroupsHos
     @Override public void setFotuPrinterY(float value) { activity.fotuPrinterY = value; }
     @Override public android.widget.TextView getFotuPushValue() { return activity.fotuPushValue; }
     @Override public void setFotuPushValue(android.widget.TextView value) { activity.fotuPushValue = value; }
-    @Override public app.spektralab.MainActivity.Square getFotuRebateMark() { return activity.fotuRebateMark; }
-    @Override public void setFotuRebateMark(app.spektralab.MainActivity.Square value) { activity.fotuRebateMark = value; }
+    @Override public Square getFotuRebateMark() { return activity.fotuRebateMark; }
+    @Override public void setFotuRebateMark(Square value) { activity.fotuRebateMark = value; }
     @Override public java.util.List<java.lang.Runnable> getFotuRefreshers() { return activity.fotuRefreshers; }
     @Override public float getFotuSaturation() { return activity.fotuSaturation; }
     @Override public void setFotuSaturation(float value) { activity.fotuSaturation = value; }
@@ -139,8 +140,8 @@ final class FotuGroupsHostImpl implements app.spektralab.ui.panels.FotuGroupsHos
     @Override public java.util.List<android.view.View> getGrainGated() { return activity.grainGated; }
     @Override public java.lang.String getOverscanFormat() { return activity.overscanFormat; }
     @Override public void setOverscanFormat(java.lang.String value) { activity.overscanFormat = value; }
-    @Override public app.spektralab.MainActivity.Square getOverscanMark() { return activity.overscanMark; }
-    @Override public void setOverscanMark(app.spektralab.MainActivity.Square value) { activity.overscanMark = value; }
+    @Override public Square getOverscanMark() { return activity.overscanMark; }
+    @Override public void setOverscanMark(Square value) { activity.overscanMark = value; }
     @Override public boolean getOverscanOn() { return activity.overscanOn; }
     @Override public void setOverscanOn(boolean value) { activity.overscanOn = value; }
     @Override public android.graphics.Typeface getTfBody() { return activity.tfBody; }
@@ -169,8 +170,8 @@ final class FotuGroupsHostImpl implements app.spektralab.ui.panels.FotuGroupsHos
     @Override public void showFotuPushPickerHostCall() { activity.showFotuPushPicker(); }
     @Override public void syncSubRowActiveHostCall() { activity.syncSubRowActive(); }
     @Override public void tintTextHostCall(android.widget.TextView a0, int a1, long a2) { activity.tintText(a0, a1, a2); }
-    @Override public void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, app.spektralab.MainActivity.Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5) { activity.toggleCell(a0, a1, a2, a3, a4, a5); }
-    @Override public android.view.View toggleRowHostCall(java.lang.String a0, app.spektralab.MainActivity.Square a1, java.util.function.BooleanSupplier a2, java.util.function.Consumer<java.lang.Boolean> a3) { return activity.toggleRow(a0, a1, a2, a3); }
+    @Override public void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5) { activity.toggleCell(a0, a1, a2, a3, a4, a5); }
+    @Override public android.view.View toggleRowHostCall(java.lang.String a0, Square a1, java.util.function.BooleanSupplier a2, java.util.function.Consumer<java.lang.Boolean> a3) { return activity.toggleRow(a0, a1, a2, a3); }
     @Override public int uiToggleOffViaHost() { return activity.uiToggleOff(); }
     @Override public void underlineViaHost(android.widget.TextView a0, boolean a1) { activity.underline(a0, a1); }
     @Override public void runOnUiThreadHostCall(Runnable r) { activity.runOnUiThread(r); }

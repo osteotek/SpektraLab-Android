@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.HistogramView;
 
 /** Delegating implementation of SettingsDialogsHost. */
 final class SettingsDialogsHostImpl implements app.spektralab.ui.panels.SettingsDialogsHost {
@@ -22,8 +23,8 @@ final class SettingsDialogsHostImpl implements app.spektralab.ui.panels.Settings
     @Override public void setUI_PAPER(int value) { activity.UI_PAPER = value; }
     @Override public boolean getDarkTheme() { return activity.darkTheme; }
     @Override public void setDarkTheme(boolean value) { activity.darkTheme = value; }
-    @Override public app.spektralab.MainActivity.HistogramView getHistogram() { return activity.histogram; }
-    @Override public void setHistogram(app.spektralab.MainActivity.HistogramView value) { activity.histogram = value; }
+    @Override public HistogramView getHistogram() { return activity.histogram; }
+    @Override public void setHistogram(HistogramView value) { activity.histogram = value; }
     @Override public boolean getHistogramOn() { return activity.histogramOn; }
     @Override public void setHistogramOn(boolean value) { activity.histogramOn = value; }
     @Override public app.spektralab.DeviceProbe getProbe() { return activity.probe; }

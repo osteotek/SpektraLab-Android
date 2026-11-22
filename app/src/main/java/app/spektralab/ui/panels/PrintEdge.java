@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.Square;
 
 import static app.spektralab.AppLanguage.tr;
 import android.view.View;
@@ -7,7 +8,6 @@ import app.spektralab.DebugSink;
 import app.spektralab.Diagnostics;
 import app.spektralab.Probe;
 import app.spektralab.MainActivity.CappedScroll;
-import app.spektralab.MainActivity.Square;
 
 /** PrintEdge builders extracted from MainActivity (architecture Phase C). */
 public final class PrintEdge {
