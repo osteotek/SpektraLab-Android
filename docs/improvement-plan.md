@@ -31,6 +31,13 @@ Baseline measured at `1.6.2m (385)` on branch `feat/windows-debug-builds`:
   header, declarations, and implementations. External to this repository.
 - **Verification:** `python app/build/check-patch.py <upstream>` exits 0 and a
   clean checkout builds `libspektrafilm_engine.so` in CI.
+- **Progress (2026-11-22):** the source-build repair and upstream engine work
+  were merged into this branch; `check-patch.py` and the NDK build now pass and
+  the 18.6 MB source-built APK installs. **P0.1 stays open:** the source-built
+  engine rejects three wire parameters (`halation_additive`,
+  `halation_scatter_scale`, `hue_correction`) and rendering fails, so no
+  pixel-equivalence claim is made for that path. The prebuilt 1.6.2m payload
+  remains what ships. See [`repair-merge-plan.md`](repair-merge-plan.md).
 - **Effort / risk:** external dependency; no app-code risk.
 
 ### [ ] P0.2 — Real regression tests (partially done)

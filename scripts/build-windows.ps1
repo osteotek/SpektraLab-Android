@@ -60,14 +60,14 @@ if (!(Test-Path "$engine\engine\src\pipeline\tiling.hpp") -or
     throw 'Incomplete Android engine source (missing tiling.hpp or current JNI APIs). Supply a full patched checkout via -EngineCheckout, or use -UseReleaseNative for Java/UI work.'
 }
 
-$raw = "$BuildHome\LibRaw-0.22.2"
-if (!(Select-String -Quiet -SimpleMatch 'The stream says what it is' "$raw\src\metadata\tiff.cpp")) {
-    # git apply also works outside a repository; don't depend on GNU patch.
-    Push-Location $raw
-    try { git apply -p2 --ignore-space-change "$root\app\build\libraw-he-sniff.patch" }
-    finally { Pop-Location }
+# The engine now pins LibRaw master 42f89c16 (0.23.0-Snapshot202611). Its
+# verified tree already carries the HE/HE* stream sniff and the modern camera
+# tables, so the old 0.22.2 local patches must not be applied: setup-libraw.ps1
+# checks the tree byte for byte and would refuse a patched source.
+$raw = "$BuildHome\LibRaw-42f89c165763272a5482a254c446337f8048e0df"
+if (!(Test-Path -LiteralPath "$raw\src\libraw_c_api.cpp")) {
+    throw "Pinned LibRaw source missing: $raw. Run engine/setup-libraw.ps1 -DependencyDirectory $BuildHome first."
 }
-& $python "$root\app\build\libraw-new-cameras.py" "$raw\src\tables\colordata.cpp" | Out-Host
 $toolchain = @('-G', 'Ninja', "-DCMAKE_MAKE_PROGRAM=$BuildHome/ninja.exe",
     "-DCMAKE_TOOLCHAIN_FILE=$ndk/build/cmake/android.toolchain.cmake",
     '-DANDROID_ABI=arm64-v8a', '-DANDROID_PLATFORM=android-24',

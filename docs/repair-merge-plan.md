@@ -155,3 +155,34 @@ Validation performed in that dry-run tree:
 - Decide the `pinned_auto_exposure_ev` vs `camera.exposure_baseline_ev`
   reconciliation and the no-film wire field with device tests.
 - Re-evaluate the LibRaw 0.22.2 patch files once the master pin is proven.
+
+## 8. Implementation outcome (2026-11-22)
+
+Executed through Step 4. Results:
+
+- **Step 0/1:** both branches clean; plan doc committed (`fbb564d`);
+  `git merge --no-ff feat/source-build-repair` produced exactly one conflict
+  (`docs/source-build-repair-plan.md`, add/add) resolved by taking the repair
+  side of both hunks. The three auto-merges were verified semantically correct.
+- **Step 2:** `scripts/verify.ps1` → all PASS;
+  `scripts/verify.ps1 -EngineRoot <445e314 checkout>` → all PASS including
+  `check-patch` and the shimmed JNI compile; direct `check-patch.py` →
+  `113 patched files, 31 JNI spk_* calls all declared`. No conflict markers.
+- **Step 3:** the pinned LibRaw master tree was already present locally. A
+  source-native build from the merged patch produced
+  `SpektraLab-windows-debug-side-by-side.apk` (**18.6 MB**, signed), with all
+  new `spk_*` symbols exported (14 checked). `app/prebuilt/` was not touched.
+- **Step 4:** prebuilt side-by-side APK golden bands 0/128/512 =
+  `e0517f9ff1532b87` — unchanged. **The source-built APK fails the gate:**
+  it installs but rendering aborts with
+  `spektralab: unknown parameter 'halation_additive'`. A static comparison of
+  the 81 parameters Java sends against the merged engine's table finds three
+  unsupported names: `halation_additive`, `halation_scatter_scale`,
+  `hue_correction`. This is the deferred wire-semantics risk (§5.6), now
+  confirmed on device (emulator).
+
+**Decision per the plan:** the source-built path is marked **unvalidated**;
+the prebuilt 1.6.2m payload continues to ship. P0.1 remains open and links this
+plan. Wire compatibility (aliases or a Java mapping for the three parameters)
+is a follow-up requiring the physical-device equivalence baseline that was
+skipped in Phase 0.
