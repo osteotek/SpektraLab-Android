@@ -43,10 +43,10 @@ import app.spektralab.engine.SpektraLabEngine;
  * already swallows a missing sink, and none of these is on a per-pixel path:
  * the highest frequency is one line per gesture.
  */
-final class Probe {
+public final class Probe {
     private Probe() {}
 
-    static void log(String area, String body) {
+    public static void log(String area, String body) {
         try { DebugSink.text("probe-" + area, body); } catch (Throwable ignored) { }
     }
 

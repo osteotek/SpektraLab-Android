@@ -40,7 +40,7 @@ def main():
             code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', text, flags=re.S)
             code = re.sub(r'/\*.*?\*/|//[^\n]*', '', code, flags=re.S)
             for nested in ('Frame', 'Look', 'LiveClip', 'Knob', 'CappedScroll',
-                           'HistogramView', 'ColorWheel', 'CurveView', 'Square'):
+                           'HistogramView', 'ColorWheel', 'CurveView', 'Square', 'CropOverlay', 'RotateScale'):
                 code = code.replace('MainActivity.' + nested, nested)
             if re.search(r'\bMainActivity\b', code):
                 problems.append(f'{rel}: ui must not reference MainActivity directly')

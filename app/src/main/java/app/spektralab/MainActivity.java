@@ -41,6 +41,7 @@ import app.spektralab.ui.SheetDialogs;
 import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
+import app.spektralab.ui.panels.ComposePages;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -227,9 +228,9 @@ public class MainActivity extends Activity implements
     // geometry node -- never a second bitmap transform at export time.
     int geometryTurns = 0;
     /** 构图 page: which sub-page is showing (0 crop, 1 rotate). */
-    private int composeSubPage = 0;
+    int composeSubPage = 0;
     /** The crop card that is lit: -1 original, otherwise an EDGE_* index. */
-    private int cropRatioIndex = -1;
+    int cropRatioIndex = -1;
     // **A crop is a proposal until you press 应用.** Dragging the frame used
     // to write `geometry_crop_*` and render on release, which had two costs:
     // the picture changed under the frame you were still adjusting, and once
@@ -238,13 +239,13 @@ public class MainActivity extends Activity implements
     // sat off the image (tr("ui170.001")). So the frame edits these,
     // relative to whatever the canvas is showing right now, and 应用 folds
     // them into `geometryCrop*` once.
-    private float pendingCropX = 0f, pendingCropY = 0f, pendingCropW = 1f, pendingCropH = 1f;
-    private boolean geometryFlipH = false, geometryFlipV = false;
+    float pendingCropX = 0f, pendingCropY = 0f, pendingCropW = 1f, pendingCropH = 1f;
+    boolean geometryFlipH = false, geometryFlipV = false;
     LinearLayout composeBody;
     TextView composeCropTab, composeRotateTab;
     /** The ratio strip, kept so choosing a card does not scroll back to zero. */
-    private HorizontalScrollView cropScroll;
-    private int cropScrollX = 0;
+    HorizontalScrollView cropScroll;
+    int cropScrollX = 0;
     /** The before/after toggle, bottom-right of the canvas. */
     private TextView comparePill;
     /** The canvas itself, so a window-level pinch knows where the picture is. */
@@ -259,7 +260,7 @@ public class MainActivity extends Activity implements
     private float canvasPinchStartCx = 0f, canvasPinchStartCy = 0f;
     private float canvasPinchStartPanX = 0f, canvasPinchStartPanY = 0f;
     /** The draggable frame over the canvas, alive only on 构图 → 裁切. */
-    private CropOverlay cropOverlay;
+    CropOverlay cropOverlay;
     float geometryRotation = 0.0f;
     float geometryCropW = 1.0f, geometryCropH = 1.0f;
     float geometryCropX = 0.0f, geometryCropY = 0.0f;
@@ -275,7 +276,7 @@ public class MainActivity extends Activity implements
     /** The 构图 → 旋转 reference grid. On by default: the whole point of the
      *  dial is levelling a horizon, and without lines there is nothing to
      *  level against. */
-    private boolean rotateGridOn = true;
+    boolean rotateGridOn = true;
     RotateScale rotateArc;
     /** The committed angle when the finger went down: a failed render has to
      *  put the picture back where it was, not leave it turned in the numbers
@@ -1065,7 +1066,7 @@ public class MainActivity extends Activity implements
             pairShadowKneeBar, pairShadowRoomBar;
 
     /** 片边: the ten carriers the engine's overscan knows. */
-    private static String[] EDGE_LABELS = {
+    static String[] EDGE_LABELS = {
             tr("meter.35_mm_full_frame"), tr("meter.35_mm_half_frame"), "135 XPan", "645",
             "6×6", "6×7", "6×8", "6×9", "6×12", "6×17",
             "Super 35", tr("ui170.021"), "Super 8", tr("ui170.022"),
@@ -1089,8 +1090,8 @@ public class MainActivity extends Activity implements
      * they are <em>not</em> gates: nothing is printed on the film for them, so
      * they change the window only.
      */
-    private static final String[] PORTRAIT_LABELS = {"2:3", "3:4", "4:5"};
-    private static final float[] PORTRAIT_RATIOS = {2f / 3f, 3f / 4f, 4f / 5f};
+    static final String[] PORTRAIT_LABELS = {"2:3", "3:4", "4:5"};
+    static final float[] PORTRAIT_RATIOS = {2f / 3f, 3f / 4f, 4f / 5f};
     /**
      * The gate each portrait card is the portrait of.
      *
@@ -1101,7 +1102,7 @@ public class MainActivity extends Activity implements
      * across and the render succeeds.
      */
     private static final String[] PORTRAIT_GATES = {"135", "135_half", "120_6x7"};
-    private static final double[] EDGE_RATIOS = {
+    static final double[] EDGE_RATIOS = {
             36.25 / 24.3, 24.0 / 18.0, 65.0 / 24.0, 56.0 / 41.5,
             1.0, 69.5 / 56.0, 76.0 / 56.0, 84.0 / 56.0, 112.0 / 56.0, 168.0 / 56.0,
             24.92 / 18.67, 12.35 / 7.42, 5.79 / 4.01, 120.0 / 95.0,
@@ -1123,7 +1124,7 @@ public class MainActivity extends Activity implements
             24.92f, 12.35f, 5.79f, 120f, 62f, 62f, 99f};
     /** Each gate's frame as a ratio caption. Read off `EDGE_RATIOS`, rounded to
      *  what the eye calls it -- 69.5/56 is 1.241, and everyone says 5:4. */
-    private static final String[] EDGE_RATIO_LABELS = {
+    static final String[] EDGE_RATIO_LABELS = {
             "3:2", "4:3", "65:24", "4:3", "1:1", "5:4", "4:3", "3:2", "2:1", "3:1",
             "4:3", "5:3", "3:2", "5:4", "3:2", "1:1", "8:5"};
 
@@ -2853,7 +2854,7 @@ public class MainActivity extends Activity implements
     private long liveClipPtsUs = -1L;
     private LinearLayout originalAction;
     private ToolGlyph originalGlyph;
-    private int activeTabIndex = 0;
+    int activeTabIndex = 0;
     private boolean panelCollapsed = false;
     /** The shelf opens on 原图, never on a stock the user did not pick. */
     boolean showingOriginal = true;
@@ -15851,7 +15852,7 @@ public class MainActivity extends Activity implements
         return bg;
     }
 
-    private android.graphics.drawable.GradientDrawable cardBorder(boolean active) {
+    android.graphics.drawable.GradientDrawable cardBorder(boolean active) {
         android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
         bg.setColor(UI_GROUND);
         bg.setStroke(dp(1), active ? UI_BLUE : UI_LINE);
@@ -18750,7 +18751,7 @@ public class MainActivity extends Activity implements
         // which left nowhere to print an axis: the curve was a shape with no
         // scale, and "is this point at 128 or at 140" could only be guessed.
         // The left gutter carries the output axis, the bottom one the input.
-        private final int padL = dp(26), padR = dp(8), padT = dp(8), padB = dp(16);
+        final int padL = dp(26), padR = dp(8), padT = dp(8), padB = dp(16);
         private int dragging = -1;
 
         CurveView() { super(MainActivity.this); }
@@ -19618,159 +19619,22 @@ public class MainActivity extends Activity implements
         return tv;
     }
 
-    private static void underline(TextView tv, boolean on) {
+    static void underline(TextView tv, boolean on) {
         final int flags = tv.getPaintFlags();
         tv.setPaintFlags(on ? (flags | android.graphics.Paint.UNDERLINE_TEXT_FLAG)
                 : (flags & ~android.graphics.Paint.UNDERLINE_TEXT_FLAG));
     }
 
-     void showComposePage(int page) {
-        composeSubPage = page;
-        if (composeBody == null) return;
-        composeCropTab.setTextColor(page == 0 ? UI_INK : UI_MUTED);
-        composeRotateTab.setTextColor(page == 1 ? UI_INK : UI_MUTED);
-        underline(composeCropTab, page == 0);
-        underline(composeRotateTab, page == 1);
-        if (cropScroll != null) cropScrollX = cropScroll.getScrollX();
-        composeBody.removeAllViews();
-        if (page == 0) buildCropPage(); else buildRotatePage();
-        syncRotateGrid();
-        if (cropOverlay != null) {
-            // **Only while 构图 → 裁切 is the page in front.** The page is
-            // built during `onCreate`, long before `setTab` runs, so keying on
-            // `page == 0` alone left the frame drawn over every other page --
-            // which is exactly what tr("ui170.202") was.
-            final boolean show = activeTabIndex == 4 && page == 0;
-            cropOverlay.setVisibility(show ? View.VISIBLE : View.GONE);
-            if (show) {
-                cropOverlay.sync(pendingCropX, pendingCropY, pendingCropW, pendingCropH,
-                        cropAspectForSelection());
-            }
-        }
-    }
+    void showComposePage(int page) { ComposePages.showComposePage(new ComposePagesHostImpl(this), page); }
 
     /** The frame's own aspect, which is what tr("compose.original") means. */
-    private float originalAspect() {
+    float originalAspect() {
         final int w = importedWidth > 0 ? importedWidth : sourceWidth;
         final int h = importedHeight > 0 ? importedHeight : sourceHeight;
         return (w > 0 && h > 0) ? (float) w / h : 1.5f;
     }
 
-    private void buildCropPage() {
-        final HorizontalScrollView scroll = new HorizontalScrollView(this);
-        scroll.setHorizontalScrollBarEnabled(false);
-        scroll.setClipToPadding(false);
-        final LinearLayout strip = new LinearLayout(this);
-        strip.setOrientation(LinearLayout.HORIZONTAL);
-        // **Room for the border on the bottom edge.** The cards are 94 dp and
-        // the strip used to be 94 dp tall with a 10 dp top pad, so the bottom
-        // of every card -- and with it the selected card's outline -- was
-        // clipped away. The strip is as tall as its children plus both pads.
-        strip.setPadding(0, dp(8), 0, dp(6));
-
-        for (int i = -1; i < EDGE_LABELS.length; ++i) {
-            final int index = i;
-            final boolean original = i < 0;
-            final boolean active = cropRatioIndex == index;
-            final float ratio = original ? originalAspect() : (float) EDGE_RATIOS[i];
-
-            final LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
-            card.setBackground(cardBorder(active));
-            card.setPadding(dp(3), dp(6), dp(3), dp(4));
-
-            card.addView(new RatioMark(this, ratio, active ? UI_BLUE : UI_INK),
-                    new LinearLayout.LayoutParams(-1, dp(44)));
-
-            final TextView caption = label(original ? tr("compose.original") : EDGE_RATIO_LABELS[i],
-                    8.5f, active ? UI_INK : UI_MUTED, tfBody);
-            caption.setGravity(android.view.Gravity.CENTER);
-            card.addView(caption, new LinearLayout.LayoutParams(-1, -2));
-
-            final TextView gate = label(original ? tr("compose.full_frame") : EDGE_LABELS[i], 6.5f, UI_MUTED, tfHan);
-            gate.setGravity(android.view.Gravity.CENTER);
-            card.addView(gate, new LinearLayout.LayoutParams(-1, -2));
-
-            card.setOnClickListener(v -> applyCropRatio(index));
-            final LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(76), dp(94));
-            lp.rightMargin = dp(6);
-            strip.addView(card, lp);
-        }
-        for (int i = 0; i < PORTRAIT_RATIOS.length; ++i) {
-            final int index = EDGE_LABELS.length + i;
-            final boolean active = cropRatioIndex == index;
-            final float ratio = PORTRAIT_RATIOS[i];
-
-            final LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
-            card.setBackground(cardBorder(active));
-            card.setPadding(dp(3), dp(6), dp(3), dp(4));
-            card.addView(new RatioMark(this, ratio, active ? UI_BLUE : UI_INK),
-                    new LinearLayout.LayoutParams(-1, dp(44)));
-            final TextView caption = label(PORTRAIT_LABELS[i], 8.5f,
-                    active ? UI_INK : UI_MUTED, tfBody);
-            caption.setGravity(android.view.Gravity.CENTER);
-            card.addView(caption, new LinearLayout.LayoutParams(-1, -2));
-            final TextView gate = label(tr("compose.portrait"), 6.5f, UI_MUTED, tfHan);
-            gate.setGravity(android.view.Gravity.CENTER);
-            card.addView(gate, new LinearLayout.LayoutParams(-1, -2));
-
-            card.setOnClickListener(v -> applyCropRatio(index));
-            final LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(76), dp(94));
-            lp.rightMargin = dp(6);
-            strip.addView(card, lp);
-        }
-        scroll.addView(strip, new android.widget.FrameLayout.LayoutParams(-2, dp(108)));
-        cropScroll = scroll;
-        composeBody.addView(scroll, new LinearLayout.LayoutParams(-1, dp(108)));
-        // **Restore the scroll after layout, not before it.** `post` can run
-        // while the new strip is still unmeasured; `scrollTo` then clamps
-        // against a zero content width and the strip lands back on the first
-        // card. Picking one of the portrait ratios at the end of the strip
-        // therefore snapped to the start on every tap -- the tr("ui170.203") on the last
-        // few cards. `OnPreDraw` runs after measure/layout and before the
-        // frame is drawn, which is the first moment `scrollTo` means anything.
-        scroll.getViewTreeObserver().addOnPreDrawListener(
-                new android.view.ViewTreeObserver.OnPreDrawListener() {
-                    @Override public boolean onPreDraw() {
-                        scroll.getViewTreeObserver().removeOnPreDrawListener(this);
-                        scroll.scrollTo(cropScrollX, 0);
-                        Probe.log("crop", "scroll " + cropScrollX + " -> " + scroll.getScrollX());
-                        return true;
-                    }
-                });
-
-        final LinearLayout footRow = new LinearLayout(this);
-        footRow.setOrientation(LinearLayout.HORIZONTAL);
-        footRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        final TextView foot = label(cropSummary(), 8.5f, UI_MUTED, tfHan);
-        footRow.addView(foot, new LinearLayout.LayoutParams(0, -2, 1f));
-
-        // **Nothing happens to the picture until 应用.** 取消 throws the
-        // proposal away; the frame goes back to the whole canvas.
-        final TextView cancel = label(tr("editor.cancel"), 9, UI_MUTED, tfHan);
-        cancel.setGravity(android.view.Gravity.CENTER);
-        cancel.setBackground(cardBorder(false));
-        cancel.setOnClickListener(v -> {
-            pendingCropX = 0f; pendingCropY = 0f;
-            pendingCropW = 1f; pendingCropH = 1f;
-            cropRatioIndex = -1;
-            showComposePage(0);
-        });
-        final LinearLayout.LayoutParams cancelLp = new LinearLayout.LayoutParams(dp(58), dp(30));
-        cancelLp.rightMargin = dp(6);
-        footRow.addView(cancel, cancelLp);
-
-        final TextView apply = label(tr("compose.apply_crop"), 9, UI_BLUE, tfHan);
-        apply.setGravity(android.view.Gravity.CENTER);
-        apply.setBackground(cardBorder(true));
-        apply.setOnClickListener(v -> commitPendingCrop());
-        footRow.addView(apply, new LinearLayout.LayoutParams(dp(84), dp(30)));
-
-        composeBody.addView(footRow, new LinearLayout.LayoutParams(-1, dp(38)));
-    }
+    void buildCropPage() { ComposePages.buildCropPage(new ComposePagesHostImpl(this)); }
 
     private android.graphics.drawable.GradientDrawable comparePillBg(boolean on) {
         final android.graphics.drawable.GradientDrawable bg =
@@ -19801,7 +19665,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The picture-pixel ratio the drag is held to; 0 means free. */
-    private float cropAspectForSelection() {
+    float cropAspectForSelection() {
         if (cropRatioIndex >= EDGE_RATIOS.length
                 && cropRatioIndex < EDGE_RATIOS.length + PORTRAIT_RATIOS.length) {
             return PORTRAIT_RATIOS[cropRatioIndex - EDGE_RATIOS.length];
@@ -19810,7 +19674,7 @@ public class MainActivity extends Activity implements
                 ? (float) EDGE_RATIOS[cropRatioIndex] : 0f;
     }
 
-    private String cropSummary() {
+    String cropSummary() {
         if (pendingCropW >= 0.999f && pendingCropH >= 0.999f
                 && pendingCropX <= 0.001f && pendingCropY <= 0.001f) return tr("compose.full_frame_uncropped");
         return String.format(java.util.Locale.US, tr("compose.keep_0f_0f_scaled_by"),
@@ -19826,7 +19690,7 @@ public class MainActivity extends Activity implements
      * There is no free-drag box yet -- the four numbers can carry one, but the
      * gesture does not exist, and a card that promised one would be lying.
      */
-    private void applyCropRatio(int index) {
+    void applyCropRatio(int index) {
         cropRatioIndex = index;
         if (index < 0) {
             pendingCropW = 1f; pendingCropH = 1f;
@@ -19855,7 +19719,7 @@ public class MainActivity extends Activity implements
      * the canvas currently shows, which may itself already be a crop. Two
      * nested windows are one window in the original file's coordinates.
      */
-    private void commitPendingCrop() {
+    void commitPendingCrop() {
         if (pendingCropW >= 0.999f && pendingCropH >= 0.999f
                 && pendingCropX <= 0.001f && pendingCropY <= 0.001f) {
             showInAppToast(tr("compose.no_crop_applied"));
@@ -19905,64 +19769,10 @@ public class MainActivity extends Activity implements
         showComposePage(0);
     }
 
-    private void buildRotatePage() {
-        // **The gesture is on the picture; the scale is the readout.** This
-        // page used to make the finger turn a dial while the picture sat still,
-        // which is the wrong way round: 修偏 is done by watching the horizon.
-        final RotateScale arc = new RotateScale(this);
-        arc.setAngle(geometryRotation);
-        rotateArc = arc;
-        android.widget.FrameLayout arcBox = new android.widget.FrameLayout(this);
-        arcBox.addView(arc, new android.widget.FrameLayout.LayoutParams(-1, -1));
-        final TextView gridChip = label("", 8f, UI_BLUE, tfHan);
-        final Runnable paintChip = () -> gridChip.setText(rotateGridOn ? tr("compose.guides_on") : tr("compose.guides_off"));
-        paintChip.run();
-        gridChip.setPadding(dp(8), dp(4), dp(8), dp(4));
-        gridChip.setOnClickListener(v -> {
-            rotateGridOn = !rotateGridOn;
-            getSharedPreferences("ui", MODE_PRIVATE).edit()
-                    .putBoolean("rotate_grid", rotateGridOn).apply();
-            paintChip.run();
-            syncRotateGrid();
-        });
-        android.widget.FrameLayout.LayoutParams chipLp = new android.widget.FrameLayout.LayoutParams(
-                -2, -2, android.view.Gravity.TOP | android.view.Gravity.END);
-        chipLp.topMargin = 0;
-        chipLp.rightMargin = dp(6);
-        arcBox.addView(gridChip, chipLp);
-        composeBody.addView(arcBox, new LinearLayout.LayoutParams(-1, dp(70)));
-        final TextView tip = label(tr("compose.drag_the_dial_or_image"),
-                7.5f, UI_MUTED, tfHan);
-        tip.setGravity(android.view.Gravity.CENTER);
-        composeBody.addView(tip, new LinearLayout.LayoutParams(-1, dp(14)));
-
-        final LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(12), 0, 0);
-
-        final LinearLayout.LayoutParams cell = new LinearLayout.LayoutParams(0, -2, 1f);
-        row.addView(circleAction("↺", tr("compose.left_90"), () -> turnBy(-1)), cell);
-        row.addView(circleAction("↻", tr("compose.right_90"), () -> turnBy(1)),
-                new LinearLayout.LayoutParams(0, -2, 1f));
-        row.addView(circleAction("⇆", tr("compose.flip_horizontally"), () -> {
-            geometryFlipH = !geometryFlipH;
-            showComposePage(1);
-            commitCompose();
-        }), new LinearLayout.LayoutParams(0, -2, 1f));
-        row.addView(circleAction("⇅", tr("compose.flip_vertically"), () -> {
-            geometryFlipV = !geometryFlipV;
-            showComposePage(1);
-            commitCompose();
-        }), new LinearLayout.LayoutParams(0, -2, 1f));
-        composeBody.addView(row, new LinearLayout.LayoutParams(-1, -2));
-
-        // No footnote under the buttons: the tip above the scale already says
-        // what the gesture does, and this page is height-sensitive. (The old
-        // one here still said tr("ui170.205") three pages after the dial was removed.)
-    }
+    void buildRotatePage() { ComposePages.buildRotatePage(new ComposePagesHostImpl(this)); }
 
     /** The grid belongs to exactly one square inch of this app. */
-    private void syncRotateGrid() {
+    void syncRotateGrid() {
         if (compare == null) return;
         final boolean rotatePage = rotatePageLive();
         compare.setRotateMode(rotatePage);
@@ -20114,7 +19924,7 @@ public class MainActivity extends Activity implements
      * pixel is a fortieth of a degree. Level is a place, and the commit still
      * snaps to it (see `commitRotate`).
      */
-    final class RotateScale extends View {
+    public final class RotateScale extends View {
         /** Degrees of value the arc spans across its own width. */
         private static final float SPAN_DEG = 44f;
 
@@ -20134,7 +19944,7 @@ public class MainActivity extends Activity implements
             labelPaint.setTypeface(tfBody);
         }
 
-        void setAngle(float deg) {
+        public void setAngle(float deg) {
             if (Math.abs(angle - deg) < 0.005f) return;
             angle = deg;
             invalidate();
@@ -20247,7 +20057,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private View circleAction(String glyph, String caption, Runnable tap) {
+    View circleAction(String glyph, String caption, Runnable tap) {
         final LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
@@ -20270,13 +20080,13 @@ public class MainActivity extends Activity implements
         return box;
     }
 
-    private void turnBy(int direction) {
+    void turnBy(int direction) {
         geometryTurns = ((geometryTurns + direction) % 4 + 4) % 4;
         commitCompose();
     }
 
     /** One write, one render: every control on this page ends here. */
-    private void commitCompose() {
+    void commitCompose() {
         // **The gate list is a function of the shape being rendered.** A crop
         // or a quarter turn changes that shape, and until this call the list
         // (and therefore `overscanFormat`) still described the picture before
@@ -20343,7 +20153,7 @@ public class MainActivity extends Activity implements
      * <p>Everything is normalised to the picture, so it holds at any canvas
      * size -- the same numbers `geometry_crop_*` takes.
      */
-    private final class CropOverlay extends View {
+    public final class CropOverlay extends View {
         private final android.graphics.RectF image = new android.graphics.RectF();
         private float nx = 0f, ny = 0f, nw = 1f, nh = 1f;
         private float aspect = 0f;                 // picture w/h; 0 = free
@@ -20358,7 +20168,7 @@ public class MainActivity extends Activity implements
 
         CropOverlay() { super(MainActivity.this); }
 
-        void sync(float x, float y, float w, float h, float a) {
+        public void sync(float x, float y, float w, float h, float a) {
             nx = x; ny = y; nw = w; nh = h; aspect = a;
             invalidate();
         }
