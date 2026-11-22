@@ -14,6 +14,7 @@ contains `engine/`).  No files are modified.
 """
 
 from pathlib import Path
+import os
 import re
 import sys
 
@@ -58,12 +59,12 @@ def main(engine_root, patch_path):
     for target in targets:
         for inc in INCLUDE.findall('\n'.join(added_lines(patch, target))):
             here = (root / target).parent / inc
-            candidate = (Path(target).parent / inc).as_posix()
+            candidate = Path(os.path.normpath((Path(target).parent / inc).as_posix())).as_posix()
             # An include may be satisfied by a file the patch adds, by a file
             # already in the checkout, or by an engine-relative path with a
             # directory prefix (for example "gpu/gpu.hpp" from pipeline/).
             if (here.is_file() or candidate in added
-                    or any(a.name == inc or str(a).endswith('/' + inc) for a in added_paths)
+                    or any(a.name == inc or a.as_posix().endswith('/' + inc) for a in added_paths)
                     or any(p.as_posix().endswith('/' + inc) or p.name == inc
                            for p in (root / 'engine').rglob(inc))):
                 continue

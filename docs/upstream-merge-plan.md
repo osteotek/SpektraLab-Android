@@ -132,16 +132,23 @@ Triage completed 2026-11-22 against `Windows_Linux_v2` tip `f87c5212`:
 **Gate 2:** all three pass; JNI symbol count unchanged.
 
 **Progress (2026-11-22):** Phase 0 was explicitly skipped by the operator; no
-physical-device equivalence baseline was recorded. Cherry-picked into a temp
-engine tree: `0cc25987` (DI/headroom test probes), `dc440a34` (C++ standard),
-`7766b847` (`meter_frame` rename) and `53299f73` (Vulkan device-lost guard).
-`dcdab292` was skipped: after conflict resolution it was empty because our
-`out->owner` line was preserved. Conflicts in `engine/CMakeLists.txt` and
-`vulkan_gpu.cpp` were resolved by keeping our banded dispatch and `host_storage`
-exclusion while adding the upstream device checks. The regenerated patch has
-**63 sections**, applies cleanly to `445e314`, passes `check-patch.py`, and the
-NDK/CMake build of `libspektrafilm_engine.so` succeeds. No pixel-equivalence
-claim is made because Phase 0 was skipped.
+physical-device equivalence baseline was recorded.
+
+- Phase 2: `0cc25987`, `dc440a34`, `7766b847`, `53299f73`. `dcdab292` was empty
+  after conflict resolution and skipped.
+- Phases 3–4: all remaining non-merge deferred commits were cherry-picked —
+  `3fbd9bd3` (memory peaks), `61f79d2b` (no-film precision), `8cd9992c` and
+  `2ca735ad` (RAW/wire), plus the Windows/doc/test commits. Conflicts were
+  resolved by keeping our banded dispatch, `host_storage` exclusion, `out->owner` &&
+  half-size decode while adding upstream's device-loss, memory-pressure and
+  precision changes. Desktop-only conflicts were resolved with the upstream side.
+- **`61aee26d`/`c59d0c2a` (LibRaw master) and `b5467e83` (ARW6 overlay) were
+  reverted.** They require LibRaw `42f89c16` and an overlay absent from this
+  fork's pinned LibRaw 0.22.2; keeping them broke the NDK CMake configure. This
+  dependency upgrade is a separate workstream.
+- Final patch: **89 engine sections**, applies cleanly to `445e314`, passes
+  `check-patch.py`, and the NDK/CMake build of `libspektrafilm_engine.so`
+  succeeds. No pixel-equivalence claim is made because Phase 0 was skipped.
 
 ### Phase 3 — Reconcile the memory work (`3fbd9bd3`)
 
