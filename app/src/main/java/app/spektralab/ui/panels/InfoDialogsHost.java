@@ -1,0 +1,50 @@
+package app.spektralab.ui.panels;
+
+/** Narrow Activity surface for the InfoDialogs builders. Implemented by InfoDialogsHostImpl. */
+public interface InfoDialogsHost {
+    int getUI_INK();
+    void setUI_INK(int value);
+    int getUI_LINE();
+    void setUI_LINE(int value);
+    int getUI_PAPER();
+    void setUI_PAPER(int value);
+    java.util.List<app.spektralab.MainActivity.AlbumEntry> getAlbum();
+    java.util.List<java.lang.String> getFilmIds();
+    java.lang.String getFilmStock();
+    void setFilmStock(java.lang.String value);
+    android.widget.TextView getLightFilmValue();
+    void setLightFilmValue(android.widget.TextView value);
+    android.widget.LinearLayout getLightInfo();
+    void setLightInfo(android.widget.LinearLayout value);
+    android.widget.TextView getLightInfoFile();
+    void setLightInfoFile(android.widget.TextView value);
+    java.lang.String getLightInfoKey();
+    void setLightInfoKey(java.lang.String value);
+    android.widget.TextView getLightInfoMeta();
+    void setLightInfoMeta(android.widget.TextView value);
+    android.widget.TextView getLightPaperValue();
+    void setLightPaperValue(android.widget.TextView value);
+    android.animation.ValueAnimator getNoteAnim();
+    void setNoteAnim(android.animation.ValueAnimator value);
+    android.widget.PopupWindow getNotePopup();
+    void setNotePopup(android.widget.PopupWindow value);
+    boolean getShowingOriginal();
+    void setShowingOriginal(boolean value);
+    android.graphics.Typeface getTfHan();
+    void setTfHan(android.graphics.Typeface value);
+    boolean cardShowsStockViaHost(java.lang.String a0, java.lang.String a1);
+    void componentArrivalHostCall(android.view.View a0);
+    int[] dimsOfHostCall(java.lang.String a0);
+    int dpHostCall(float a0);
+    java.lang.String idFromPrettyHostCall(java.lang.String a0, boolean a1);
+    boolean isFotuStockViaHost(java.lang.String a0);
+    android.widget.TextView labelHostCall(java.lang.String a0, float a1, int a2, android.graphics.Typeface a3);
+    void markFileViaHost(java.lang.String a0);
+    java.lang.String ratioViaHost(java.lang.String a0);
+    void selectFotuStockHostCall(java.lang.String a0);
+    void selectSpkStockHostCall(java.lang.String a0, int a1);
+    void showChoiceSheetHostCall(java.lang.String a0, java.util.List<java.lang.String> a1, java.lang.String a2, java.util.function.Consumer<java.lang.String> a3);
+    void showChoiceSheetHostCall(java.lang.String a0, java.util.List<java.lang.String> a1, java.util.List<java.lang.String> a2, java.lang.String a3, java.util.function.IntPredicate a4, java.util.function.Consumer<java.lang.String> a5);
+    void typeNoteHostCall(android.widget.TextView a0, java.lang.String a1);
+    android.content.Context context();
+}

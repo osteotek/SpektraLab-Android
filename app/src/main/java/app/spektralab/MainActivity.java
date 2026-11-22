@@ -42,6 +42,7 @@ import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
+import app.spektralab.ui.panels.InfoDialogs;
 import app.spektralab.ui.panels.ExportDialogs;
 import app.spektralab.ui.panels.PresetDialogs;
 import app.spektralab.ui.panels.PickerSheets;
@@ -4935,40 +4936,7 @@ public class MainActivity extends Activity implements
      * by character and never shows an inverse block (the text is Chinese, and
      * the upstream effect types Chinese character by character too).
      */
-    private void showNote(final View anchor, final String text) {
-        if (notePopup != null) {
-            try { notePopup.dismiss(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:4829", ignored); }
-            notePopup = null;
-        }
-        final TextView body = label("", 9, UI_INK, tfHan);
-        body.setLineSpacing(dp(5), 1f);
-        final LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(14), dp(11), dp(14), dp(13));
-        final android.graphics.drawable.GradientDrawable bg =
-                new android.graphics.drawable.GradientDrawable();
-        bg.setColor(UI_PAPER);
-        // **Square.** A rounded card here was the only rounded rectangle in a
-        // screen built out of right angles -- the toggle cells, the chips and
-        // the panel all meet at 90 degrees.
-        bg.setCornerRadius(0f);
-        bg.setStroke(dp(1), UI_LINE);
-        card.setBackground(bg);
-        card.addView(body, new LinearLayout.LayoutParams(-1, -2));
-        final int width = Math.min(Math.round(getResources().getConfiguration().screenWidthDp
-                * getResources().getDisplayMetrics().density * 0.74f), dp(330));
-        final android.widget.PopupWindow pw = new android.widget.PopupWindow(card, width,
-                android.view.ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        pw.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
-        pw.setOutsideTouchable(true);
-        try { pw.setElevation(dp(8)); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:4853", ignored); }
-        pw.setOnDismissListener(() -> {
-            if (noteAnim != null) { noteAnim.cancel(); noteAnim = null; }
-        });
-        notePopup = pw;
-        pw.showAsDropDown(anchor, -dp(6), dp(3));
-        body.post(() -> typeNote(body, text));
-    }
+    void showNote(final View anchor, final String text) { InfoDialogs.showNote(new InfoDialogsHostImpl(this), anchor, text); }
 
     /**
      * Reveal a paragraph the same way the panel types its labels.
@@ -4978,7 +4946,7 @@ public class MainActivity extends Activity implements
      * panel's own -- the inverse block travels over the word being read, which
      * is the part of this effect people recognise.
      */
-    private void typeNote(final TextView tv, final String plain) {
+    void typeNote(final TextView tv, final String plain) {
         if (noteAnim != null) { noteAnim.cancel(); noteAnim = null; }
         tv.setText(new android.text.SpannableString(plain),
                 android.widget.TextView.BufferType.SPANNABLE);
@@ -5731,18 +5699,18 @@ public class MainActivity extends Activity implements
 
     private LightDesk lightDesk;
     /** What the frame under the lens is: the typed EXIF line and the two cards. */
-    private LinearLayout lightInfo;
-    private TextView lightInfoMeta, lightInfoFile;
-    private TextView lightFilmValue, lightPaperValue;
-    private String lightInfoKey;
+    LinearLayout lightInfo;
+    TextView lightInfoMeta, lightInfoFile;
+    TextView lightFilmValue, lightPaperValue;
+    String lightInfoKey;
     private int lightIndex = -1;
     private int albumGen = 0;
 
     /** One row of the app's album: a file that was exported successfully. */
-    private static final class AlbumEntry {
-        final android.net.Uri uri;
-        final String name;
-        final long added;
+    public static final class AlbumEntry {
+        public final android.net.Uri uri;
+        public final String name;
+        public final long added;
 
         AlbumEntry(android.net.Uri uri, String name, long added) {
             this.uri = uri;
@@ -5750,10 +5718,10 @@ public class MainActivity extends Activity implements
             this.added = added;
         }
 
-        String key() { return uri.toString(); }
+        public String key() { return uri.toString(); }
     }
 
-    private final java.util.List<AlbumEntry> album = new java.util.ArrayList<>();
+    final java.util.List<AlbumEntry> album = new java.util.ArrayList<>();
 
     /** Decoded prints, keyed by uri, newest-used-last; ALBUM_MAX of them at most. */
     /**
@@ -11491,7 +11459,7 @@ public class MainActivity extends Activity implements
         return card;
     }
 
-    private String idFromPretty(String pretty, boolean paper) {
+    String idFromPretty(String pretty, boolean paper) {
         if (pretty == null || pretty.isEmpty()) return "";
         final java.util.List<String> ids = paper ? printIds : filmIds;
         for (String id : ids) {
@@ -11579,7 +11547,7 @@ public class MainActivity extends Activity implements
     /** Real pixel size of an exported file, decoded once and kept. */
     private final java.util.HashMap<String, int[]> photoDims = new java.util.HashMap<>();
 
-    private int[] dimsOf(String path) {
+    int[] dimsOf(String path) {
         if (path == null) return null;
         final int[] cached = photoDims.get(path);
         if (cached != null) return cached;
@@ -11598,7 +11566,7 @@ public class MainActivity extends Activity implements
     }
 
     /** `28/10` -> `2.8`, `500/10` -> `50`, `1/2000` kept as it reads. */
-    private static String ratio(String raw) {
+    static String ratio(String raw) {
         if (raw == null) return "";
         final String v = raw.trim();
         if (v.isEmpty()) return "";
@@ -11631,132 +11599,7 @@ public class MainActivity extends Activity implements
      * camera, lens, focal length, aperture, shutter, ISO, time. A field the file
      * does not have is left out rather than invented.
      */
-    private void showInfoFor(final int index) {
-        if (lightInfo == null || index < 0 || index >= album.size()) return;
-        final AlbumEntry e = album.get(index);
-        if (e.key().equals(lightInfoKey)) return;
-        lightInfoKey = e.key();
-
-        final java.io.File f = "file".equals(e.uri.getScheme())
-                ? new java.io.File(e.uri.getPath()) : null;
-        final String path = f == null ? null : f.getAbsolutePath();
-
-        // ---- the EXIF line: only what is in the file
-        final StringBuilder meta = new StringBuilder();
-        if (path != null) {
-            try {
-                final android.media.ExifInterface ex = new android.media.ExifInterface(path);
-                final String make = ex.getAttribute(android.media.ExifInterface.TAG_MAKE);
-                final String model = ex.getAttribute(android.media.ExifInterface.TAG_MODEL);
-                if (model != null && !model.trim().isEmpty()) {
-                    String cam = model.trim();
-                    if (make != null && !make.trim().isEmpty()
-                            && !cam.toLowerCase(java.util.Locale.US)
-                            .startsWith(make.trim().toLowerCase(java.util.Locale.US))) {
-                        cam = make.trim() + " " + cam;
-                    }
-                    meta.append(cam);
-                }
-                final String lens = ex.getAttribute("LensModel");
-                if (lens != null && !lens.trim().isEmpty()) {
-                    meta.append(meta.length() > 0 ? "  ·  " : "").append(lens.trim());
-                }
-                final String focal = ratio(ex.getAttribute(
-                        android.media.ExifInterface.TAG_FOCAL_LENGTH));
-                if (!focal.isEmpty()) {
-                    meta.append(meta.length() > 0 ? "  ·  " : "").append(focal).append(" mm");
-                }
-                final String fnum = ratio(ex.getAttribute(
-                        android.media.ExifInterface.TAG_F_NUMBER));
-                if (!fnum.isEmpty()) {
-                    meta.append(meta.length() > 0 ? "  ·  " : "").append("f/").append(fnum);
-                }
-                final String shutter = ex.getAttribute(
-                        android.media.ExifInterface.TAG_EXPOSURE_TIME);
-                if (shutter != null && !shutter.trim().isEmpty()) {
-                    final String sv = shutter.trim();
-                    final String shown = sv.indexOf('/') > 0 ? sv : ratio(sv) + " s";
-                    meta.append(meta.length() > 0 ? "  ·  " : "").append(shown);
-                }
-                final int iso = ex.getAttributeInt("PhotographicSensitivity", 0);
-                if (iso > 0) {
-                    meta.append(meta.length() > 0 ? "  ·  " : "").append("ISO ").append(iso);
-                }
-                final String taken = ex.getAttribute(
-                        android.media.ExifInterface.TAG_DATETIME_ORIGINAL);
-                if (taken != null && taken.length() >= 10) {
-                    meta.append(meta.length() > 0 ? "  ·  " : "")
-                            .append(taken.substring(0, 10).replace(':', '.'));
-                }
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:11580", ignored); }
-        }
-        // What the file does not carry, the exporter wrote down while it still
-        // knew the frame: the same photograph's own numbers, just not in the JPEG.
-        final String rec = getSharedPreferences("ui", MODE_PRIVATE)
-                .getString("exp_" + e.name, null);
-        String film = "", paper = "";
-        if (rec != null) {
-            final String[] p = rec.split("\\|", -1);
-            film = p.length > 0 ? p[0] : "";
-            paper = p.length > 1 ? p[1] : "";
-            if (meta.length() == 0) {
-                final StringBuilder more = new StringBuilder();
-                if (p.length > 2 && !p[2].isEmpty()) more.append(p[2]);
-                if (p.length > 3 && !p[3].isEmpty()) {
-                    more.append(more.length() > 0 ? "  ·  " : "").append(p[3]).append(" mm");
-                }
-                if (p.length > 4 && !p[4].isEmpty()) {
-                    more.append(more.length() > 0 ? "  ·  " : "").append("f/").append(p[4]);
-                }
-                if (p.length > 5 && !p[5].isEmpty()) {
-                    more.append(more.length() > 0 ? "  ·  " : "").append(p[5]);
-                }
-                if (p.length > 6 && !p[6].isEmpty() && !"0".equals(p[6])) {
-                    more.append(more.length() > 0 ? "  ·  " : "").append("ISO ").append(p[6]);
-                }
-                meta.append(more);
-            }
-        }
-        final String metaText = meta.length() > 0 ? meta.toString() : e.name;
-
-        // ---- the second line: the file's own pixel size, weight, and mtime
-        final StringBuilder line = new StringBuilder();
-        final int[] dims = dimsOf(path);
-        if (dims != null) {
-            line.append(dims[0]).append(" × ").append(dims[1]);
-        }
-        if (f != null && f.isFile()) {
-            if (line.length() > 0) line.append("  ·  ");
-            line.append(String.format(java.util.Locale.US, "%.1f MB", f.length() / 1048576.0));
-            line.append("  ·  ").append(new java.text.SimpleDateFormat("yyyy.MM.dd HH:mm",
-                    java.util.Locale.US).format(new java.util.Date(f.lastModified())));
-        }
-        if (line.length() == 0) line.append(e.name);
-
-        lightInfoMeta.setText(metaText);
-        lightInfoFile.setText(line.toString());
-        try { typeNote(lightInfoMeta, metaText); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:11627", ignored); }
-
-        // ---- the two cards, from what the exporter wrote down
-        String filmId = "", paperId = "";
-        if (rec != null) {
-            final String[] p2 = rec.split("\\|", -1);
-            filmId = p2.length > 7 ? p2[7] : "";
-            paperId = p2.length > 8 ? p2[8] : "";
-        }
-        if (filmId.isEmpty()) filmId = idFromPretty(film, false);
-        if (paperId.isEmpty()) paperId = idFromPretty(paper, true);
-
-        lightFilmValue.setText(film.isEmpty() ? "—" : film);
-
-        lightPaperValue.setText(paper.isEmpty() ? "—" : paper);
-
-        markFile("info: " + e.name + " rec=" + rec);
-
-        lightInfo.setVisibility(View.VISIBLE);
-        lightInfo.animate().alpha(1f).setDuration(240).start();
-        try { componentArrival(lightInfo); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:11647", ignored); }
-    }
+    void showInfoFor(final int index) { InfoDialogs.showInfoFor(new InfoDialogsHostImpl(this), index); }
 
     private void hideInfo() {
         if (lightInfo == null) return;
@@ -15935,7 +15778,7 @@ public class MainActivity extends Activity implements
 
     /** Is this card the one standing for `stock`? A merged card answers yes for
      *  either engine -- the border marks the film, not the renderer. */
-    private static boolean cardShowsStock(String cardId, String stock) {
+    static boolean cardShowsStock(String cardId, String stock) {
         if (cardId == null || stock == null) return false;
         if (cardId.equals(stock)) return true;
         if (!stock.startsWith(FotuFilm.PREFIX)) return false;
@@ -16729,27 +16572,12 @@ public class MainActivity extends Activity implements
      * and prints through twelve media. Marking the engine already in use means
      * opening the sheet a second time says where the frame stands.
      */
-    private void showEngineChooser(final String spkId, final String fotuId) {
-        final List<String> labels = new ArrayList<>();
-        labels.add(tr("ui170.091"));
-        labels.add(tr("ui170.092"));
-        final List<String> notes = new ArrayList<>();
-        notes.add(tr("ui170.093"));
-        notes.add(tr("ui170.094"));
-        String current = null;
-        if (!showingOriginal && cardShowsStock(spkId, filmStock)) {
-            current = isFotuStock(filmStock) ? labels.get(1) : labels.get(0);
-        }
-        showChoiceSheet(tr("ui170.095"), labels, notes, current, i -> true, picked -> {
-            if (labels.get(1).equals(picked)) selectFotuStock(FotuFilm.PREFIX + fotuId);
-            else selectSpkStock(spkId, filmIds.indexOf(spkId));
-        });
-    }
+    void showEngineChooser(final String spkId, final String fotuId) { InfoDialogs.showEngineChooser(new InfoDialogsHostImpl(this), spkId, fotuId); }
 
     /** A stock of the second engine. Its medium list is not the first engine's
      *  paper list, so a stale paper id has to be replaced before the first
      *  render or the skeleton lookup fails. */
-    private void selectFotuStock(String id) {
+    void selectFotuStock(String id) {
         filmStock = id;
         // **Picking a film retries the source.** `fotuSourceDead` remembers a
         // failed copy so twenty-three shelf cards do not each pay for it; an
@@ -16770,7 +16598,7 @@ public class MainActivity extends Activity implements
     }
 
     /** A stock of the first engine. */
-    private void selectSpkStock(String id, int index) {
+    void selectSpkStock(String id, int index) {
         if (index < 0 || index >= filmIds.size()) {
             index = filmIds.indexOf(id);
             if (index < 0) return;
@@ -30156,8 +29984,8 @@ public class MainActivity extends Activity implements
     private java.util.List<CharSequence> typeOriginals;
     private android.animation.ValueAnimator typeAnim;
     /** The note popup's own typing run, so it cannot fight the panel's. */
-    private android.animation.ValueAnimator noteAnim;
-    private android.widget.PopupWindow notePopup;
+    android.animation.ValueAnimator noteAnim;
+    android.widget.PopupWindow notePopup;
     private int typeAt;
     /**
      * Per label, the three spans a moment is expressed with: a transparent one
