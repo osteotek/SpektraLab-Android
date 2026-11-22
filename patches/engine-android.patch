@@ -934,10 +934,40 @@ index 8d6b100..7ed3982 100644
      int fused_fma_ = -1;
      bool math_checked_ = false;
 diff --git a/engine/src/io/raw_decoder.cpp b/engine/src/io/raw_decoder.cpp
-index 1f55a69..f8ae0be 100644
+index 1f55a69..a0ed9b9 100644
 --- a/engine/src/io/raw_decoder.cpp
 +++ b/engine/src/io/raw_decoder.cpp
-@@ -289,7 +289,7 @@ bool decode_raw_compatible(const std::filesystem::path& source,
+@@ -7,6 +7,10 @@
+ #include <charconv>
+ #include <chrono>
+ #include <cmath>
++#include <ctime>
++#include <fstream>
++#include <iomanip>
++#include <sstream>
+ #include <cstring>
+ #include <cstdlib>
+ #include <exception>
+@@ -163,6 +167,18 @@ bool capture_source_metadata(const LibRaw& raw, RawMetadata& metadata,
+                          std::find(std::begin(data.idata.make), std::end(data.idata.make), '\0'));
+     metadata.model.assign(data.idata.model,
+                           std::find(std::begin(data.idata.model), std::end(data.idata.model), '\0'));
++    const std::time_t captured = std::time_t(data.other.timestamp);
++    if (captured > 0) {
++        if (const std::tm* local = std::localtime(&captured)) {
++            std::ostringstream date;
++            date << std::put_time(local, "%Y:%m:%d %H:%M:%S");
++            metadata.capture_datetime = date.str();
++        }
++    }
++    metadata.shutter = data.other.shutter;
++    metadata.aperture = data.other.aperture;
++    metadata.iso = data.other.iso_speed;
++    metadata.focal_mm = data.other.focal_len;
+     metadata.sizes_before_postprocess = {
+         sizes.raw_width, sizes.raw_height, sizes.width, sizes.height,
+         sizes.iwidth, sizes.iheight, sizes.top_margin, sizes.left_margin,
+@@ -289,7 +305,7 @@ bool decode_raw_compatible(const std::filesystem::path& source,
  }
  
  bool decode_raw_compatible(const std::filesystem::path& source, const std::array<float, 4>* user_mul,
@@ -946,7 +976,7 @@ index 1f55a69..f8ae0be 100644
      error.clear();
      const auto total_start = Clock::now();
      try {
-@@ -324,6 +324,17 @@ bool decode_raw_compatible(const std::filesystem::path& source, const std::array
+@@ -324,6 +340,17 @@ bool decode_raw_compatible(const std::filesystem::path& source, const std::array
          decoded.timings.open_ms = elapsed_ms(start);
          if (!libraw_ok(open_status, "RAW open", error)) return false;
          if (!supported_compression(*raw, error)) return false;
@@ -964,11 +994,162 @@ index 1f55a69..f8ae0be 100644
  
          start = Clock::now();
          const int unpack_status = raw->unpack();
+@@ -509,4 +536,129 @@ bool decode_raw_headroom(const std::filesystem::path& source, const std::array<f
+     }
+ }
+ 
++bool RawDecodeCache::decode(const std::filesystem::path& source,
++                            const std::array<float, 4>* user_mul,
++                            DecodedRaw& out, std::string& error, size_t max_pixels) {
++    Key key;
++    key.path = source.string();
++    key.max_pixels = max_pixels;
++    key.custom_wb = user_mul != nullptr;
++    if (user_mul) key.user_mul = *user_mul;
++    if (entry_ && entry_->first == key) {
++        out = entry_->second;
++        return true;
++    }
++    DecodedRaw fresh;
++    if (!decode_raw_compatible(source, user_mul, fresh, error, max_pixels)) return false;
++    entry_.emplace(std::move(key), fresh);
++    out = std::move(fresh);
++    return true;
++}
++
++namespace {
++
++uint16_t tiff16(const std::vector<uint8_t>& bytes, size_t at, bool little) {
++    if (at + 2 > bytes.size()) return 0;
++    return little ? uint16_t(bytes[at] | (uint16_t(bytes[at + 1]) << 8))
++                  : uint16_t((uint16_t(bytes[at]) << 8) | bytes[at + 1]);
++}
++
++uint32_t tiff32(const std::vector<uint8_t>& bytes, size_t at, bool little) {
++    if (at + 4 > bytes.size()) return 0;
++    if (little)
++        return uint32_t(bytes[at]) | (uint32_t(bytes[at + 1]) << 8) |
++               (uint32_t(bytes[at + 2]) << 16) | (uint32_t(bytes[at + 3]) << 24);
++    return (uint32_t(bytes[at]) << 24) | (uint32_t(bytes[at + 1]) << 16) |
++           (uint32_t(bytes[at + 2]) << 8) | uint32_t(bytes[at + 3]);
++}
++
++double tiff_value(const std::vector<uint8_t>& bytes, size_t at, uint16_t type, bool little) {
++    switch (type) {
++        case 3: return double(tiff16(bytes, at, little));
++        case 4: return double(tiff32(bytes, at, little));
++        case 5: {
++            const double num = double(tiff32(bytes, at, little));
++            const double den = double(tiff32(bytes, at + 4, little));
++            return den != 0 ? num / den : 0.0;
++        }
++        case 10: {
++            const double num = double(int32_t(tiff32(bytes, at, little)));
++            const double den = double(int32_t(tiff32(bytes, at + 4, little)));
++            return den != 0 ? num / den : 0.0;
++        }
++        case 11: {
++            uint32_t bits = tiff32(bytes, at, little);
++            float value;
++            std::memcpy(&value, &bits, sizeof value);
++            return double(value);
++        }
++        case 12: {
++            uint64_t bits = uint64_t(tiff32(bytes, at, little)) << 32 |
++                            uint64_t(tiff32(bytes, at + 4, little));
++            double value;
++            std::memcpy(&value, &bits, sizeof value);
++            return value;
++        }
++        default: return 0.0;
++    }
++}
++
++size_t tiff_unit(uint16_t type) {
++    switch (type) {
++        case 1: case 2: case 6: case 7: return 1;
++        case 3: case 8: return 2;
++        case 4: case 9: case 11: return 4;
++        case 5: case 10: case 12: return 8;
++        default: return 0;
++    }
++}
++
++}  // namespace
++
++bool read_dng_display_profile(const std::filesystem::path& source,
++                              std::vector<float>& curve, double& baseline) {
++    std::ifstream stream(source, std::ios::binary | std::ios::ate);
++    if (!stream) return false;
++    const std::streamoff size = stream.tellg();
++    if (size < 16 || size > (std::streamoff(1) << 31)) return false;
++    std::vector<uint8_t> bytes = std::vector<uint8_t>(size_t(size));
++    stream.seekg(0);
++    if (!stream.read(reinterpret_cast<char*>(bytes.data()), size)) return false;
++
++    const bool little = bytes[0] == 'I' && bytes[1] == 'I';
++    if (!little && !(bytes[0] == 'M' && bytes[1] == 'M')) return false;
++    if (tiff16(bytes, 2, little) != 42) return false;
++    const uint32_t ifd = tiff32(bytes, 4, little);
++    if (ifd < 8 || size_t(ifd) + 2 > bytes.size()) return false;
++
++    bool found = false;
++    const uint16_t entries = tiff16(bytes, ifd, little);
++    if (size_t(ifd) + 2 + size_t(entries) * 12 > bytes.size()) return false;
++    for (uint16_t i = 0; i < entries; ++i) {
++        const size_t at = size_t(ifd) + 2 + size_t(i) * 12;
++        const uint16_t tag = tiff16(bytes, at, little);
++        const uint16_t type = tiff16(bytes, at + 2, little);
++        const uint32_t count = tiff32(bytes, at + 4, little);
++        const uint32_t value = tiff32(bytes, at + 8, little);
++        const size_t unit = tiff_unit(type);
++        if (!unit || count == 0 || count > (1u << 20)) continue;
++        const size_t payload = size_t(count) * unit;
++        const size_t data_at = payload <= 4 ? at + 8 : size_t(value);
++        if (data_at + payload > bytes.size()) continue;
++        if (tag == 50940 && (type == 5 || type == 10) && count >= 1) {
++            baseline = tiff_value(bytes, data_at, type, little);
++            found = true;
++        } else if (tag == 50730) {
++            curve.clear();
++            curve.reserve(count);
++            for (uint32_t v = 0; v < count; ++v)
++                curve.push_back(float(tiff_value(bytes, data_at + size_t(v) * unit, type, little)));
++            found = true;
++        }
++    }
++    // Files without a tone curve often still carry BaselineExposure; the JNI
++    // caller turns a lone baseline into a one-element result.
++    return found;
++}
++
+ }  // namespace spk::io
 diff --git a/engine/src/io/raw_decoder.hpp b/engine/src/io/raw_decoder.hpp
-index af0a382..7c37595 100644
+index af0a382..f49d5f8 100644
 --- a/engine/src/io/raw_decoder.hpp
 +++ b/engine/src/io/raw_decoder.hpp
-@@ -108,8 +108,15 @@ bool decode_raw_compatible(const std::filesystem::path& source,
+@@ -3,7 +3,9 @@
+ #include <array>
+ #include <cstdint>
+ #include <filesystem>
++#include <optional>
+ #include <string>
++#include <utility>
+ #include <vector>
+ 
+ namespace spk::io {
+@@ -51,6 +53,10 @@ struct RawMetadata {
+     std::string libraw_version;
+     std::uint32_t libraw_capabilities = 0;
+     std::string make, model, decoder_name;
++    // Capture fields from LibRaw's own metadata, not the camera JPEG. Empty or
++    // zero when the file did not carry the value.
++    std::string capture_datetime;
++    double shutter = 0.0, aperture = 0.0, iso = 0.0, focal_mm = 0.0;
+     RawSourceSizes sizes_before_postprocess;
+     int raw_flip = 0;
+     std::array<float, 4> camera_whitebalance{};
+@@ -108,8 +114,15 @@ bool decode_raw_compatible(const std::filesystem::path& source,
  // The same policy with caller-chosen white-balance multipliers (R, G, B, G2;
  // LibRaw's user_mul) in place of the as-shot ones. nullptr is the overload
  // above. Used by spektralab-host for Temperature/Tint at decode.
@@ -985,6 +1166,42 @@ index af0a382..7c37595 100644
  
  // Experimental expanded-output policy for conventional three-colour Bayer
  // RAW only. As-shot WB is normalised by its largest multiplier (highlight=1)
+@@ -128,4 +141,35 @@ bool decode_raw_headroom(const std::filesystem::path& source,
+ bool decode_raw_headroom(const std::filesystem::path& source, const std::array<float, 4>* user_mul,
+                          DecodedRaw& out, std::string& error);
+ 
++// Keep one decoded file across white-balance changes. A temperature drag used
++// to reopen and unpack the whole frame; only LibRaw's post step actually
++// depends on the multipliers, so the expensive unpack is what this cache
++// saves. The cache is not thread-safe: callers serialize access.
++class RawDecodeCache {
++public:
++    bool decode(const std::filesystem::path& source, const std::array<float, 4>* user_mul,
++                DecodedRaw& out, std::string& error, size_t max_pixels = 0);
++    void clear() { entry_.reset(); }
++
++private:
++    struct Key {
++        std::string path;
++        std::array<float, 4> user_mul{};
++        bool custom_wb = false;
++        size_t max_pixels = 0;
++        bool operator==(const Key& other) const {
++            return path == other.path && custom_wb == other.custom_wb &&
++                   max_pixels == other.max_pixels &&
++                   (!custom_wb || user_mul == other.user_mul);
++        }
++    };
++    std::optional<std::pair<Key, DecodedRaw>> entry_;
++};
++
++// The DNG display curve (tag 50730) and BaselineExposure (tag 50940), when the
++// file carries them. `curve` is [x0, y0, x1, y1, ...]; `baseline` is in stops.
++// Returns false when neither tag is present; a missing curve is not an error.
++bool read_dng_display_profile(const std::filesystem::path& source,
++                              std::vector<float>& curve, double& baseline);
++
+ }  // namespace spk::io
 diff --git a/engine/src/pipeline/blur.cpp b/engine/src/pipeline/blur.cpp
 index 16014f3..39633aa 100644
 --- a/engine/src/pipeline/blur.cpp

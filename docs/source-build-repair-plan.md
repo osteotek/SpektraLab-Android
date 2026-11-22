@@ -81,21 +81,29 @@ check-patch: the published source tree cannot build the JNI:
     spk_suspend_session, spk_trim_pool without a declaration              (10)
 ```
 
-### Build-validation finding (2026-11-22)
+### Build-validation finding and resolution (2026-11-22)
 
-`check-patch.py` now passes (56 patched files, 31 JNI `spk_*` calls declared),
-and `engine.cpp`/`pipeline.cpp`/`vulkan_gpu.cpp` compile with the NDK toolchain.
-A full `spektrafilm_engine` build still fails on a **different** gap that the
-checker does not cover: the JNI units use private `spk::io` APIs that the patched
-engine tree does not declare — `spk::io::write_dng`,
-`spk::io::RawDecodeCache`, `spk::io::read_dng_display_profile`, and
-`RawMetadata` fields `capture_datetime`, `shutter`, `aperture`, `iso` and
-`focal_mm`.
+An NDK/CMake build exposed a second gap that `check-patch.py` does not cover:
+the JNI units use private `spk::io` APIs absent from the patched tree —
+`spk::io::write_dng`, `spk::io::RawDecodeCache`,
+`spk::io::read_dng_display_profile`, and `RawMetadata` fields
+`capture_datetime`, `shutter`, `aperture`, `iso` and `focal_mm`.
 
-Phase 2 therefore has a second tranche: either implement these in
-`engine/src/io`, or change the JNI to avoid them (which changes DNG export and
-RAW EXIF behaviour). The checker should also be extended to scan C++ namespace
-calls, not just `spk_*` C ABI calls, so this class of gap is visible offline.
+Phase 2 was extended to implement them in `engine/src/io`:
+
+- `RawMetadata` capture fields are filled from LibRaw's `imgdata.other`.
+- `RawDecodeCache` keeps one decoded frame across white-balance changes.
+- `read_dng_display_profile` reads DNG tags 50730 and 50940 from IFD0. It is a
+  compact reader: SubIFDs and unusual encoding are not followed, so a file that
+  stores its curve elsewhere yields no curve (the JNI then returns null or a
+  baseline-only result).
+- `write_dng` writes a minimal uncompressed 16-bit RGB TIFF with DNGVersion
+  1.4; it does not embed an ICC profile or camera matrices.
+
+The full `spektrafilm_engine` shared library now builds with the NDK toolchain;
+all ten new `spk_*` symbols are exported. `check-patch.py` still passes. The
+checker should nevertheless be extended to scan C++ namespace calls, not just
+`spk_*` C ABI calls, so this class of gap becomes visible offline.
 
 ## 3. Triage of the ten missing APIs
 
