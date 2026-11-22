@@ -43,7 +43,10 @@ import java.util.List;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class MainActivity extends Activity implements BatchImportHost, BatchExportHost {
+public class MainActivity extends Activity implements
+        BatchImportHost, BatchExportHost,
+        ImportWorkerHost, RawImportWorkerHost,
+        ExportWorkerHost, RenderWorkerHost {
     SpektraLabEngine engine;
     /** This GPU's limits, read once per engine. Drives the import cap and the export tiers. */
     DeviceProbe probe = DeviceProbe.parse("{}");
@@ -24141,7 +24144,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
                 });
     }
 
-    private void setMeterMethod(String method) {
+    public void setMeterMethod(String method) {
         meterMethod = method == null ? "" : method;
         refreshMeterChip();
         // **No delta from here.** `renderImage` sends the change on its own
@@ -33693,7 +33696,7 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
     }
 
     /** Something that can turn a source clip into a re-developed one. */
-    private interface ClipRenderer {
+    interface ClipRenderer {
         java.io.File render(java.io.File clip, java.io.File still) throws Exception;
     }
 
@@ -35821,4 +35824,319 @@ public class MainActivity extends Activity implements BatchImportHost, BatchExpo
         uiReady = false;
         super.onDestroy();
     }
+    // ---- Phase 2: generated narrow-host implementations ----
+    @Override public android.content.Context context() { return this; }
+    @Override public boolean getBatchExportRunning() { return batchExportRunning; }
+    @Override public android.graphics.Bitmap getBeforeBitmap() { return beforeBitmap; }
+    @Override public android.widget.TextView getBusyLabel() { return busyLabel; }
+    @Override public float getCameraEv() { return cameraEv; }
+    @Override public app.spektralab.MainActivity.CompareView getCompare() { return compare; }
+    @Override public int getCurrentFrame() { return currentFrame; }
+    @Override public java.lang.String getDateText() { return dateText; }
+    @Override public boolean getE1001Offered() { return e1001Offered; }
+    @Override public int getEdgeCanvasSends() { return edgeCanvasSends; }
+    @Override public int getEdgePageIndex() { return edgePageIndex; }
+    @Override public app.spektralab.engine.SpektraLabEngine getEngine() { return engine; }
+    @Override public boolean getExportAtNative() { return exportAtNative; }
+    @Override public boolean getExportCorruptNow() { return exportCorruptNow; }
+    @Override public int getExportHeals() { return exportHeals; }
+    @Override public android.widget.ProgressBar getExportProgressBar() { return exportProgressBar; }
+    @Override public boolean getExportRetried() { return exportRetried; }
+    @Override public boolean getExportReuseCanvas() { return exportReuseCanvas; }
+    @Override public java.lang.Thread getExportThread() { return exportThread; }
+    @Override public java.lang.String getFilmStock() { return filmStock; }
+    @Override public int getFlatStreak() { return flatStreak; }
+    @Override public int getFotuGeneration() { return fotuGeneration; }
+    @Override public java.lang.String getFotuSourceDead() { return fotuSourceDead; }
+    @Override public java.lang.String getFotuSourcePath() { return fotuSourcePath; }
+    @Override public java.util.List<app.spektralab.MainActivity.Frame> getFrames() { return frames; }
+    @Override public java.util.concurrent.atomic.AtomicInteger getFullGeneration() { return fullGeneration; }
+    @Override public float getGeometryCropH() { return geometryCropH; }
+    @Override public float getGeometryCropW() { return geometryCropW; }
+    @Override public float getGeometryCropX() { return geometryCropX; }
+    @Override public float getGeometryCropY() { return geometryCropY; }
+    @Override public float getGeometryRotation() { return geometryRotation; }
+    @Override public int getGeometrySeq() { return geometrySeq; }
+    @Override public int getGeometryTurns() { return geometryTurns; }
+    @Override public app.spektralab.MainActivity.HistogramView getHistogram() { return histogram; }
+    @Override public int getIMPORT_LONG_EDGE() { return IMPORT_LONG_EDGE; }
+    @Override public boolean getImportAtNativeSize() { return importAtNativeSize; }
+    @Override public boolean getImportBudgetAccepted() { return importBudgetAccepted; }
+    @Override public int getImportCapPixels() { return importCapPixels; }
+    @Override public int getImportedHeight() { return importedHeight; }
+    @Override public int getImportedWidth() { return importedWidth; }
+    @Override public boolean getIsRawFile() { return isRawFile; }
+    @Override public double getLastAppliedEv() { return lastAppliedEv; }
+    @Override public boolean getLastAppliedEvValid() { return lastAppliedEvValid; }
+    @Override public java.lang.String getLastExportMime() { return lastExportMime; }
+    @Override public android.net.Uri getLastExportOutUri() { return lastExportOutUri; }
+    @Override public android.net.Uri getLastExportUri() { return lastExportUri; }
+    @Override public java.lang.String getLastImportError() { return lastImportError; }
+    @Override public android.graphics.Bitmap getLastRenderedBitmap() { return lastRenderedBitmap; }
+    @Override public int getLiveClipEdge() { return liveClipEdge; }
+    @Override public boolean getLiveClipRendering() { return liveClipRendering; }
+    @Override public java.lang.String getMeterMethod() { return meterMethod; }
+    @Override public double getMeteredEv() { return meteredEv; }
+    @Override public java.lang.String getOverscanFormat() { return overscanFormat; }
+    @Override public boolean getOverscanOn() { return overscanOn; }
+    @Override public int getPREVIEW_LONG_EDGE() { return PREVIEW_LONG_EDGE; }
+    @Override public int getPendingCapPixels() { return pendingCapPixels; }
+    @Override public boolean getPendingGeometry() { return pendingGeometry; }
+    @Override public boolean getPendingRender() { return pendingRender; }
+    @Override public boolean getPendingRenderAfterLive() { return pendingRenderAfterLive; }
+    @Override public float getPrintExposure() { return printExposure; }
+    @Override public java.lang.String getPrintStock() { return printStock; }
+    @Override public app.spektralab.DeviceProbe getProbe() { return probe; }
+    @Override public android.widget.ProgressBar getProgressBar() { return progressBar; }
+    @Override public java.lang.String getRawFilePath() { return rawFilePath; }
+    @Override public int getRenderEpoch() { return renderEpoch; }
+    @Override public java.lang.Object getRenderMutex() { return renderMutex; }
+    @Override public boolean getRendering() { return rendering; }
+    @Override public boolean getReopenToOriginal() { return reopenToOriginal; }
+    @Override public int getRepickFrame() { return repickFrame; }
+    @Override public app.spektralab.MainActivity.RotateScale getRotateArc() { return rotateArc; }
+    @Override public boolean getRotating() { return rotating; }
+    @Override public float getRotationBeforeDrag() { return rotationBeforeDrag; }
+    @Override public boolean getRotationPending() { return rotationPending; }
+    @Override public double getSOURCE_VIEW_EV_SCALE() { return SOURCE_VIEW_EV_SCALE; }
+    @Override public app.spektralab.engine.SpektraLabEngine.Session getSession() { return session; }
+    @Override public android.widget.TextView getSharePill() { return sharePill; }
+    @Override public boolean getShowingOriginal() { return showingOriginal; }
+    @Override public android.graphics.Bitmap getSourceBitmap() { return sourceBitmap; }
+    @Override public int getSourceHeight() { return sourceHeight; }
+    @Override public long getSourcePixels() { return sourcePixels; }
+    @Override public float[] getSourceToneCurve() { return sourceToneCurve; }
+    @Override public android.net.Uri getSourceUri() { return sourceUri; }
+    @Override public int getSourceWidth() { return sourceWidth; }
+    @Override public android.widget.TextView getStatusText() { return statusText; }
+    @Override public boolean getSuppressBudgetDialog() { return suppressBudgetDialog; }
+    @Override public int getTestBandRows() { return testBandRows; }
+    @Override public boolean getUiReady() { return uiReady; }
+    @Override public boolean getWbDecoding() { return wbDecoding; }
+    @Override public float[] getWbUserMul() { return wbUserMul; }
+    @Override public void setBeforeBitmap(android.graphics.Bitmap value) { beforeBitmap = value; }
+    @Override public void setBusyLabel(android.widget.TextView value) { busyLabel = value; }
+    @Override public void setCameraEv(float value) { cameraEv = value; }
+    @Override public void setCompare(app.spektralab.MainActivity.CompareView value) { compare = value; }
+    @Override public void setCurrentFrame(int value) { currentFrame = value; }
+    @Override public void setDateText(java.lang.String value) { dateText = value; }
+    @Override public void setE1001Offered(boolean value) { e1001Offered = value; }
+    @Override public void setEdgeCanvasSends(int value) { edgeCanvasSends = value; }
+    @Override public void setEdgePageIndex(int value) { edgePageIndex = value; }
+    @Override public void setEngine(app.spektralab.engine.SpektraLabEngine value) { engine = value; }
+    @Override public void setExportAtNative(boolean value) { exportAtNative = value; }
+    @Override public void setExportCorruptNow(boolean value) { exportCorruptNow = value; }
+    @Override public void setExportHeals(int value) { exportHeals = value; }
+    @Override public void setExportProgressBar(android.widget.ProgressBar value) { exportProgressBar = value; }
+    @Override public void setExportRetried(boolean value) { exportRetried = value; }
+    @Override public void setExportReuseCanvas(boolean value) { exportReuseCanvas = value; }
+    @Override public void setExportThread(java.lang.Thread value) { exportThread = value; }
+    @Override public void setFilmStock(java.lang.String value) { filmStock = value; }
+    @Override public void setFlatStreak(int value) { flatStreak = value; }
+    @Override public void setFotuGeneration(int value) { fotuGeneration = value; }
+    @Override public void setFotuSourceDead(java.lang.String value) { fotuSourceDead = value; }
+    @Override public void setFotuSourcePath(java.lang.String value) { fotuSourcePath = value; }
+    @Override public void setGeometryCropH(float value) { geometryCropH = value; }
+    @Override public void setGeometryCropW(float value) { geometryCropW = value; }
+    @Override public void setGeometryCropX(float value) { geometryCropX = value; }
+    @Override public void setGeometryCropY(float value) { geometryCropY = value; }
+    @Override public void setGeometryRotation(float value) { geometryRotation = value; }
+    @Override public void setGeometrySeq(int value) { geometrySeq = value; }
+    @Override public void setGeometryTurns(int value) { geometryTurns = value; }
+    @Override public void setHistogram(app.spektralab.MainActivity.HistogramView value) { histogram = value; }
+    @Override public void setImportAtNativeSize(boolean value) { importAtNativeSize = value; }
+    @Override public void setImportBudgetAccepted(boolean value) { importBudgetAccepted = value; }
+    @Override public void setImportCapPixels(int value) { importCapPixels = value; }
+    @Override public void setImportedHeight(int value) { importedHeight = value; }
+    @Override public void setImportedWidth(int value) { importedWidth = value; }
+    @Override public void setIsRawFile(boolean value) { isRawFile = value; }
+    @Override public void setLastAppliedEv(double value) { lastAppliedEv = value; }
+    @Override public void setLastAppliedEvValid(boolean value) { lastAppliedEvValid = value; }
+    @Override public void setLastExportMime(java.lang.String value) { lastExportMime = value; }
+    @Override public void setLastExportOutUri(android.net.Uri value) { lastExportOutUri = value; }
+    @Override public void setLastExportUri(android.net.Uri value) { lastExportUri = value; }
+    @Override public void setLastImportError(java.lang.String value) { lastImportError = value; }
+    @Override public void setLastRenderedBitmap(android.graphics.Bitmap value) { lastRenderedBitmap = value; }
+    @Override public void setLiveClipEdge(int value) { liveClipEdge = value; }
+    @Override public void setLiveClipRendering(boolean value) { liveClipRendering = value; }
+    @Override public void setMeteredEv(double value) { meteredEv = value; }
+    @Override public void setOverscanFormat(java.lang.String value) { overscanFormat = value; }
+    @Override public void setOverscanOn(boolean value) { overscanOn = value; }
+    @Override public void setPendingCapPixels(int value) { pendingCapPixels = value; }
+    @Override public void setPendingGeometry(boolean value) { pendingGeometry = value; }
+    @Override public void setPendingRender(boolean value) { pendingRender = value; }
+    @Override public void setPendingRenderAfterLive(boolean value) { pendingRenderAfterLive = value; }
+    @Override public void setPrintExposure(float value) { printExposure = value; }
+    @Override public void setPrintStock(java.lang.String value) { printStock = value; }
+    @Override public void setProbe(app.spektralab.DeviceProbe value) { probe = value; }
+    @Override public void setProgressBar(android.widget.ProgressBar value) { progressBar = value; }
+    @Override public void setRawFilePath(java.lang.String value) { rawFilePath = value; }
+    @Override public void setRenderEpoch(int value) { renderEpoch = value; }
+    @Override public void setRendering(boolean value) { rendering = value; }
+    @Override public void setReopenToOriginal(boolean value) { reopenToOriginal = value; }
+    @Override public void setRepickFrame(int value) { repickFrame = value; }
+    @Override public void setRotateArc(app.spektralab.MainActivity.RotateScale value) { rotateArc = value; }
+    @Override public void setRotating(boolean value) { rotating = value; }
+    @Override public void setRotationBeforeDrag(float value) { rotationBeforeDrag = value; }
+    @Override public void setRotationPending(boolean value) { rotationPending = value; }
+    @Override public void setSession(app.spektralab.engine.SpektraLabEngine.Session value) { session = value; }
+    @Override public void setSharePill(android.widget.TextView value) { sharePill = value; }
+    @Override public void setShowingOriginal(boolean value) { showingOriginal = value; }
+    @Override public void setSourceBitmap(android.graphics.Bitmap value) { sourceBitmap = value; }
+    @Override public void setSourceHeight(int value) { sourceHeight = value; }
+    @Override public void setSourcePixels(long value) { sourcePixels = value; }
+    @Override public void setSourceToneCurve(float[] value) { sourceToneCurve = value; }
+    @Override public void setSourceUri(android.net.Uri value) { sourceUri = value; }
+    @Override public void setSourceWidth(int value) { sourceWidth = value; }
+    @Override public void setStatusText(android.widget.TextView value) { statusText = value; }
+    @Override public void setSuppressBudgetDialog(boolean value) { suppressBudgetDialog = value; }
+    @Override public void setTestBandRows(int value) { testBandRows = value; }
+    @Override public void setUiReady(boolean value) { uiReady = value; }
+    @Override public void setWbDecoding(boolean value) { wbDecoding = value; }
+    @Override public void setWbUserMul(float[] value) { wbUserMul = value; }
+
+    // ---- Phase 2: instance delegators for static worker helpers ----
+    // instance delegator for static liftRows, used by the extracted workers
+    public void liftRowsViaHost(android.graphics.Bitmap a0, long a1, int a2, int a3) { liftRows(a0, a1, a2, a3); }
+    // instance delegator for static isFotuStock, used by the extracted workers
+    public boolean isFotuStockViaHost(java.lang.String a0) { return isFotuStock(a0); }
+    // instance delegator for static megapixels, used by the extracted workers
+    public java.lang.String megapixelsViaHost(int a0, int a1) { return megapixels(a0, a1); }
+    // instance delegator for static inspectContainer, used by the extracted workers
+    public java.lang.String inspectContainerViaHost(java.lang.String a0, int a1, int a2) { return inspectContainer(a0, a1, a2); }
+    // instance delegator for static nowMs, used by the extracted workers
+    public long nowMsViaHost() { return nowMs(); }
+    // instance delegator for static exportMatchesCanvas, used by the extracted workers
+    public double exportMatchesCanvasViaHost(java.lang.String a0, android.graphics.Bitmap a1) { return exportMatchesCanvas(a0, a1); }
+    // instance delegator for static describe, used by the extracted workers
+    public java.lang.String describeViaHost(java.lang.Throwable a0) { return describe(a0); }
+    // instance delegator for static inspectExportedFile, used by the extracted workers
+    public java.lang.String inspectExportedFileViaHost(java.lang.String a0) { return inspectExportedFile(a0); }
+    // instance delegator for static sanitizeMeter, used by the extracted workers
+    public java.lang.String sanitizeMeterViaHost(java.lang.String a0) { return sanitizeMeter(a0); }
+    // instance delegator for static stopTick, used by the extracted workers
+    public void stopTickViaHost(java.lang.Thread a0) { stopTick(a0); }
+    // instance delegator for static edgeRulerVerdict, used by the extracted workers
+    public java.lang.String edgeRulerVerdictViaHost(java.lang.String a0) { return edgeRulerVerdict(a0); }
+    // instance delegator for static b, used by the extracted workers
+    public java.lang.String bViaHost(boolean a0) { return b(a0); }
+    // instance delegator for static f, used by the extracted workers
+    public java.lang.String fViaHost(java.lang.String a0, double a1) { return f(a0, a1); }
+    // instance delegator for static rowSignature, used by the extracted workers
+    public java.lang.String rowSignatureViaHost(java.lang.String a0) { return rowSignature(a0); }
+    // instance delegator for static isDeviceLost, used by the extracted workers
+    public boolean isDeviceLostViaHost(java.lang.String a0) { return isDeviceLost(a0); }
+    // instance delegator for static sampleGrid, used by the extracted workers
+    public int[] sampleGridViaHost(android.graphics.Bitmap a0) { return sampleGrid(a0); }
+    // instance delegator for static edgeVerdictOfLine, used by the extracted workers
+    public java.lang.String edgeVerdictOfLineViaHost(java.lang.String a0) { return edgeVerdictOfLine(a0); }
+    // instance delegator for static blackBands, used by the extracted workers
+    public int[] blackBandsViaHost(android.graphics.Bitmap a0) { return blackBands(a0); }
+
+    // ---- Phase 2: delegators for worker-called instance methods ----
+    public boolean appliedEvBelongsToCurrentFrameHostCall() { return appliedEvBelongsToCurrentFrame(); }
+    public android.graphics.Bitmap applyExifRotationHostCall(android.net.Uri a0, android.graphics.Bitmap a1) { return applyExifRotation(a0, a1); }
+    public void applyLookHostCall(app.spektralab.MainActivity.Look a0) { applyLook(a0); }
+    public boolean applyParamsHostCall(java.lang.String a0, int a1) { return applyParams(a0, a1); }
+    public boolean applyParamsHostCall(java.lang.String a0, java.lang.String a1, int a2) { return applyParams(a0, a1, a2); }
+    public void applyParamsHostCall() { applyParams(); }
+    public void applyParamsHostCall(int a0) { applyParams(a0); }
+    public boolean applyParamsToHostCall(app.spektralab.engine.SpektraLabEngine.Session a0, java.lang.String a1, java.lang.String a2, int a3, java.lang.String a4) { return applyParamsTo(a0, a1, a2, a3, a4); }
+    public boolean applyParamsToHostCall(app.spektralab.engine.SpektraLabEngine.Session a0, java.lang.String a1, java.lang.String a2, int a3, java.lang.String a4, boolean a5) { return applyParamsTo(a0, a1, a2, a3, a4, a5); }
+    public void applySessionParamsHostCall() { applySessionParams(); }
+    public java.io.File attachLiveClipHostCall(java.io.File a0, java.lang.String a1, long a2, app.spektralab.MainActivity.ClipRenderer a3) { return attachLiveClip(a0, a1, a2, a3); }
+    public java.io.File attachLiveClipHostCall(java.io.File a0, java.lang.String a1, long a2, int a3) { return attachLiveClip(a0, a1, a2, a3); }
+    public long availableMemoryBytesHostCall() { return availableMemoryBytes(); }
+    public void cacheFilmThumbHostCall(java.lang.String a0, android.graphics.Bitmap a1) { cacheFilmThumb(a0, a1); }
+    public boolean canReadUriHostCall(android.net.Uri a0) { return canReadUri(a0); }
+    public void cancelLivePreviewHostCall() { cancelLivePreview(); }
+    public void cancelUndoHostCall() { cancelUndo(); }
+    public app.spektralab.MainActivity.LiveClip captureLiveClipHostCall(android.net.Uri a0) { return captureLiveClip(a0); }
+    public void clearBusyPlateHostCall() { clearBusyPlate(); }
+    public void clearShelfCacheHostCall() { clearShelfCache(); }
+    public android.graphics.Bitmap decodeForExportHostCall(java.lang.String a0, long a1) { return decodeForExport(a0, a1); }
+    public android.graphics.Bitmap decodeImportHostCall(android.net.Uri a0, int a1, int a2) { return decodeImport(a0, a1, a2); }
+    public app.spektralab.MainActivity.Look defaultLookHostCall() { return defaultLook(); }
+    public java.lang.String describeImportFailureHostCall(java.lang.Throwable a0) { return describeImportFailure(a0); }
+    public int dpHostCall(float a0) { return dp(a0); }
+    public app.spektralab.engine.SpektraLabEngine ensureEngineHostCall() throws java.lang.Exception { return ensureEngine(); }
+    public void exportFotuHostCall(java.lang.String a0, java.lang.String a1, java.lang.Runnable a2, int a3) { exportFotu(a0, a1, a2, a3); }
+    public void exportImageHostCall() { exportImage(); }
+    public void exportImageHostCall(java.lang.String a0, java.lang.String a1) { exportImage(a0, a1); }
+    public void exportImageHostCall(java.lang.String a0, java.lang.String a1, java.lang.Runnable a2) { exportImage(a0, a1, a2); }
+    public void exportOriginalHostCall(java.lang.String a0, java.lang.Runnable a1) { exportOriginal(a0, a1); }
+    public long exportPixelCapHostCall() { return exportPixelCap(); }
+    public android.graphics.Bitmap exportSourceBitmapHostCall(app.spektralab.engine.SpektraLabEngine.Session a0, double a1) { return exportSourceBitmap(a0, a1); }
+    public java.lang.String getFileNameHostCall(android.net.Uri a0) { return getFileName(a0); }
+    public java.lang.String getFilePathFromUriHostCall(android.net.Uri a0) { return getFilePathFromUri(a0); }
+    public java.lang.String getResourcesDirHostCall() throws java.io.IOException { return getResourcesDir(); }
+    public void glowInPlaceHostCall(android.graphics.Bitmap a0) { glowInPlace(a0); }
+    public boolean healCanvasFromErrorHostCall(java.lang.String a0) { return healCanvasFromError(a0); }
+    public boolean healGateFromErrorHostCall(java.lang.String a0) { return healGateFromError(a0); }
+    public void hideBusyHostCall() { hideBusy(); }
+    public java.lang.String importSizeNoteHostCall(int a0, int a1) { return importSizeNote(a0, a1); }
+    public java.lang.String[] jpegSourceExifHostCall() { return jpegSourceExif(); }
+    public java.lang.String liveClipForCurrentFrameHostCall() { return liveClipForCurrentFrame(); }
+    public void loadAlbumHostCall() { loadAlbum(); }
+    public void loadRawImageHostCall(android.net.Uri a0, int a1) { loadRawImage(a0, a1); }
+    public int maxImportPixelsHostCall() { return maxImportPixels(); }
+    public int maxImportPixelsHostCall(boolean a0) { return maxImportPixels(a0); }
+    public android.graphics.Bitmap newFrameBitmapHostCall(int a0, int a1) { return newFrameBitmap(a0, a1); }
+    public void offerSmallerImportHostCall() { offerSmallerImport(); }
+    public void openEdgePageHostCall(int a0) { openEdgePage(a0); }
+    public java.lang.String overscanCanvasLabelHostCall() { return overscanCanvasLabel(); }
+    public void persistThumbHostCall(app.spektralab.MainActivity.Frame a0) { persistThumb(a0); }
+    public void pickRawFileHostCall() { pickRawFile(); }
+    public boolean rebuildEngineAndReloadHostCall(java.lang.String a0) { return rebuildEngineAndReload(a0); }
+    public void rebuildFilmCardsHostCall() { rebuildFilmCards(); }
+    public void rebuildFrameChipsHostCall() { rebuildFrameChips(); }
+    public void refreshComparePillHostCall() { refreshComparePill(); }
+    public boolean refreshEdgeFormatsHostCall() { return refreshEdgeFormats(); }
+    public boolean refreshEdgeFormatsHostCall(boolean a0) { return refreshEdgeFormats(a0); }
+    public void refreshGlowForCurrentViewHostCall() { refreshGlowForCurrentView(); }
+    public void refreshLiveBadgeHostCall() { refreshLiveBadge(); }
+    public void refreshPanelLocksHostCall() { refreshPanelLocks(); }
+    public void refreshSceneLatitudeFitHostCall(app.spektralab.engine.SpektraLabEngine.Session a0) { refreshSceneLatitudeFit(a0); }
+    public void refreshViewPanelHostCall() { refreshViewPanel(); }
+    public void rememberAppliedEvHostCall(java.lang.String a0, java.lang.String a1) { rememberAppliedEv(a0, a1); }
+    public void rememberFrameHostCall(android.net.Uri a0, int a1) { rememberFrame(a0, a1); }
+    public void removeFrameHostCall(int a0) { removeFrame(a0); }
+    public void renderFotuHostCall() { renderFotu(); }
+    public void renderImageHostCall() { renderImage(); }
+    public void renderImageHostCall(int a0) { renderImage(a0); }
+    public void reopenFrameForcedHostCall(int a0) { reopenFrameForced(a0); }
+    public java.lang.String reportHeadHostCall() { return reportHead(); }
+    public void saveSessionStateHostCall() { saveSessionState(); }
+    public void schedulePersistHostCall() { schedulePersist(); }
+    public void scheduleUndoHostCall() { scheduleUndo(); }
+    public void sendGeometryHostCall() { sendGeometry(); }
+    public void setOriginalVisualHostCall(boolean a0) { setOriginalVisual(a0); }
+    public void setStageHostCall(int a0, java.lang.String a1) { setStage(a0, a1); }
+    public void setStepHostCall(int a0) { setStep(a0); }
+    public void showActionSheetHostCall(java.lang.String a0, java.lang.String a1, java.lang.String[] a2, java.util.function.IntConsumer a3) { showActionSheet(a0, a1, a2, a3); }
+    public void showActionSheetHostCall(java.lang.String a0, java.lang.String a1, java.lang.String[] a2, java.util.function.IntConsumer a3, java.lang.Runnable a4) { showActionSheet(a0, a1, a2, a3, a4); }
+    public void showActionSheetHostCall(java.lang.String a0, java.lang.String a1, java.lang.String[] a2, java.util.function.IntConsumer a3, java.lang.Runnable a4, java.lang.String a5) { showActionSheet(a0, a1, a2, a3, a4, a5); }
+    public void showBusyHostCall(java.lang.String a0) { showBusy(a0); }
+    public void showBusyIfSlowHostCall() { showBusyIfSlow(); }
+    public void showErrorDialogHostCall(java.lang.String a0, java.lang.String a1) { showErrorDialog(a0, a1); }
+    public void showImportBudgetDialogHostCall(android.net.Uri a0, int a1, int a2, int a3, int a4) { showImportBudgetDialog(a0, a1, a2, a3, a4); }
+    public void showInAppToastHostCall(java.lang.CharSequence a0) { showInAppToast(a0); }
+    public void showRawBudgetDialogHostCall(android.net.Uri a0, int a1, int a2, int a3, int a4) { showRawBudgetDialog(a0, a1, a2, a3, a4); }
+    public int[] sniffImageSizeHostCall(android.net.Uri a0) { return sniffImageSize(a0); }
+    public java.lang.String[] sourceExifForExportHostCall() { return sourceExifForExport(); }
+    public java.lang.String spkPaperForEngineHostCall(java.lang.String a0) { return spkPaperForEngine(a0); }
+    public void startPrefetchHostCall() { startPrefetch(); }
+    public java.lang.Thread startTickHostCall(java.lang.String a0, app.spektralab.engine.SpektraLabEngine.Session a1) { return startTick(a0, a1); }
+    public void stopLivePreviewHostCall() { stopLivePreview(); }
+    public void stopPrefetchHostCall() { stopPrefetch(); }
+    public void trimPoolIfBloatedHostCall() { trimPoolIfBloated(); }
+    public void updateCardThumbHostCall(java.lang.String a0) { updateCardThumb(a0); }
+    public void updateFilmSelectionHostCall() { updateFilmSelection(); }
+    public void updateFilmSelectionHostCall(boolean a0) { updateFilmSelection(a0); }
+    public void uploadCapabilitiesHostCall() { uploadCapabilities(); }
+    public void uploadExportProgressHostCall(java.io.File a0) { uploadExportProgress(a0); }
+    public void uploadVkLogHostCall() { uploadVkLog(); }
+    public java.io.File vkLogFileHostCall() { return vkLogFile(); }
+    public android.net.Uri writeExportFileHostCall(java.io.File a0, java.lang.String a1, java.lang.String a2, java.lang.String a3) throws java.io.IOException { return writeExportFile(a0, a1, a2, a3); }
+
 }

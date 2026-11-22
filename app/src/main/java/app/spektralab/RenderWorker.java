@@ -11,7 +11,9 @@ import java.util.List;
 
 /** Worker re-extracted from the 1.7.0 Activity; owns the full current path. */
 final class RenderWorker extends HostWorker {
-    RenderWorker(MainActivity host) { super(host); }
+    private final RenderWorkerHost host;
+
+    RenderWorker(RenderWorkerHost host) { this.host = host; }
 
     void run(int longEdge) {
 
@@ -20,25 +22,25 @@ final class RenderWorker extends HostWorker {
         // one native result buffer with the clip. Say so, and render once when
         // it is done -- returning silently would leave the canvas on the
         // previous look for ever, which reads as a dead control.
-        if (host.liveClipRendering) { host.pendingRenderAfterLive = true; return; }
+        if (host.getLiveClipRendering()) { host.setPendingRenderAfterLive(true); return; }
         // The full-size pass owns the canvas from here. A live frame still in
         // flight would otherwise land a moment later and put 800 px on top of
         // the result the user waited for.
-        host.cancelLivePreview();
+        host.cancelLivePreviewHostCall();
         // A clip playing over a canvas that is about to change is the previous
         // look, on top of the new one.
-        host.stopLivePreview();
-        host.fullGeneration.incrementAndGet();
-        CrashTrail.mark(host, "render:begin");
+        host.stopLivePreviewHostCall();
+        host.getFullGeneration().incrementAndGet();
+        CrashTrail.mark(host.context(), "render:begin");
         // **A decode in flight owns the session.** It is closed for a few
         // seconds while LibRaw re-demosaics; a render that walked in then would
         // either complain about a null session or queue behind the decode for
         // the whole of it, which is what "白平衡卡死" was.
-        if (host.wbDecoding) { host.pendingRender = true; return; }
+        if (host.getWbDecoding()) { host.setPendingRender(true); return; }
         // Every branch says something. The foot is one thin line, too quiet to
         // carry "nothing happened"; failures need to be readable.
-        if (host.session == null) {
-            try { DebugSink.text("render", "no session, lastImportError=" + host.lastImportError); }
+        if (host.getSession() == null) {
+            try { DebugSink.text("render", "no session, lastImportError=" + host.getLastImportError()); }
             catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34008", ignored); }
             // **A frame in the strip means an import is on its way.** Coming
             // back from the background walks through here while `loadImage` is
@@ -46,25 +48,25 @@ final class RenderWorker extends HostWorker {
             // 图像" is the wrong sentence and the dialog is pure noise. Ask for
             // the render again once the import finishes; if the import really
             // failed, its own message is the one to show.
-            if (!host.frames.isEmpty() && host.lastImportError == null) {
-                host.pendingRender = true;
+            if (!host.getFrames().isEmpty() && host.getLastImportError() == null) {
+                host.setPendingRender(true);
                 return;
             }
-            host.showErrorDialog("还没有可渲染的图像", host.lastImportError == null
+            host.showErrorDialogHostCall("还没有可渲染的图像", host.getLastImportError() == null
                     ? "先导入一张照片。点画布中央的「选择照片」，或点下方「换图」；RAW / HEIC 请选「从文件管理器选择」。"
-                    : "上次导入没有完成：\n\n" + host.lastImportError);
+                    : "上次导入没有完成：\n\n" + host.getLastImportError());
             return;
         }
-        if (host.filmStock == null) {
-            host.showInAppToast("先在下方选一张胶片");
+        if (host.getFilmStock() == null) {
+            host.showInAppToastHostCall("先在下方选一张胶片");
             return;
         }
         // **The second engine has no session, no tiers and no live path.**
         // One call takes the file, the skeleton and the numbers and writes a
         // JPEG; the canvas decodes it back. Everything that asks for a picture
         // funnels through here, so this is the only branch it needs.
-        if (host.isFotuStock(host.filmStock)) {
-            host.renderFotu();
+        if (host.isFotuStockViaHost(host.getFilmStock())) {
+            host.renderFotuHostCall();
             return;
         }
         // **The gate follows the crop.** `refreshEdgeFormats` re-picks from the
@@ -72,47 +74,47 @@ final class RenderWorker extends HostWorker {
         // page -- so cropping to 3:2 left the 6x8 the file had matched, and the
         // render was refused with E-1305 for a picture the user had just made
         // 3:2. Cheap (ten ratios), and it never touches the picture itself.
-        if (host.overscanOn) host.refreshEdgeFormats();
-        host.stopPrefetch();
-        if (host.rendering) {
+        if (host.getOverscanOn()) host.refreshEdgeFormatsHostCall();
+        host.stopPrefetchHostCall();
+        if (host.getRendering()) {
             // One native result buffer for the whole process: two renders would
             // interleave on it and hand back another frame's dimensions.
             try { DebugSink.text("render", "already rendering"); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34046", ignored); }
-            Probe.log("render", "queued film=" + host.filmStock + " pending=" + host.pendingRender);
-            host.statusText.setText("Rendering…");
+            Probe.log("render", "queued film=" + host.getFilmStock() + " pending=" + host.getPendingRender());
+            host.getStatusText().setText("Rendering…");
             // Not dropped: a tap that lands mid-render is the *last* choice the
             // user made, so it becomes the next render instead of a toast.
-            host.pendingRender = true;
-            host.showInAppToast("正在渲染，完成后按新选择再画一次…");
+            host.setPendingRender(true);
+            host.showInAppToastHostCall("正在渲染，完成后按新选择再画一次…");
             return;
         }
-        host.scheduleUndo();          // one entry per settled edit
-        final String renderedStock = host.filmStock;
+        host.scheduleUndoHostCall();          // one entry per settled edit
+        final String renderedStock = host.getFilmStock();
         // **The frame this render belongs to.** Deleting the chips (or opening
         // another photo) while a render is in flight used to let its callback
         // call setStage(1) on a canvas that no longer had a frame: the empty
         // state -- and with it the 选择照片 button -- vanished, which is the
         // "删掉全部缩略图后导入按钮有时候会消失" report.
-        final int renderedFrame = host.currentFrame;
-        final int renderedEpoch = host.renderEpoch;
+        final int renderedFrame = host.getCurrentFrame();
+        final int renderedEpoch = host.getRenderEpoch();
         // **Which geometry this render is allowed to speak for.** A render the
         // commit did not wait for carries the angle from before it, and letting
         // it take the preview turn off is exactly the frame that jumps back.
-        final int renderedGeometrySeq = host.geometrySeq;
-        host.rendering = true;
+        final int renderedGeometrySeq = host.getGeometrySeq();
+        host.setRendering(true);
         // **No stock spinner.** The plate underneath carries the wave, and a
         // horizontal indeterminate bar across the canvas was the one piece of
         // this screen that looked like the platform rather than the app.
-        host.progressBar.setVisibility(View.GONE);
-        host.showBusyIfSlow();
-        host.statusText.setText("Rendering…");
-        try { DebugSink.text("render", "begin " + host.sourceWidth + "x" + host.sourceHeight); }
+        host.getProgressBar().setVisibility(View.GONE);
+        host.showBusyIfSlowHostCall();
+        host.getStatusText().setText("Rendering…");
+        try { DebugSink.text("render", "begin " + host.getSourceWidth() + "x" + host.getSourceHeight()); }
         catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34076", ignored); }
 
         new Thread(() -> {
             try {
-                synchronized (host.renderMutex) {
-                if (host.session == null) {
+                synchronized (host.getRenderMutex()) {
+                if (host.getSession() == null) {
                     // **A frame change can land between the check the UI thread
                     // made and this lock.** Throwing here turned that race into
                     // a dialog on top of a batch export that had already
@@ -122,11 +124,11 @@ final class RenderWorker extends HostWorker {
                     // import render. A rebate export makes every render 2-3 s
                     // slower, which is exactly why that window got wide enough
                     // to hit in the field and not on the bench.
-                    CrashTrail.mark(host, "render:session-gone");
+                    CrashTrail.mark(host.context(), "render:session-gone");
                     host.runOnUiThread(() -> {
-                        host.rendering = false;
-                        if (host.progressBar != null) host.progressBar.setVisibility(View.GONE);
-                        if (host.busyLabel != null) host.hideBusy();
+                        host.setRendering(false);
+                        if (host.getProgressBar() != null) host.getProgressBar().setVisibility(View.GONE);
+                        if (host.getBusyLabel() != null) host.hideBusyHostCall();
                     });
                     return;
                 }
@@ -134,7 +136,7 @@ final class RenderWorker extends HostWorker {
                 // finishes and can put a stock back onto this session. Take the
                 // film the user picked, under the same lock the render runs
                 // under, so the picture and the edge text cannot disagree.
-                CrashTrail.markNow(host, "render:lock");
+                CrashTrail.markNow(host.context(), "render:lock");
                 // **Geometry first, and not through the delta ledger.** A crop
                 // or a rotation is the one edit the canvas cannot show while it
                 // is being made: the preview turns the *view* and the picture
@@ -150,46 +152,46 @@ final class RenderWorker extends HostWorker {
                 // did not. Whatever the full delta does to that field, the
                 // geometry is now written after it, so the last word before
                 // `renderBegin` is this one.
-                final boolean geoOwed = host.pendingGeometry;
-                host.pendingGeometry = false;
-                host.applyParams(renderedStock, longEdge);
+                final boolean geoOwed = host.getPendingGeometry();
+                host.setPendingGeometry(false);
+                host.applyParamsHostCall(renderedStock, longEdge);
                 // **相纸的宽容度，每次换图/换纸只解一次。** 引擎拿这张纸真正跑
                 // 一条斜坡量出黑白边界，再按画面的 P0.1/P99.9 解 knee/room；
                 // 解出来和上次不同就补一条 delta，然后才 renderBegin。
-                host.refreshSceneLatitudeFit(host.session);
+                host.refreshSceneLatitudeFitHostCall(host.getSession());
                 if (geoOwed) {
-                    host.sendGeometry();
+                    host.sendGeometryHostCall();
                     try {
-                        final String gp = host.session.getParams();
+                        final String gp = host.getSession().getParams();
                         final int at = gp.indexOf("\"geometry_rotation_deg\"");
                         DebugSink.text("geo-check", "after delta " + (at >= 0
                                 ? gp.substring(at, Math.min(gp.length(), at + 30)) : "absent"));
                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34133", ignored); }
                 }
                 Probe.log("render", "apply film=" + renderedStock + " long=" + longEdge
-                        + " src=" + host.sourceWidth + "x" + host.sourceHeight);
-                CrashTrail.markNow(host, "render:params");
+                        + " src=" + host.getSourceWidth() + "x" + host.getSourceHeight());
+                CrashTrail.markNow(host.context(), "render:params");
                 // **The black box is `renderBegin`.** Everything before it is
                 // Java and leaves a stack; everything after it is arithmetic on
                 // a frame that already exists. So the ticker wraps exactly that
                 // call, and `render:returned` is the first proof it came back.
-                Thread ticker = host.startTick("render", host.session);
-                CrashTrail.markNow(host, "render:call");
+                Thread ticker = host.startTickHostCall("render", host.getSession());
+                CrashTrail.markNow(host.context(), "render:call");
                 int[] dims;
                 try {
-                    dims = host.session.renderBegin("live");
+                    dims = host.getSession().renderBegin("live");
                 } finally {
-                    host.stopTick(ticker);
+                    host.stopTickViaHost(ticker);
                 }
                 int w = dims[0], h = dims[1];
-                CrashTrail.markNow(host, "render:returned " + w + "x" + h);
+                CrashTrail.markNow(host.context(), "render:returned " + w + "x" + h);
                 if (w <= 0 || h <= 0) throw new RuntimeException("engine returned empty frame");
 
-                CrashTrail.markNow(host, "render:alloc " + w + "x" + h);
-                Bitmap bmp = host.newFrameBitmap(w, h);
+                CrashTrail.markNow(host.context(), "render:alloc " + w + "x" + h);
+                Bitmap bmp = host.newFrameBitmapHostCall(w, h);
                 int[] pixels = new int[w * h];
-                CrashTrail.markNow(host, "render:copy");
-                int copied = host.session.copyArgbRange(pixels, 0, h);
+                CrashTrail.markNow(host.context(), "render:copy");
+                int copied = host.getSession().copyArgbRange(pixels, 0, h);
                 if (copied != w * h) {
                     throw new RuntimeException("pixel copy incomplete " + copied + "/" + (w * h));
                 }
@@ -198,8 +200,8 @@ final class RenderWorker extends HostWorker {
                 // engine's pixels land and before the UI thread is handed the
                 // frame, so the canvas, the histogram and the film thumbnail all
                 // see the same glowed picture.
-                host.glowInPlace(bmp);
-                CrashTrail.markNow(host, "render:setPixels");
+                host.glowInPlaceHostCall(bmp);
+                CrashTrail.markNow(host.context(), "render:setPixels");
                 // **The canvas, not just the export.** The reports say the ruler
                 // is already visible while editing, and `log_edge_profile` only
                 // ever ran on an export -- three rounds of "send me the export"
@@ -210,44 +212,44 @@ final class RenderWorker extends HostWorker {
                 if (longEdge >= 1024) {
                     try {
                         final String edgeLine = SpektraLabEngine.edgeReport();
-                        final String verdict = host.edgeVerdictOfLine(edgeLine);
+                        final String verdict = host.edgeVerdictOfLineViaHost(edgeLine);
                         if (verdict != null) {
                             DebugSink.textNow("edge-canvas", verdict);
-                        } else if (edgeLine != null && host.edgeCanvasSends < 4) {
+                        } else if (edgeLine != null && host.getEdgeCanvasSends() < 4) {
                             // Below the threshold, but say what it measured:
                             // knowing that preview reads 40 and full reads 8 on
                             // the same picture is the whole answer.
-                            ++host.edgeCanvasSends;
+                            host.setEdgeCanvasSends(host.getEdgeCanvasSends() + 1);
                             DebugSink.textNow("edge-weak", edgeLine);
                         }
                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34189", ignored); }
                 }
-                host.session.renderEnd();
-                CrashTrail.markNow(host, "render:end");
+                host.getSession().renderEnd();
+                CrashTrail.markNow(host.context(), "render:end");
                 // What the meter did to *this* frame. A render that looks dark
                 // is either the film's curve or an exposure the engine decided
                 // on, and the two are indistinguishable by eye -- one line of
                 // numbers settles it.
                 try {
-                    host.rememberAppliedEv(host.session.progressJson(), "full");
+                    host.rememberAppliedEvHostCall(host.getSession().progressJson(), "full");
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34199", ignored); }
                 // The rebate's own numbers, next to the buffer they belong to.
                 // "the edge is wrong in the export but right in the preview" is
                 // a question only these two lines can answer.
                 try {
                     DebugSink.text("overscan-geom", "tier=live " + w + "x" + h + " "
-                            + host.session.overscanGeometry());
+                            + host.getSession().overscanGeometry());
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34206", ignored); }
                 // The engine's log for this render. When a frame comes back as
                 // one flat colour there is nothing else to read: it says which
                 // tier was built, how big, and what each dispatch covered.
-                host.uploadVkLog();
+                host.uploadVkLogHostCall();
 
                 final int fw = w, fh = h;
                 try {
                     long hsh = 1469598103934665603L;
                     for (int i = 0; i < pixels.length; i += 7) { hsh ^= pixels[i]; hsh *= 1099511628211L; }
-                    long t0 = host.nowMs();
+                    long t0 = host.nowMsViaHost();
                     java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
                     bmp.compress(Bitmap.CompressFormat.JPEG, 85, bo);
                     DebugSink.text("preview", "w=" + w + " h=" + h + " hash=" + Long.toHexString(hsh)
@@ -256,15 +258,15 @@ final class RenderWorker extends HostWorker {
                             + " jpegBytes=" + bo.size());
                     // logcat hook for scripts/device-golden.ps1 (no network needed).
                     android.util.Log.i("SpektraLabHash", "w=" + w + " h=" + h + " hash="
-                            + Long.toHexString(hsh) + " band=" + host.testBandRows + " copy=" + copied
+                            + Long.toHexString(hsh) + " band=" + host.getTestBandRows() + " copy=" + copied
                             + " first=" + Integer.toHexString(pixels[0])
                             + " mid=" + Integer.toHexString(pixels[(h / 2) * w + w / 2]));
                     DebugSink.bytes("preview", "p.jpg", bo.toByteArray(), "image/jpeg");
-                    DebugSink.text("preview-timing", "jpeg_ms=" + (host.nowMs() - t0));
+                    DebugSink.text("preview-timing", "jpeg_ms=" + (host.nowMsViaHost() - t0));
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34225", ignored); }
                 host.runOnUiThread(() -> {
-                    if (renderedEpoch != host.renderEpoch
-                            || host.currentFrame != renderedFrame || host.session == null) {
+                    if (renderedEpoch != host.getRenderEpoch()
+                            || host.getCurrentFrame() != renderedFrame || host.getSession() == null) {
                         try { DebugSink.text("render", "frame changed mid-render; dropped"); }
                         catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34230", ignored); }
                         // **The overlay belongs to this generation too.**
@@ -276,11 +278,11 @@ final class RenderWorker extends HostWorker {
                         // later tap then answered "正在渲染", and a render that
                         // had queued up (`pendingRender`) never ran either,
                         // because `renderImage` bailed at the same flag.
-                        host.rendering = false;
-                        host.clearBusyPlate();
-                        if (host.pendingRender) {
-                            host.pendingRender = false;
-                            if (host.filmStock != null && host.session != null) host.renderImage();
+                        host.setRendering(false);
+                        host.clearBusyPlateHostCall();
+                        if (host.getPendingRender()) {
+                            host.setPendingRender(false);
+                            if (host.getFilmStock() != null && host.getSession() != null) host.renderImageHostCall();
                         }
                         return;
                     }
@@ -297,39 +299,39 @@ final class RenderWorker extends HostWorker {
                     //      reports itself is better than a retry loop.
                     // The budgets cap how often 1 and 2 may run in a process;
                     // a picture resets the streak.
-                    final PictureCheck.Result look = PictureCheck.of(host.sampleGrid(bmp));
+                    final PictureCheck.Result look = PictureCheck.of(host.sampleGridViaHost(bmp));
                     if (!look.ok()) {
-                        ++host.flatStreak;
+                        host.setFlatStreak(host.getFlatStreak() + 1);
                         SelfHeal.repaired("render-flat", look.describe()
-                                + " at " + fw + "x" + fh + " (attempt " + host.flatStreak + ")");
-                        if (host.flatStreak == 1 && SelfHeal.budget("render-redraw", 2)) {
-                            host.rendering = false;
-                            host.hideBusy();
-                            host.renderImage(longEdge);
+                                + " at " + fw + "x" + fh + " (attempt " + host.getFlatStreak() + ")");
+                        if (host.getFlatStreak() == 1 && SelfHeal.budget("render-redraw", 2)) {
+                            host.setRendering(false);
+                            host.hideBusyHostCall();
+                            host.renderImageHostCall(longEdge);
                             return;
                         }
-                        if (host.flatStreak == 2 && SelfHeal.budget("engine-rebuild", 2)) {
-                            host.rendering = false;
-                            host.hideBusy();
-                            if (host.rebuildEngineAndReload(look.describe() + " twice at " + fw + "x" + fh)) {
+                        if (host.getFlatStreak() == 2 && SelfHeal.budget("engine-rebuild", 2)) {
+                            host.setRendering(false);
+                            host.hideBusyHostCall();
+                            if (host.rebuildEngineAndReloadHostCall(look.describe() + " twice at " + fw + "x" + fh)) {
                                 return;
                             }
                         }
-                        host.statusText.setText("画面异常 · " + look.verdict);
-                    } else if (host.flatStreak != 0) {
+                        host.getStatusText().setText("画面异常 · " + look.verdict);
+                    } else if (host.getFlatStreak() != 0) {
                         SelfHeal.repaired("render-recovered",
-                                "a picture after " + host.flatStreak + " constant frame(s)");
-                        host.flatStreak = 0;
+                                "a picture after " + host.getFlatStreak() + " constant frame(s)");
+                        host.setFlatStreak(0);
                     }
-                    host.showingOriginal = false;
-                    host.compare.setAfter(bmp);
+                    host.setShowingOriginal(false);
+                    host.getCompare().setAfter(bmp);
                     // **The pill follows the canvas, not the frame list.** Every
                     // successful render passes through here, and this is the
                     // line that actually turns `showingOriginal` off -- the
                     // twenty assignments elsewhere do not all call
                     // `setOriginalVisual`, so refreshing there would leave the
                     // pill behind on some paths.
-                    host.refreshLiveBadge();
+                    host.refreshLiveBadgeHostCall();
                     // **The stand-in goes on *every* frame that is current.** The
                     // old test also required `rotationPending`, a flag only two
                     // call sites set -- so a commit path that missed it left the
@@ -337,78 +339,78 @@ final class RenderWorker extends HostWorker {
                     // carried the angle, and the picture came out turned twice.
                     // The only thing that may keep a stand-in alive is a finger
                     // still on the glass.
-                    if (!host.rotating && renderedGeometrySeq >= host.geometrySeq) {
-                        final boolean was = host.rotationPending;
-                        host.rotationPending = false;
-                        host.compare.setPreviewRotation(0f);
+                    if (!host.getRotating() && renderedGeometrySeq >= host.getGeometrySeq()) {
+                        final boolean was = host.getRotationPending();
+                        host.setRotationPending(false);
+                        host.getCompare().setPreviewRotation(0f);
                         if (was) {
                             try {
                                 DebugSink.send("rotate", "frame seq=" + renderedGeometrySeq
-                                        + "/" + host.geometrySeq + " stand-in cleared");
+                                        + "/" + host.getGeometrySeq() + " stand-in cleared");
                             } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34309", ignored); }
                         }
                     }
-                    host.setStage(1, null);
+                    host.setStageHostCall(1, null);
                     // Give the pool back if this render left it far larger than
                     // the frame -- ten shoot-layer edits in a row is what parks
                     // gigabytes and gets the launcher killed. Off the UI thread:
                     // trimming destroys buffers and waits on the device.
-                    new Thread(host::trimPoolIfBloated, "pool-trim").start();
-                    host.setStep(2);
-                    host.lastRenderedBitmap = bmp;
+                    new Thread(host::trimPoolIfBloatedHostCall, "pool-trim").start();
+                    host.setStepHostCall(2);
+                    host.setLastRenderedBitmap(bmp);
                     // The histogram describes what the canvas shows, so it moves
                     // with the render, not with the tab that displays it.
-                    if (host.histogram != null) host.histogram.setBitmap(bmp);
-                    host.refreshComparePill();
-                    host.cacheFilmThumb(renderedStock, bmp);
-                    host.updateCardThumb(renderedStock);
-                    host.updateFilmSelection();
+                    if (host.getHistogram() != null) host.getHistogram().setBitmap(bmp);
+                    host.refreshComparePillHostCall();
+                    host.cacheFilmThumbHostCall(renderedStock, bmp);
+                    host.updateCardThumbHostCall(renderedStock);
+                    host.updateFilmSelectionHostCall();
                     // A user render stops the queue so it can own the GPU. Put
                     // it back afterwards, or the rest of the shelf never fills.
-                    host.startPrefetch();
+                    host.startPrefetchHostCall();
                     // A finished render is exactly what makes both pages live
                     // -- and it is the only place that does.
-                    host.refreshPanelLocks();
-                    host.setOriginalVisual(false);
-                    host.updateFilmSelection();
-                    final int[] bands = host.blackBands(bmp);
-                    host.statusText.setText("Preview ready " + fw + "×" + fh);
+                    host.refreshPanelLocksHostCall();
+                    host.setOriginalVisualHostCall(false);
+                    host.updateFilmSelectionHostCall();
+                    final int[] bands = host.blackBandsViaHost(bmp);
+                    host.getStatusText().setText("Preview ready " + fw + "×" + fh);
                     try {
                         DebugSink.text("bands", "render " + fw + "x" + fh
                                 + " black rows top=" + bands[0] + " bottom=" + bands[1]
-                                + " source=" + host.sourceWidth + "x" + host.sourceHeight);
+                                + " source=" + host.getSourceWidth() + "x" + host.getSourceHeight());
                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34341", ignored); }
-                    host.progressBar.setVisibility(View.GONE);
-                    host.hideBusy();
-                    host.rendering = false;
+                    host.getProgressBar().setVisibility(View.GONE);
+                    host.hideBusyHostCall();
+                    host.setRendering(false);
                     // The canvas now shows this look; it is also the version
                     // that has to survive a kill from recents.
-                    host.schedulePersist();
-                    if (host.pendingRender) { host.pendingRender = false; host.renderImage(); }
+                    host.schedulePersistHostCall();
+                    if (host.getPendingRender()) { host.setPendingRender(false); host.renderImageHostCall(); }
                 });
             }
             } catch (Throwable e) {
-                try { host.session.renderEnd(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34352", ignored); }
-                final String msg = host.describe(e);
-                if (host.healCanvasFromError(msg)) {
+                try { host.getSession().renderEnd(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34352", ignored); }
+                final String msg = host.describeViaHost(e);
+                if (host.healCanvasFromErrorHostCall(msg)) {
                     host.runOnUiThread(() -> {
-                        host.rendering = false;
-                        host.progressBar.setVisibility(View.GONE);
-                        host.hideBusy();
-                        host.pendingRender = false;
-                        host.statusText.setText("Rendering…");
-                        host.renderImage(longEdge);
+                        host.setRendering(false);
+                        host.getProgressBar().setVisibility(View.GONE);
+                        host.hideBusyHostCall();
+                        host.setPendingRender(false);
+                        host.getStatusText().setText("Rendering…");
+                        host.renderImageHostCall(longEdge);
                     });
                     return;
                 }
-                if (host.healGateFromError(msg)) {
+                if (host.healGateFromErrorHostCall(msg)) {
                     host.runOnUiThread(() -> {
-                        host.rendering = false;
-                        host.progressBar.setVisibility(View.GONE);
-                        host.hideBusy();
-                        host.pendingRender = false;
-                        host.statusText.setText("Rendering…");
-                        host.renderImage(longEdge);
+                        host.setRendering(false);
+                        host.getProgressBar().setVisibility(View.GONE);
+                        host.hideBusyHostCall();
+                        host.setPendingRender(false);
+                        host.getStatusText().setText("Rendering…");
+                        host.renderImageHostCall(longEdge);
                     });
                     return;
                 }
@@ -418,7 +420,7 @@ final class RenderWorker extends HostWorker {
                 // phone whose 44 MP import works two times out of three. The
                 // budget keeps it from becoming a loop on a device that is
                 // genuinely broken -- after two rebuilds the error is shown.
-                if (host.isDeviceLost(msg) && SelfHeal.budget("device-lost", 2)) {
+                if (host.isDeviceLostViaHost(msg) && SelfHeal.budget("device-lost", 2)) {
                     // **The device just told us it cannot hold this frame's
                     // plane.** The fast path (no checkpoint) asks for four or
                     // five whole planes; that is what lost the queue. The
@@ -435,14 +437,14 @@ final class RenderWorker extends HostWorker {
                     SelfHeal.repaired("device-lost",
                             msg.substring(0, Math.min(90, msg.length())));
                     host.runOnUiThread(() -> {
-                        host.rendering = false;
-                        host.progressBar.setVisibility(View.GONE);
-                        host.hideBusy();
-                        host.pendingRender = false;
-                        host.statusText.setText("显卡掉线，正在重建…");
-                        if (!host.rebuildEngineAndReload("device lost at " + longEdge + "px")) {
-                            host.statusText.setText("渲染失败 " + SpkError.shortForm(msg));
-                            host.showErrorDialog("渲染失败", SpkError.format(msg));
+                        host.setRendering(false);
+                        host.getProgressBar().setVisibility(View.GONE);
+                        host.hideBusyHostCall();
+                        host.setPendingRender(false);
+                        host.getStatusText().setText("显卡掉线，正在重建…");
+                        if (!host.rebuildEngineAndReloadHostCall("device lost at " + longEdge + "px")) {
+                            host.getStatusText().setText("渲染失败 " + SpkError.shortForm(msg));
+                            host.showErrorDialogHostCall("渲染失败", SpkError.format(msg));
                         }
                     });
                     return;
@@ -453,27 +455,27 @@ final class RenderWorker extends HostWorker {
                     // still shows the view-space turn; leaving both is a picture
                     // that looks turned and exports straight. Put the angle back
                     // and take the preview rotation off in the same frame.
-                    if (host.rotationPending) {
-                        host.rotationPending = false;
-                        host.geometryRotation = host.rotationBeforeDrag;
-                        if (host.compare != null) host.compare.setPreviewRotation(0f);
-                        if (host.rotateArc != null) host.rotateArc.setAngle(host.geometryRotation);
+                    if (host.getRotationPending()) {
+                        host.setRotationPending(false);
+                        host.setGeometryRotation(host.getRotationBeforeDrag());
+                        if (host.getCompare() != null) host.getCompare().setPreviewRotation(0f);
+                        if (host.getRotateArc() != null) host.getRotateArc().setAngle(host.getGeometryRotation());
                     }
                     // **A failed render is not an edit.** `scheduleUndo` runs
                     // before the render does, so a failure would still push the
                     // state that caused it -- and undo then replayed the error
                     // instead of the picture before it.
-                    host.cancelUndo();
-                    host.statusText.setText("渲染失败 " + SpkError.shortForm(msg));
-                    host.progressBar.setVisibility(View.GONE);
-                    host.hideBusy();
-                    host.rendering = false;
+                    host.cancelUndoHostCall();
+                    host.getStatusText().setText("渲染失败 " + SpkError.shortForm(msg));
+                    host.getProgressBar().setVisibility(View.GONE);
+                    host.hideBusyHostCall();
+                    host.setRendering(false);
                     // The foot is one 7 sp line: a failure has to be readable,
                     // and it has to arrive with enough context to be reported.
-                    host.showErrorDialog("渲染失败", SpkError.format(msg)
-                            + "\n\n" + host.sourceWidth + "×" + host.sourceHeight
-                            + "\n" + host.probe.describe());
-                    if (host.pendingRender) { host.pendingRender = false; host.renderImage(); }
+                    host.showErrorDialogHostCall("渲染失败", SpkError.format(msg)
+                            + "\n\n" + host.getSourceWidth() + "×" + host.getSourceHeight()
+                            + "\n" + host.getProbe().describe());
+                    if (host.getPendingRender()) { host.setPendingRender(false); host.renderImageHostCall(); }
                 });
                 // E-1001 is "a plane is bigger than one binding may name", and
                 // the only cure is a smaller session. The import cap already
@@ -485,7 +487,7 @@ final class RenderWorker extends HostWorker {
                 // failed without naming one, which on a frame this size is the
                 // same ceiling. Both have the same cure.
                 final int code = SpkError.codeOf(msg);
-                if (code == 1001 || code == 1009) host.offerSmallerImport();
+                if (code == 1001 || code == 1009) host.offerSmallerImportHostCall();
             }
         }).start();
         }

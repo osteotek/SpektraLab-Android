@@ -11,44 +11,46 @@ import java.util.List;
 
 /** Worker re-extracted from the 1.7.0 Activity; owns the full current path. */
 final class RawImportWorker extends HostWorker {
-    RawImportWorker(MainActivity host) { super(host); }
+    private final RawImportWorkerHost host;
+
+    RawImportWorker(RawImportWorkerHost host) { this.host = host; }
 
     void run(Uri uri, int reopenIndex) {
 
-        host.fotuSourcePath = null;
-        host.fotuSourceDead = null;
-        host.fotuGeneration++;
+        host.setFotuSourcePath(null);
+        host.setFotuSourceDead(null);
+        host.setFotuGeneration(host.getFotuGeneration() + 1);
         // **This decode has a serial number.** A RAW takes three to five seconds, and the strip
         // is right there: tap chip A, tap chip B before A finishes, and A's worker woke up last
         // -- closed B's session, installed A's pixels and drew A under B's chip. That is the
         // "quick taps give the wrong picture / half-drawn canvas" report. `loadImage` bumps the
         // epoch; this worker is the one place that has to honour it.
-        final int importEpoch = host.renderEpoch;
+        final int importEpoch = host.getRenderEpoch();
         // Read once, on the UI thread, before the decode starts: the worker
         // below cannot be allowed to see a flag that a later tap already moved.
-        final boolean stayOnOriginal = host.reopenToOriginal;
-        host.reopenToOriginal = false;
+        final boolean stayOnOriginal = host.getReopenToOriginal();
+        host.setReopenToOriginal(false);
         // **A different import is a different frame.** The cache keys on path +
         // mtime, and every import is copied to `files/import/<same name>`; two
         // copies inside one second share an mtime, so the second import could
         // be handed the first one's decoded pixels. Clearing here costs one
         // unpack and buys the guarantee that the pixels belong to this file.
         try { SpektraLabEngine.clearRawCache(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29554", ignored); }
-        CrashTrail.mark(host, "import:raw " + uri);
+        CrashTrail.mark(host.context(), "import:raw " + uri);
         try {
-            String filePath = host.getFilePathFromUri(uri);
-            host.rawFilePath = filePath;
+            String filePath = host.getFilePathFromUriHostCall(uri);
+            host.setRawFilePath(filePath);
             // **The phone's own idea of how this raw should look.** OnePlus and
             // OPPO ship a 128/140-point `ProfileToneCurve` plus a
             // `BaselineExposure`; LibRaw parses neither, which is the whole of
             // "our canvas is flat and Lightroom's is not". Read once here, a
             // 6 KB seek, and handed to the canvas only.
-            host.sourceToneCurve = SpektraLabEngine.sourceDisplayProfile(filePath);
-            final int curvePts = host.sourceToneCurve == null ? 0 : (host.sourceToneCurve.length - 1) / 2;
+            host.setSourceToneCurve(SpektraLabEngine.sourceDisplayProfile(filePath));
+            final int curvePts = host.getSourceToneCurve() == null ? 0 : (host.getSourceToneCurve().length - 1) / 2;
             DebugSink.text("raw-view", "display profile: "
-                    + (host.sourceToneCurve == null ? "none"
+                    + (host.getSourceToneCurve() == null ? "none"
                        : curvePts + " points, baseline "
-                         + String.format(java.util.Locale.US, "%.2f", host.sourceToneCurve[0]) + " EV"));
+                         + String.format(java.util.Locale.US, "%.2f", host.getSourceToneCurve()[0]) + " EV"));
             // **Which half of the import we got to.** Until now the RAW path
             // filed one mark (`import:raw`) and then nothing until the decode
             // had already finished, so a report of the form "crashed importing
@@ -56,9 +58,9 @@ final class RawImportWorker extends HostWorker {
             // seconds" -- the file copy, `open_file`, the decode, `spk_open`,
             // the meter or the source view. The JPEG path has had these marks
             // for a while; this one had not.
-            CrashTrail.markNow(host, "import:path " + (filePath == null ? "(null)" : "ok"));
+            CrashTrail.markNow(host.context(), "import:path " + (filePath == null ? "(null)" : "ok"));
             if (filePath == null) {
-                host.showInAppToast("无法获取RAW文件路径");
+                host.showInAppToastHostCall("无法获取RAW文件路径");
                 return;
             }
 
@@ -67,20 +69,20 @@ final class RawImportWorker extends HostWorker {
             // pixel before anyone is consulted, and at 50 MP that is 600 MB. A
             // sheet that appears after that memory is spent is a post-mortem,
             // not a choice.
-            if (!host.suppressBudgetDialog && !host.importAtNativeSize && host.pendingCapPixels <= 0) {
+            if (!host.getSuppressBudgetDialog() && !host.getImportAtNativeSize() && host.getPendingCapPixels() <= 0) {
                 final int[] dims = SpektraLabEngine.rawDimensions(filePath);
                 if (dims != null && dims[0] > 0 && dims[1] > 0) {
                     final long area = (long) dims[0] * (long) dims[1];
-                    final int cap = host.maxImportPixels();
-                    if (area > cap || Math.max(dims[0], dims[1]) > host.IMPORT_LONG_EDGE) {
-                        host.statusText.setText("选择导入尺寸");
-                        host.showRawBudgetDialog(uri, dims[0], dims[1], cap, reopenIndex);
+                    final int cap = host.maxImportPixelsHostCall();
+                    if (area > cap || Math.max(dims[0], dims[1]) > host.getIMPORT_LONG_EDGE()) {
+                        host.getStatusText().setText("选择导入尺寸");
+                        host.showRawBudgetDialogHostCall(uri, dims[0], dims[1], cap, reopenIndex);
                         return;
                     }
                 }
             }
 
-            host.statusText.setText("Decoding RAW…");
+            host.getStatusText().setText("Decoding RAW…");
             // **The same three things the JPEG path does, for the same three
             // reasons** — and this path had none of them, which is why a RAW
             // import kept the previous photograph everywhere except the little
@@ -91,52 +93,52 @@ final class RawImportWorker extends HostWorker {
             //     render, which nothing else ever clears;
             //   · filmThumbs.clear() is the shelf's own cache, keyed by film
             //     id with no frame identity in the key.
-            host.stopPrefetch();
-            if (host.compare != null) host.compare.clear();
-            host.clearShelfCache();
-            host.lastRenderedBitmap = null;
-            host.refreshPanelLocks();
+            host.stopPrefetchHostCall();
+            if (host.getCompare() != null) host.getCompare().clear();
+            host.clearShelfCacheHostCall();
+            host.setLastRenderedBitmap(null);
+            host.refreshPanelLocksHostCall();
             // **Not `clearBusyPlate()`.** That emptied the canvas for the
             // decode and left "RAW LOADED" standing there while it worked --
             // the old behaviour the import was asked to stop having.
-            host.dateText = null;
+            host.setDateText(null);
             // **This method raises its own plate.** `loadImage` no longer does:
             // it can return on a size question, and a plate with nothing under
             // it is what "导入选项不显示" was. The decode sets the stage itself
             // as soon as it has a preview; the plate sits on top of that.
-            host.showBusy("READING");
+            host.showBusyHostCall("READING");
             new Thread(() -> {
                 try {
                     // Someone tapped another chip while this file was decoding. The newer import
                     // owns the canvas, the session and the strip: this one must not touch any of
                     // them, or the picture and the selected chip disagree.
-                    if (importEpoch != host.renderEpoch) {
-                        CrashTrail.mark(host, "import:superseded " + importEpoch + "/" + host.renderEpoch);
+                    if (importEpoch != host.getRenderEpoch()) {
+                        CrashTrail.mark(host.context(), "import:superseded " + importEpoch + "/" + host.getRenderEpoch());
                         return;
                     }
-                    String resourcesDir = host.getResourcesDir();
-                    if (host.engine == null) {
-                        host.vkLogFile().delete();
-                        host.engine = SpektraLabEngine.create(resourcesDir, host.vkLogFile().getAbsolutePath());
-                        host.uploadCapabilities();
+                    String resourcesDir = host.getResourcesDirHostCall();
+                    if (host.getEngine() == null) {
+                        host.vkLogFileHostCall().delete();
+                        host.setEngine(SpektraLabEngine.create(resourcesDir, host.vkLogFileHostCall().getAbsolutePath()));
+                        host.uploadCapabilitiesHostCall();
                     }
                     // Under the render lock: the shelf queue can still be
                     // inside `renderBegin` when this thread gets here, and
                     // closing a session out from under it is a native crash,
                     // not an exception.
-                    synchronized (host.renderMutex) {
-                        if (host.session != null) { host.session.close(); host.session = null; }
+                    synchronized (host.getRenderMutex()) {
+                        if (host.getSession() != null) { host.getSession().close(); host.setSession(null); }
                     }
-                    Probe.log("import", "pre avail=" + Probe.mb(host.availableMemoryBytes())
-                            + " cap=" + host.maxImportPixels() + " native=" + host.importAtNativeSize
-                            + " pool=" + Probe.pool(host.engine));
-                    Probe.step(host, "import:pre");
+                    Probe.log("import", "pre avail=" + Probe.mb(host.availableMemoryBytesHostCall())
+                            + " cap=" + host.maxImportPixelsHostCall() + " native=" + host.getImportAtNativeSize()
+                            + " pool=" + Probe.pool(host.getEngine()));
+                    Probe.step(host.context(), "import:pre");
                     // **Same trim as the JPEG path.** A 50 MP frame needs
                     // ~76 B/px of planes (3.8 GB); the previous session's pool
                     // is freed here rather than left for the allocator to run
                     // out against.
-                    try { if (host.engine != null) host.engine.trimPool(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29656", ignored); }
-                    Probe.log("import", "trimmed pool=" + Probe.pool(host.engine));
+                    try { if (host.getEngine() != null) host.getEngine().trimPool(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29656", ignored); }
+                    Probe.log("import", "trimmed pool=" + Probe.pool(host.getEngine()));
                     
                     // `film_stock` names a profile file: "" and "null" both make
                     // `load_profile` fail ("bad stock name"), so an unchosen film
@@ -151,12 +153,12 @@ final class RawImportWorker extends HostWorker {
                     // has work to do (it decodes the raw and paints 原图), so it
                     // opens with no film and the default paper; the picture
                     // itself is developed by `renderFotu` through `renderImage`.
-                    final boolean fotuFrame = host.isFotuStock(host.filmStock);
-                    final String spkFilm = fotuFrame ? null : host.filmStock;
+                    final boolean fotuFrame = host.isFotuStockViaHost(host.getFilmStock());
+                    final String spkFilm = fotuFrame ? null : host.getFilmStock();
                     // **Never the sentinel.** 无相纸 is a UI idea; `spk_open`
                     // reads this as a file name (SL-261119-938F).
                     final String spkPaper = fotuFrame ? "kodak_portra_endura"
-                            : host.spkPaperForEngine(host.printStock);
+                            : host.spkPaperForEngineHostCall(host.getPrintStock());
                     final String filmField = spkFilm == null ? ""
                             : String.format(java.util.Locale.US, "\"film_stock\":\"%s\",", spkFilm);
                     // **`Locale.US`, always, for anything that becomes JSON.**
@@ -169,7 +171,7 @@ final class RawImportWorker extends HostWorker {
                     // died with E-1106 (SL-261121-130E).
                     String params = String.format(java.util.Locale.US,
                         "{%s\"print_stock\":\"%s\",\"input_color_space\":\"ProPhoto RGB\",\"input_cctf_decoding\":false,\"output_color_space\":\"sRGB\",\"print_exposure\":%.2f,\"preview_long_edge\":2048}",
-                        filmField, spkPaper, host.printExposure
+                        filmField, spkPaper, host.getPrintExposure()
                     );
                     
                     try { DebugSink.text("open-params", "path=" + filePath + "\n" + params); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29693", ignored); }
@@ -178,40 +180,40 @@ final class RawImportWorker extends HostWorker {
                     // maxStorageBufferRange. Two limits apply, whichever is
                     // lower -- that range, and the 65 535-workgroup dispatch
                     // limit (16,776,960 px) this driver still loses blocks over.
-                    final boolean nativeSize = host.importAtNativeSize;
-                    host.importAtNativeSize = false;                   // one import only
+                    final boolean nativeSize = host.getImportAtNativeSize();
+                    host.setImportAtNativeSize(false);                   // one import only
                     // The raw path re-opens at the file's own size for its
                     // export already (`openRawSession(..., 0, 0)`), so a flag
                     // left over from a JPEG import must not reach it.
-                    host.exportAtNative = false;
+                    host.setExportAtNative(false);
                     if (nativeSize) {
                         try { DebugSink.text("import-mode", "native size, no cap"); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29706", ignored); }
                     }
-                    host.rawFilePath = filePath;
-                    host.importCapPixels = nativeSize ? 0 : host.maxImportPixels();
+                    host.setRawFilePath(filePath);
+                    host.setImportCapPixels(nativeSize ? 0 : host.maxImportPixelsHostCall());
                     // **The frame's own balance, if it had one.** A frame
                     // reopened from the strip restores `wbUserMul` through
                     // `applyLook`; without passing it here the reopen decodes
                     // as-shot while the sliders still show the saved Kelvin.
-                    final float[] wbMul = host.wbUserMul;
-                    CrashTrail.markNow(host, "import:opening cap=" + host.importCapPixels);
-                    host.session = wbMul != null
-                            ? host.engine.openRawSessionTuned(filePath, params,
-                                    host.importCapPixels, nativeSize ? 0 : host.IMPORT_LONG_EDGE, wbMul)
-                            : host.engine.openRawSession(filePath, params,
-                                    host.importCapPixels, nativeSize ? 0 : host.IMPORT_LONG_EDGE);
-                    Probe.log("import", "opened=" + (host.session != null)
-                            + " cap=" + host.importCapPixels
-                            + " edge=" + (nativeSize ? 0 : host.IMPORT_LONG_EDGE)
+                    final float[] wbMul = host.getWbUserMul();
+                    CrashTrail.markNow(host.context(), "import:opening cap=" + host.getImportCapPixels());
+                    host.setSession(wbMul != null
+                            ? host.getEngine().openRawSessionTuned(filePath, params,
+                                    host.getImportCapPixels(), nativeSize ? 0 : host.getIMPORT_LONG_EDGE(), wbMul)
+                            : host.getEngine().openRawSession(filePath, params,
+                                    host.getImportCapPixels(), nativeSize ? 0 : host.getIMPORT_LONG_EDGE()));
+                    Probe.log("import", "opened=" + (host.getSession() != null)
+                            + " cap=" + host.getImportCapPixels()
+                            + " edge=" + (nativeSize ? 0 : host.getIMPORT_LONG_EDGE())
                             + " mul=" + Probe.mul(wbMul)
-                            + " pool=" + Probe.pool(host.engine));
-                    host.lastImportError = null;
+                            + " pool=" + Probe.pool(host.getEngine()));
+                    host.setLastImportError(null);
                     {
                         // The size the engine actually opened, which is not
                         // always the one `rawDimensions` promised: `half_size`
                         // and the budget can both change it.
-                        final int[] sd = host.session == null ? null : host.session.getDimensions();
-                        CrashTrail.markNow(host, "import:opened "
+                        final int[] sd = host.getSession() == null ? null : host.getSession().getDimensions();
+                        CrashTrail.markNow(host.context(), "import:opened "
                                 + (sd == null || sd.length < 2 ? "none" : sd[0] + "x" + sd[1]));
                     }
                     // **The session's own parameters, which this path never sent.**
@@ -223,7 +225,7 @@ final class RawImportWorker extends HostWorker {
                     // control until the user moved a slider -- and a rebate or a
                     // date back chosen before the import never reached the render
                     // at all.
-                    host.applySessionParams();
+                    host.applySessionParamsHostCall();
 
                     // **Meter before the source view.** `spk_export_source`
                     // materialises the live tier, and a meter taken after it
@@ -240,8 +242,8 @@ final class RawImportWorker extends HostWorker {
                     // field is also re-read inside the lock, so a swap that
                     // lands in between simply skips the solve.
                     try {
-                        synchronized (host.renderMutex) {
-                            if (host.session != null) host.session.solve("exposure");
+                        synchronized (host.getRenderMutex()) {
+                            if (host.getSession() != null) host.getSession().solve("exposure");
                         }
                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29764", ignored); }
                     // **The raw itself**, which is the "before" side of every
@@ -252,9 +254,9 @@ final class RawImportWorker extends HostWorker {
                     // a stand-in for it: a preview is the camera's rendering,
                     // not this frame, and showing it as "原图" is the same lie
                     // as importing it would be. No frame, no picture.
-                    Bitmap rawView = host.exportSourceBitmap(host.session, 0.0);
+                    Bitmap rawView = host.exportSourceBitmapHostCall(host.getSession(), 0.0);
                     final Bitmap preview = rawView;
-                    CrashTrail.markNow(host, "import:source " + (preview == null ? "none"
+                    CrashTrail.markNow(host.context(), "import:source " + (preview == null ? "none"
                             : preview.getWidth() + "x" + preview.getHeight()));
                     final boolean hasPreview = preview != null;
                     if (!hasPreview) {
@@ -264,17 +266,17 @@ final class RawImportWorker extends HostWorker {
                         // photo that failed to load.
                         try { DebugSink.text("raw-view", "no source frame for the canvas"); }
                         catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29784", ignored); }
-                        host.runOnUiThread(() -> host.statusText.setText("RAW 已载入，原图预览未生成"));
+                        host.runOnUiThread(() -> host.getStatusText().setText("RAW 已载入，原图预览未生成"));
                     }
                     if (hasPreview) {
                         host.runOnUiThread(() -> {
-                            host.beforeBitmap = preview;
-                            host.compare.setBefore(preview);
-                            host.setStage(1, host.getFileName(uri));
-                            host.rememberFrame(uri, reopenIndex);
-                            host.rebuildFilmCards();
-                            host.setStep(1);
-                            host.statusText.setText("Raw preview");
+                            host.setBeforeBitmap(preview);
+                            host.getCompare().setBefore(preview);
+                            host.setStageHostCall(1, host.getFileNameHostCall(uri));
+                            host.rememberFrameHostCall(uri, reopenIndex);
+                            host.rebuildFilmCardsHostCall();
+                            host.setStepHostCall(1);
+                            host.getStatusText().setText("Raw preview");
                         });
                     }
 
@@ -284,11 +286,11 @@ final class RawImportWorker extends HostWorker {
                     // this build does it once on open.
                     String solvedJson = null;
                     try {
-                        synchronized (host.renderMutex) {
-                            solvedJson = host.session == null ? null : host.session.solve("both");
+                        synchronized (host.getRenderMutex()) {
+                            solvedJson = host.getSession() == null ? null : host.getSession().solve("both");
                         }
                         DebugSink.text("solve", solvedJson == null ? "(null)" : solvedJson);
-                        CrashTrail.markNow(host, "import:print " + (solvedJson == null ? "none" : "ok"));
+                        CrashTrail.markNow(host.context(), "import:print " + (solvedJson == null ? "none" : "ok"));
                     } catch (Throwable se) {
                         DebugSink.text("solve-failed", String.valueOf(se));
                     }
@@ -301,8 +303,8 @@ final class RawImportWorker extends HostWorker {
                         try {
                             final org.json.JSONObject root = new org.json.JSONObject(solvedJson);
                             final org.json.JSONObject sp = root.optJSONObject("solved_params");
-                            host.meteredEv = sp == null ? 0.0 : sp.optDouble("exposure_compensation_ev", 0.0);
-                            Probe.log("meter", "applied ev=" + host.meteredEv);
+                            host.setMeteredEv(sp == null ? 0.0 : sp.optDouble("exposure_compensation_ev", 0.0));
+                            Probe.log("meter", "applied ev=" + host.getMeteredEv());
                         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29824", ignored); }
                     }
                     if (hasPreview && solvedJson != null) {
@@ -317,24 +319,24 @@ final class RawImportWorker extends HostWorker {
                         // the developed one, and the film's own contrast stops
                         // showing. 85 % is the same exposure a "before" frame is
                         // expected to have.
-                        solvedEv *= host.SOURCE_VIEW_EV_SCALE;
+                        solvedEv *= host.getSOURCE_VIEW_EV_SCALE();
                         if (Math.abs(solvedEv) > 0.02) {
-                            final Bitmap lifted = host.exportSourceBitmap(host.session, solvedEv);
+                            final Bitmap lifted = host.exportSourceBitmapHostCall(host.getSession(), solvedEv);
                             if (lifted != null) {
                                 final double shownEv = solvedEv;
                                 host.runOnUiThread(() -> {
-                                    host.beforeBitmap = lifted;
-                                    if (host.compare != null) host.compare.setBefore(lifted);
-                                    if (host.currentFrame >= 0 && host.currentFrame < host.frames.size()) {
-                                        final MainActivity.Frame frame = host.frames.get(host.currentFrame);
+                                    host.setBeforeBitmap(lifted);
+                                    if (host.getCompare() != null) host.getCompare().setBefore(lifted);
+                                    if (host.getCurrentFrame() >= 0 && host.getCurrentFrame() < host.getFrames().size()) {
+                                        final MainActivity.Frame frame = host.getFrames().get(host.getCurrentFrame());
                                         try {
-                                            final int tw = Math.max(1, host.dp(42));
+                                            final int tw = Math.max(1, host.dpHostCall(42));
                                             final int th = Math.max(1, Math.round(
                                                     tw * lifted.getHeight() / (float) lifted.getWidth()));
                                             frame.thumb = Bitmap.createScaledBitmap(lifted, tw, th, true);
-                                            host.persistThumb(frame);
+                                            host.persistThumbHostCall(frame);
                                         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29854", ignored); }
-                                        host.rebuildFrameChips();
+                                        host.rebuildFrameChipsHostCall();
                                     }
                                     try {
                                         DebugSink.text("raw-view", "display ev=" + shownEv);
@@ -344,16 +346,16 @@ final class RawImportWorker extends HostWorker {
                         }
                     }
                     host.runOnUiThread(() -> {
-                        if (host.session == null) return;
-                        host.showingOriginal = true;
-                        host.lastRenderedBitmap = null;
-                        host.setOriginalVisual(true);
-                        host.rebuildFilmCards();
-                        if (host.filmStock == null) host.statusText.setText("未渲染 · 选择胶片开始");
+                        if (host.getSession() == null) return;
+                        host.setShowingOriginal(true);
+                        host.setLastRenderedBitmap(null);
+                        host.setOriginalVisualHostCall(true);
+                        host.rebuildFilmCardsHostCall();
+                        if (host.getFilmStock() == null) host.getStatusText().setText("未渲染 · 选择胶片开始");
                         // See the JPEG import: a photo now exists, so the lock
                         // has to be recomputed even when no render follows.
-                        host.refreshPanelLocks();
-                        host.refreshGlowForCurrentView();
+                        host.refreshPanelLocksHostCall();
+                        host.refreshGlowForCurrentViewHostCall();
                         // **No render from here.** `sourceWidth/Height` are
                         // still the previous frame's and `refreshEdgeFormats`
                         // has not run, so a render now used the old shape and
@@ -364,7 +366,7 @@ final class RawImportWorker extends HostWorker {
                     });
 
                     // Get dimensions from session
-                    int[] dims = host.session == null ? null : host.session.getDimensions();
+                    int[] dims = host.getSession() == null ? null : host.getSession().getDimensions();
                     if (dims == null || dims.length < 2 || dims[0] <= 0 || dims[1] <= 0) {
                         // **A session that will not say how big it is failed
                         // quietly.** Seen while switching back and forth between
@@ -374,13 +376,13 @@ final class RawImportWorker extends HostWorker {
                         // the user to start again -- and if it fails the same
                         // way, that is a decode problem and the message below is
                         // the honest one.
-                        try { if (host.session != null) host.session.close(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29895", ignored); }
-                        host.session = wbMul != null
-                                ? host.engine.openRawSessionTuned(filePath, params,
-                                        host.importCapPixels, nativeSize ? 0 : host.IMPORT_LONG_EDGE, wbMul)
-                                : host.engine.openRawSession(filePath, params,
-                                        host.importCapPixels, nativeSize ? 0 : host.IMPORT_LONG_EDGE);
-                        dims = host.session == null ? null : host.session.getDimensions();
+                        try { if (host.getSession() != null) host.getSession().close(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29895", ignored); }
+                        host.setSession(wbMul != null
+                                ? host.getEngine().openRawSessionTuned(filePath, params,
+                                        host.getImportCapPixels(), nativeSize ? 0 : host.getIMPORT_LONG_EDGE(), wbMul)
+                                : host.getEngine().openRawSession(filePath, params,
+                                        host.getImportCapPixels(), nativeSize ? 0 : host.getIMPORT_LONG_EDGE()));
+                        dims = host.getSession() == null ? null : host.getSession().getDimensions();
                     }
                     if (dims == null || dims.length < 2 || dims[0] <= 0 || dims[1] <= 0) {
                         // A zero here used to travel silently: the canvas laid
@@ -389,74 +391,74 @@ final class RawImportWorker extends HostWorker {
                         throw new IllegalStateException(
                                 "session reported no size: " + java.util.Arrays.toString(dims));
                     }
-                    host.importedWidth = dims[0];
-                    host.importedHeight = dims[1];
+                    host.setImportedWidth(dims[0]);
+                    host.setImportedHeight(dims[1]);
                     int w = dims[0];
                     int h = dims[1];
-                    host.sourceWidth = w;
-                    host.sourceHeight = h;
+                    host.setSourceWidth(w);
+                    host.setSourceHeight(h);
                     try { DebugSink.text("raw-dims", "w=" + w + " h=" + h); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29916", ignored); }
 
                     // **The session's own size, not `rawSourceSize()`.** That
                     // legacy query answers {0,0} on purpose -- its comment says
                     // callers must ask the session -- and reading it put
                     // "RAW 0×0 · 0.0 MP" on the status bar.
-                    final boolean capped = host.importCapPixels > 0;
+                    final boolean capped = host.getImportCapPixels() > 0;
                     try {
-                        DebugSink.text("raw-cap", (capped ? "capped at " + host.importCapPixels : "native")
+                        DebugSink.text("raw-cap", (capped ? "capped at " + host.getImportCapPixels() : "native")
                                 + " -> session " + w + "x" + h);
                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29926", ignored); }
 
                     host.runOnUiThread(() -> {
-                        host.refreshEdgeFormats();
-                        host.setStep(1);
+                        host.refreshEdgeFormatsHostCall();
+                        host.setStepHostCall(1);
                         // **No sheet.** The raw arrives at the size it was
                         // imported at; the suggestion is a line in the status
                         // bar, not a gate.
-                        host.hideBusy();
-                        host.statusText.setText("RAW " + w + "×" + h
-                                + " · " + host.megapixels(w, h) + " MP"
-                                + host.importSizeNote(w, h));
-                        host.refreshViewPanel();
+                        host.hideBusyHostCall();
+                        host.getStatusText().setText("RAW " + w + "×" + h
+                                + " · " + host.megapixelsViaHost(w, h) + " MP"
+                                + host.importSizeNoteHostCall(w, h));
+                        host.refreshViewPanelHostCall();
                         // **Render only now.** The frame's real size and the
                         // gates that fit it are both known, so the render the
                         // chip's Look asks for uses this picture's shape.
-                        if (host.filmStock != null && stayOnOriginal) {
-                            host.showingOriginal = true;
-                            host.setOriginalVisual(true);
-                            host.updateFilmSelection();
-                            host.statusText.setText("ORIGINAL · RAW 原始数据（未调色，选胶片后才成片）");
-                            if (!host.batchExportRunning) host.startPrefetch();
-                        } else if (host.filmStock != null) {
-                            host.showingOriginal = false;
-                            host.updateFilmSelection();
-                            if (!host.batchExportRunning) host.renderImage();
-                        } else if (!host.batchExportRunning) {
-                            host.startPrefetch();
+                        if (host.getFilmStock() != null && stayOnOriginal) {
+                            host.setShowingOriginal(true);
+                            host.setOriginalVisualHostCall(true);
+                            host.updateFilmSelectionHostCall();
+                            host.getStatusText().setText("ORIGINAL · RAW 原始数据（未调色，选胶片后才成片）");
+                            if (!host.getBatchExportRunning()) host.startPrefetchHostCall();
+                        } else if (host.getFilmStock() != null) {
+                            host.setShowingOriginal(false);
+                            host.updateFilmSelectionHostCall();
+                            if (!host.getBatchExportRunning()) host.renderImageHostCall();
+                        } else if (!host.getBatchExportRunning()) {
+                            host.startPrefetchHostCall();
                         }
                     });
                 } catch (Throwable t) {
-                    final String said = host.describeImportFailure(t);
-                    host.lastImportError = said;
+                    final String said = host.describeImportFailureHostCall(t);
+                    host.setLastImportError(said);
                     // A High-Efficiency NEF is not a preview job. Say what it
                     // is (E-1108, a compression this build has no decoder for)
                     // and what to change, and leave the file alone.
                     host.runOnUiThread(() -> {
-                        host.statusText.setText("RAW加载失败 " + SpkError.shortForm(said));
-                        host.showErrorDialog("RAW 加载失败", said);
+                        host.getStatusText().setText("RAW加载失败 " + SpkError.shortForm(said));
+                        host.showErrorDialogHostCall("RAW 加载失败", said);
                         // **The plate belongs to whoever raised it.** This path
                         // returned with `showBusy("READING")` still up, so a
                         // failed import left the canvas saying 「加载中」 for
                         // ever -- and deleting the frame did not clear it,
                         // because nothing owned it.
-                        host.hideBusy();
+                        host.hideBusyHostCall();
                     });
                 }
             }).start();
         } catch (Throwable t) {
-            host.lastImportError = host.describeImportFailure(t);
-            host.hideBusy();
-            host.showErrorDialog("RAW 加载失败", host.lastImportError);
+            host.setLastImportError(host.describeImportFailureHostCall(t));
+            host.hideBusyHostCall();
+            host.showErrorDialogHostCall("RAW 加载失败", host.getLastImportError());
         }
         }
 }

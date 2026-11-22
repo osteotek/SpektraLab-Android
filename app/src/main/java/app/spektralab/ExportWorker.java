@@ -11,71 +11,73 @@ import java.util.List;
 
 /** Worker re-extracted from the 1.7.0 Activity; owns the full current path. */
 final class ExportWorker extends HostWorker {
-    ExportWorker(MainActivity host) { super(host); }
+    private final ExportWorkerHost host;
+
+    ExportWorker(ExportWorkerHost host) { this.host = host; }
 
     void run(String format, String tier, final Runnable onDone) {
 
-        CrashTrail.mark(host, "export:begin");
+        CrashTrail.mark(host.context(), "export:begin");
         // **Read once, at the door.** Every early return below -- an export
         // already running, no session, no film -- would otherwise leave the live
         // request armed, and the *next* export, whatever it is, would attach a
         // clip to it.
-        final int liveEdge = ("jpeg".equals(format) && !host.batchExportRunning) ? host.liveClipEdge : 0;
-        host.liveClipEdge = 0;
+        final int liveEdge = ("jpeg".equals(format) && !host.getBatchExportRunning()) ? host.getLiveClipEdge() : 0;
+        host.setLiveClipEdge(0);
         // **A second engine, a second writer.** fotufilm hands back a JPEG and
         // has no TIF/DNG encoder at all; saying so is better than writing a
         // .dng that is really a JPEG with the wrong extension.
-        if (host.isFotuStock(host.filmStock)) {
+        if (host.isFotuStockViaHost(host.getFilmStock())) {
             if ("dng".equals(format)) {
-                host.showErrorDialog("fotufilm 没有 DNG 写出路径",
+                host.showErrorDialogHostCall("fotufilm 没有 DNG 写出路径",
                         "这一支胶片由 fotufilm 引擎渲染，它只能写 JPEG 和 16 位 TIFF。\n\n"
                                 + "要 DNG 请换一支 SpektraLab 引擎的胶片。");
                 if (onDone != null) onDone.run();
                 return;
             }
-            host.exportFotu(format, tier, onDone, liveEdge);
+            host.exportFotuHostCall(format, tier, onDone, liveEdge);
             return;
         }
         // **One export at a time.** Two of these at once is two full renders of
         // the same frame competing for the same two gigabytes, and two files at
         // the end -- the sheet closes the instant a row is hit, so a tap that
         // looked like it did nothing gets repeated and both went through.
-        final Thread running = host.exportThread;
+        final Thread running = host.getExportThread();
         if (running != null && running.isAlive()) {
-            host.showInAppToast("正在导出，等这一张写完");
+            host.showInAppToastHostCall("正在导出，等这一张写完");
             if (onDone != null) onDone.run();
             return;
         }
         // **Which clip, decided on the caller's thread.** `currentFrame` is a
         // field the UI thread moves; reading it inside the export thread would
         // pair this still with the next frame's clip.
-        final String liveClipPath = liveEdge > 0 ? host.liveClipForCurrentFrame() : null;
+        final String liveClipPath = liveEdge > 0 ? host.liveClipForCurrentFrameHostCall() : null;
         final long liveTsUs = (liveClipPath != null
-                && host.currentFrame >= 0 && host.currentFrame < host.frames.size())
-                ? host.frames.get(host.currentFrame).liveTsUs : 0L;
+                && host.getCurrentFrame() >= 0 && host.getCurrentFrame() < host.getFrames().size())
+                ? host.getFrames().get(host.getCurrentFrame()).liveTsUs : 0L;
         final boolean[] liveDone = {false};
         // **What the canvas is showing is the source, not a print.** Exporting
         // it has to write that same picture: a session would develop the film,
         // which is exactly the side the user is not looking at -- and with no
         // film picked there was no session to open, so the button answered
         // "先选一张胶片，再导出" over a photograph that was already finished.
-        if ((host.showingOriginal || host.filmStock == null) && !host.batchExportRunning) {
-            host.exportOriginal(format, onDone);
+        if ((host.getShowingOriginal() || host.getFilmStock() == null) && !host.getBatchExportRunning()) {
+            host.exportOriginalHostCall(format, onDone);
             return;
         }
         // **The export's exposure, decided once, before any branch.** The open
         // params, the forced delta and the pin all have to agree: the canvas'
         // meter flag, the canvas' EV, and only the *user's* offset in
         // `exposure_compensation_ev` (see `applyParamsTo`).
-        final String exportMeter = host.sanitizeMeter(host.meterMethod);
+        final String exportMeter = host.sanitizeMeterViaHost(host.getMeterMethod());
         final boolean exportAutoExposure = !exportMeter.isEmpty();
         // Only the frame the canvas last measured may hand its EV over; a batch
         // walks the strip without rendering, so the previous frame's EV would
         // otherwise be pinned onto this one.
-        final boolean pinEv = exportAutoExposure && host.appliedEvBelongsToCurrentFrame();
+        final boolean pinEv = exportAutoExposure && host.appliedEvBelongsToCurrentFrameHostCall();
         // A live frame is 800 px and this is about to build a 4175 px one;
         // letting the two queue behind the same lock buys nothing.
-        host.cancelLivePreview();
+        host.cancelLivePreviewHostCall();
         final boolean tiff = "tiff".equals(format);
         // **The same picture, un-encoded.** A linear TIFF is what a scanner would hand over: the
         // render's own light, tagged linear sRGB, so Lightroom's highlight recovery works on the
@@ -88,14 +90,14 @@ final class ExportWorker extends HostWorker {
         final boolean uhdr = "uhdr".equals(format);
         final String ext = dng ? ".dng" : (tiff || tiffLinear) ? ".tif" : ".jpg";
         final String mime = dng ? "image/x-adobe-dng" : (tiff || tiffLinear) ? "image/tiff" : "image/jpeg";
-        if (host.sharePill != null) host.sharePill.setVisibility(View.GONE);
-        if (host.engine == null || host.session == null) {
-            host.showInAppToast("请先导入照片");
+        if (host.getSharePill() != null) host.getSharePill().setVisibility(View.GONE);
+        if (host.getEngine() == null || host.getSession() == null) {
+            host.showInAppToastHostCall("请先导入照片");
             if (onDone != null) onDone.run();
             return;
         }
-        if (host.filmStock == null) {
-            host.showInAppToast("先选一张胶片，再导出");
+        if (host.getFilmStock() == null) {
+            host.showInAppToastHostCall("先选一张胶片，再导出");
             if (onDone != null) onDone.run();
             return;
         }
@@ -103,23 +105,23 @@ final class ExportWorker extends HostWorker {
         // card that lands between "start export" and the first strip swaps
         // film_stock under the full-size render. That -- not the params delta --
         // is what used to come back as a flat grey.
-        host.stopPrefetch();
+        host.stopPrefetchHostCall();
         new Thread(() -> {
-            host.exportThread = Thread.currentThread();
+            host.setExportThread(Thread.currentThread());
             java.io.File tmp = new java.io.File(host.getCacheDir(), "export_" + System.currentTimeMillis() + ext);
             try {
                 host.runOnUiThread(() -> {
-                    host.statusText.setText("导出中：准备全尺寸渲染（分条）...");
-                    host.showBusy("EXPORTING");
-                    host.setStep(3);
+                    host.getStatusText().setText("导出中：准备全尺寸渲染（分条）...");
+                    host.showBusyHostCall("EXPORTING");
+                    host.setStepHostCall(3);
                 });
                 // A stock delta before an export is fine -- measured, not
                 // assumed (`full_after_delta`: mean 104.2 std 11945 before,
                 // 102.4 std 12481 after, and the two hashes differ). It is the
                 // same delta the preview renders with, which is the point.
                 try {
-                    DebugSink.text("export-params", "film=" + host.filmStock + " print=" + host.printStock
-                            + " pex=" + host.printExposure + " (no delta sent)");
+                    DebugSink.text("export-params", "film=" + host.getFilmStock() + " print=" + host.getPrintStock()
+                            + " pex=" + host.getPrintExposure() + " (no delta sent)");
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37020", ignored); }
 
                 // **The numbers the export is about to spend, before it spends
@@ -132,14 +134,14 @@ final class ExportWorker extends HostWorker {
                     // is the window the render was asked for.
                     DebugSink.textNow("export-crop", String.format(java.util.Locale.US,
                             "x=%.4f y=%.4f w=%.4f h=%.4f turns=%d rot=%.2f",
-                            host.geometryCropX, host.geometryCropY, host.geometryCropW, host.geometryCropH,
-                            host.geometryTurns, host.geometryRotation));
-                    DebugSink.textNow("export-plan", "src=" + host.sourceWidth + "x" + host.sourceHeight
-                            + " importCap=" + host.importCapPixels + " frameCap=" + host.maxImportPixels()
-                            + " overscan=" + host.overscanOn + " tier=" + tier
-                            + " avail=" + (host.availableMemoryBytes() >> 20) + "MiB");
+                            host.getGeometryCropX(), host.getGeometryCropY(), host.getGeometryCropW(), host.getGeometryCropH(),
+                            host.getGeometryTurns(), host.getGeometryRotation()));
+                    DebugSink.textNow("export-plan", "src=" + host.getSourceWidth() + "x" + host.getSourceHeight()
+                            + " importCap=" + host.getImportCapPixels() + " frameCap=" + host.maxImportPixelsHostCall()
+                            + " overscan=" + host.getOverscanOn() + " tier=" + tier
+                            + " avail=" + (host.availableMemoryBytesHostCall() >> 20) + "MiB");
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37038", ignored); }
-                final long t0 = host.nowMs();
+                final long t0 = host.nowMsViaHost();
                 final java.util.concurrent.atomic.AtomicBoolean spinning =
                         new java.util.concurrent.atomic.AtomicBoolean(true);
                 final java.util.concurrent.atomic.AtomicLong lastMem =
@@ -148,8 +150,8 @@ final class ExportWorker extends HostWorker {
                 Runnable tick = new Runnable() {
                     @Override public void run() {
                         if (!spinning.get()) return;
-                        long el = (host.nowMs() - t0) / 1000;
-                        host.statusText.setText("导出中（" + tier + "）：渲染中 " + el + " 秒...");
+                        long el = (host.nowMsViaHost() - t0) / 1000;
+                        host.getStatusText().setText("导出中（" + tier + "）：渲染中 " + el + " 秒...");
                         // **What the export is holding, every five seconds.**
                         // A black screen leaves no stack and no exception -- the
                         // last line before the process dies is the only evidence
@@ -161,9 +163,9 @@ final class ExportWorker extends HostWorker {
                         // little" stay distinguishable.
                         if (el % 5 == 0 && lastMem.getAndSet(el) != el) {
                             try {
-                                final long avail = host.availableMemoryBytes();
+                                final long avail = host.availableMemoryBytesHostCall();
                                 DebugSink.textNow("export-mem", el + "s avail=" + (avail >> 20)
-                                        + "MiB " + (host.engine == null ? "no engine" : host.engine.memoryReport()));
+                                        + "MiB " + (host.getEngine() == null ? "no engine" : host.getEngine().memoryReport()));
                             } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37064", ignored); }
                         }
                         ticker.postDelayed(this, 1000);
@@ -174,17 +176,17 @@ final class ExportWorker extends HostWorker {
                 Thread memTicker = new Thread(() -> {
                     while (spinning.get()) {
                         try {
-                            final long el = (host.nowMs() - t0) / 1000;
+                            final long el = (host.nowMsViaHost() - t0) / 1000;
                             final String line = el + "s avail="
-                                    + (host.availableMemoryBytes() >> 20) + "MiB "
-                                    + (host.engine == null ? "no engine" : host.engine.memoryReport());
+                                    + (host.availableMemoryBytesHostCall() >> 20) + "MiB "
+                                    + (host.getEngine() == null ? "no engine" : host.getEngine().memoryReport());
                             // **On disk first.** `textNow` needs the network; a
                             // phone in flight mode -- or a process killed at the
                             // moment it mattered -- loses the sample entirely,
                             // which is why the 18-second export crash came back
                             // with none. The ring is a SharedPreferences write
                             // and survives the kill; the report picks it up.
-                            CrashTrail.markNow(host, "export-mem " + line);
+                            CrashTrail.markNow(host.context(), "export-mem " + line);
                             DebugSink.textNow("export-mem", line);
                         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37086", ignored); }
                         try { Thread.sleep(5000); } catch (InterruptedException ie) { break; }
@@ -196,8 +198,8 @@ final class ExportWorker extends HostWorker {
                 // **Which session the retry may borrow.** Read once here, on the
                 // export thread, and consumed: a stale `true` must not silently
                 // make every later export render on the preview's session.
-                final boolean reuseCanvas = host.exportReuseCanvas;
-                host.exportReuseCanvas = false;
+                final boolean reuseCanvas = host.getExportReuseCanvas();
+                host.setExportReuseCanvas(false);
                 try {
                     DebugSink.textNow("export", "session: " + (reuseCanvas
                             ? "the canvas' own (second attempt)" : "a fresh one")
@@ -205,26 +207,26 @@ final class ExportWorker extends HostWorker {
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37102", ignored); }
                 // A full-size export does not need the preview bitmaps resident.
                 // Keep the frame and its Look; these two are only the display.
-                final Bitmap savedBefore = host.beforeBitmap;
-                final Bitmap savedAfter = host.lastRenderedBitmap;
+                final Bitmap savedBefore = host.getBeforeBitmap();
+                final Bitmap savedAfter = host.getLastRenderedBitmap();
                 host.runOnUiThread(() -> {
-                    host.beforeBitmap = null;
-                    host.lastRenderedBitmap = null;
-                    if (host.compare != null) host.compare.clear();
+                    host.setBeforeBitmap(null);
+                    host.setLastRenderedBitmap(null);
+                    if (host.getCompare() != null) host.getCompare().clear();
                 });
                 int[] info;
                 try {
-                    synchronized (host.renderMutex) {
-                        CrashTrail.markNow(host, "export:lock");
+                    synchronized (host.getRenderMutex()) {
+                        CrashTrail.markNow(host.context(), "export:lock");
                         // **Give the pool back before the export asks for more.**
                         // The preview that has just been rendered leaves its
                         // working set pooled, and a 40 MP export then wants the
                         // whole thing again. Measured on the owner's phone: the
                         // export dies at 153 s with the launcher behind it.
                         try {
-                            final long freed = host.engine.trimPool();
+                            final long freed = host.getEngine().trimPool();
                             DebugSink.text("export", "pre-export trim freed " + (freed >> 20)
-                                    + " MiB; report " + host.engine.memoryReport());
+                                    + " MiB; report " + host.getEngine().memoryReport());
                         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37125", ignored); }
                         // **A session of its own for the export.** The preview
                         // session has already rasterised the rebate's masks at
@@ -245,22 +247,22 @@ final class ExportWorker extends HostWorker {
                         // the device copies; `resume` puts them back. Refused
                         // when there is no scratch directory, which is a no-op
                         // rather than a failure.
-                        final SpektraLabEngine.Session keep = host.session;
+                        final SpektraLabEngine.Session keep = host.getSession();
                         boolean keepSuspended = false;
                         boolean keepClosed = false;
                         // **A batch closes this session a moment later anyway.**
                         // Suspending writes a frame's worth of planes to the
                         // cache directory and resuming allocates them again --
                         // once per frame, for a session that is about to die.
-                        if (keep != null && !host.batchExportRunning) {
+                        if (keep != null && !host.getBatchExportRunning()) {
                             try {
                                 keepSuspended = keep.suspend();
                                 DebugSink.text("export", "preview suspended=" + keepSuspended
                                         + (keepSuspended ? "" : " why=" + SpektraLabEngine.Session.lastError())
-                                        + "; report " + host.engine.memoryReport());
+                                        + "; report " + host.getEngine().memoryReport());
                             } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37158", ignored); }
                         }
-                        CrashTrail.markNow(host, "export:suspend " + keepSuspended);
+                        CrashTrail.markNow(host.context(), "export:suspend " + keepSuspended);
                         // **Free the preview before the export asks for its own
                         // frame.** The close further down runs *after* `fresh`
                         // exists, so the peak held two source planes at once --
@@ -272,17 +274,17 @@ final class ExportWorker extends HostWorker {
                         // 「按原图」 the session is the working size and the
                         // export re-decodes at the file's, which can be ten
                         // times what this heuristic was weighing.
-                        long needPixels = (long) host.sourceWidth * host.sourceHeight;
-                        final int[] fileSize = host.exportAtNative && host.sourceUri != null
-                                ? host.sniffImageSize(host.sourceUri) : null;
+                        long needPixels = (long) host.getSourceWidth() * host.getSourceHeight();
+                        final int[] fileSize = host.getExportAtNative() && host.getSourceUri() != null
+                                ? host.sniffImageSizeHostCall(host.getSourceUri()) : null;
                         if (fileSize != null && fileSize[0] > 0 && fileSize[1] > 0)
                             needPixels = (long) fileSize[0] * fileSize[1];
                         final long exportNeed = needPixels * 12L * 51L / 10L + (160L << 20);
-                        final long exportAvail = host.availableMemoryBytes();
+                        final long exportAvail = host.availableMemoryBytesHostCall();
                         if (!reuseCanvas && keep != null && (!keepSuspended
                                 || (exportAvail > 0 && exportNeed > exportAvail * 55L / 100L))) {
                             try { keep.close(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37181", ignored); }
-                            if (host.session == keep) host.session = null;
+                            if (host.getSession() == keep) host.setSession(null);
                             keepSuspended = false;
                             keepClosed = true;
                             try {
@@ -301,7 +303,7 @@ final class ExportWorker extends HostWorker {
                         // Mali report. The buffer is malloc'd now and the cap is
                         // thirty times smaller than what the phones can hold.
                         if (!reuseCanvas && keep != null
-                                && host.sourceWidth > 0 && host.sourceHeight > 0) {
+                                && host.getSourceWidth() > 0 && host.getSourceHeight() > 0) {
                             // **The export goes back to the file for its size.**
                             // `sourcePixels` carries whatever the import's
                             // memory estimate allowed, and that estimate moves
@@ -316,29 +318,29 @@ final class ExportWorker extends HostWorker {
                             Bitmap fullBmp = null;
                             long fullBuf = 0;
                             try {
-                                final String path = host.sourceUri != null ? host.getFilePathFromUri(host.sourceUri) : null;
+                                final String path = host.getSourceUri() != null ? host.getFilePathFromUriHostCall(host.getSourceUri()) : null;
                                 // **Not `inSampleSize = 1`.** See `decodeForExport`: the
                                 // release frame is the largest this phone can develop, not
                                 // the largest the file happens to be.
                                 if (path != null) {
-                                    fullBmp = host.decodeForExport(path, host.exportPixelCap());
+                                    fullBmp = host.decodeForExportHostCall(path, host.exportPixelCapHostCall());
                                 }
                             } catch (Throwable ignored) { fullBmp = null; }
                             final boolean bigger = fullBmp != null
                                     && (long) fullBmp.getWidth() * fullBmp.getHeight()
-                                       > (long) host.sourceWidth * host.sourceHeight;
+                                       > (long) host.getSourceWidth() * host.getSourceHeight();
                             // **A frame with no staging copy comes back from the
                             // file.** Since 1.7.0i the import lets
                             // `sourcePixels` go once the engine has its own;
                             // the export is the only thing that ever wanted it,
                             // and re-decoding at the same size is the same
                             // frame.
-                            final boolean fromFile = bigger || (host.sourcePixels == 0 && fullBmp != null);
+                            final boolean fromFile = bigger || (host.getSourcePixels() == 0 && fullBmp != null);
                             if (fromFile) {
                                 final int fw = fullBmp.getWidth(), fh = fullBmp.getHeight();
                                 try {
                                     fullBuf = SpektraLabEngine.allocPixels((long) fw * fh * 12L);
-                                    host.liftRows(fullBmp, fullBuf, fw, fh);
+                                    host.liftRowsViaHost(fullBmp, fullBuf, fw, fh);
                                     // **Give the memory back as soon as it is
                                     // copied.** A 200 MP re-decode is 800 MB of
                                     // bitmap, 2.4 GB of float and then the
@@ -346,12 +348,12 @@ final class ExportWorker extends HostWorker {
                                     // when its successor exists keeps the peak
                                     // at two of the three instead of three.
                                     if (fullBmp != null) { fullBmp.recycle(); fullBmp = null; }
-                                    fresh = host.engine.openSession(fullBuf, fw, fh, 3);
+                                    fresh = host.getEngine().openSession(fullBuf, fw, fh, 3);
                                     SpektraLabEngine.freePixels(fullBuf);
                                     fullBuf = 0;
-                                    CrashTrail.markNow(host,
+                                    CrashTrail.markNow(host.context(),
                                             "export:full-size " + fw + "x" + fh
-                                                    + " (import was " + host.sourceWidth + "x" + host.sourceHeight + ")");
+                                                    + " (import was " + host.getSourceWidth() + "x" + host.getSourceHeight() + ")");
                                 } catch (Throwable e) {
                                     fresh = null;
                                     try { DebugSink.textNow("export-full",
@@ -365,10 +367,10 @@ final class ExportWorker extends HostWorker {
                             // Only when the file really is bigger than the
                             // session: for a frame the working size already
                             // holds whole, the fallback *is* the file's size.
-                            if (fresh == null && host.exportAtNative && fileSize != null
+                            if (fresh == null && host.getExportAtNative() && fileSize != null
                                     && fileSize[0] > 0 && fileSize[1] > 0
                                     && (long) fileSize[0] * fileSize[1]
-                                       > (long) host.sourceWidth * host.sourceHeight) {
+                                       > (long) host.getSourceWidth() * host.getSourceHeight()) {
                                 // **Never the working size.** 「按原图」 means the
                                 // file's size; falling back to the session here
                                 // is "the export came out smaller than the
@@ -381,13 +383,13 @@ final class ExportWorker extends HostWorker {
                                                 + "本机现在给不出来。关掉其它应用再试，"
                                                 + "或重新导入时选「缩到…」。");
                             }
-                            if (fresh == null && host.sourcePixels != 0) {
-                                try { fresh = host.engine.openSession(host.sourcePixels, host.sourceWidth, host.sourceHeight, 3); }
+                            if (fresh == null && host.getSourcePixels() != 0) {
+                                try { fresh = host.getEngine().openSession(host.getSourcePixels(), host.getSourceWidth(), host.getSourceHeight(), 3); }
                                 catch (Throwable ignored) { fresh = null; }
                             }
-                            CrashTrail.markNow(host,
+                            CrashTrail.markNow(host.context(),
                                     "export:session " + (fresh != null ? "fresh" : "none"));
-                        } else if (!reuseCanvas && keep != null && host.rawFilePath != null) {
+                        } else if (!reuseCanvas && keep != null && host.getRawFilePath() != null) {
                             // **No budget gate here.** One was added in 1.4.1t and it
                             // refused frames the engine goes on to render: it compared
                             // the canvas against `maxPixelsByMemory(available)` before
@@ -397,10 +399,10 @@ final class ExportWorker extends HostWorker {
                             // A frame that genuinely does not fit fails in the engine
                             // and says which plane it wanted; that message is true,
                             // this one was a guess.
-                            final int budgetPixels = host.importedWidth > 0 && host.importedHeight > 0
-                                    ? host.importedWidth * host.importedHeight
-                                    : (host.importCapPixels > 0 ? host.importCapPixels
-                                       : host.sourceWidth * host.sourceHeight);
+                            final int budgetPixels = host.getImportedWidth() > 0 && host.getImportedHeight() > 0
+                                    ? host.getImportedWidth() * host.getImportedHeight()
+                                    : (host.getImportCapPixels() > 0 ? host.getImportCapPixels()
+                                       : host.getSourceWidth() * host.getSourceHeight());
                             try {
                                 // **The export renders the frame that was imported,
                                 // never the file's own size.** This passed 0, 0 --
@@ -432,7 +434,7 @@ final class ExportWorker extends HostWorker {
                                 // true, and it is the one to show.
                                 final int exportPixels = 0;
                                 final int exportEdge = 0;
-                                final float[] wbMul = host.wbUserMul;
+                                final float[] wbMul = host.getWbUserMul();
                                 Probe.log("wb", "export tier=" + tier + " mul=" + Probe.mul(wbMul)
                                         + " px=" + exportPixels + " edge=" + exportEdge);
                                 // **What the fresh session is opened with.** The
@@ -443,15 +445,15 @@ final class ExportWorker extends HostWorker {
                                 // app. `export-params` reads the session's copy;
                                 // this line is the string the engine parsed.
                                 try {
-                                    DebugSink.text("export-open", "pex=" + host.f("%.6f", host.printExposure)
+                                    DebugSink.text("export-open", "pex=" + host.fViaHost("%.6f", host.getPrintExposure())
                                             + " auto=" + exportAutoExposure
-                                            + " pin=" + (pinEv ? host.f("%.6f", host.lastAppliedEv) : "none")
-                                            + " offset=" + host.f("%.4f", host.cameraEv)
-                                            + " paper=" + host.printStock + " raw=" + host.rawFilePath);
+                                            + " pin=" + (pinEv ? host.fViaHost("%.6f", host.getLastAppliedEv()) : "none")
+                                            + " offset=" + host.fViaHost("%.4f", host.getCameraEv())
+                                            + " paper=" + host.getPrintStock() + " raw=" + host.getRawFilePath());
                                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37348", ignored); }
                                 fresh = wbMul != null
-                                        ? host.engine.openRawSessionTuned(host.rawFilePath,
-                                                "{\"print_stock\":\"" + host.spkPaperForEngine(host.printStock)
+                                        ? host.getEngine().openRawSessionTuned(host.getRawFilePath(),
+                                                "{\"print_stock\":\"" + host.spkPaperForEngineHostCall(host.getPrintStock())
                                                         + "\",\"input_color_space\":\"ProPhoto RGB\","
                                                         + "\"input_cctf_decoding\":false,\"output_color_space\":\"sRGB\","
                                                         // **The meter travels with the export.** This
@@ -470,8 +472,8 @@ final class ExportWorker extends HostWorker {
                                                         // the meter a second time is what turned
                                                         // 0.0756 into a clamped +12 and pushed
                                                         // the picture to white.
-                                                        + "\"auto_exposure\":" + host.b(exportAutoExposure) + ","
-                                                        + "\"exposure_compensation_ev\":" + host.f("%.6f", host.cameraEv) + ","
+                                                        + "\"auto_exposure\":" + host.bViaHost(exportAutoExposure) + ","
+                                                        + "\"exposure_compensation_ev\":" + host.fViaHost("%.6f", host.getCameraEv()) + ","
                                                         // **Open with the enlarger exposure too.** It is
                                                         // a live PRINT field: sent as a delta the engine
                                                         // updates the session's copy while the render
@@ -479,11 +481,11 @@ final class ExportWorker extends HostWorker {
                                                         // if the slider had never moved (6/6 exports at
                                                         // 0.41, `export-params` in D1). Opening with it
                                                         // puts it on the pipeline from the first frame.
-                                                        + "\"print_exposure\":" + host.f("%.6f", host.printExposure) + ","
+                                                        + "\"print_exposure\":" + host.fViaHost("%.6f", host.getPrintExposure()) + ","
                                                         + "\"preview_long_edge\":2048}",
                                                 exportPixels, exportEdge, wbMul)
-                                        : host.engine.openRawSession(host.rawFilePath,
-                                                "{\"print_stock\":\"" + host.spkPaperForEngine(host.printStock)
+                                        : host.getEngine().openRawSession(host.getRawFilePath(),
+                                                "{\"print_stock\":\"" + host.spkPaperForEngineHostCall(host.getPrintStock())
                                                         + "\",\"input_color_space\":\"ProPhoto RGB\","
                                                         + "\"input_cctf_decoding\":false,\"output_color_space\":\"sRGB\","
                                                         // **The meter travels with the export.** This
@@ -502,8 +504,8 @@ final class ExportWorker extends HostWorker {
                                                         // the meter a second time is what turned
                                                         // 0.0756 into a clamped +12 and pushed
                                                         // the picture to white.
-                                                        + "\"auto_exposure\":" + host.b(exportAutoExposure) + ","
-                                                        + "\"exposure_compensation_ev\":" + host.f("%.6f", host.cameraEv) + ","
+                                                        + "\"auto_exposure\":" + host.bViaHost(exportAutoExposure) + ","
+                                                        + "\"exposure_compensation_ev\":" + host.fViaHost("%.6f", host.getCameraEv()) + ","
                                                         // **Open with the enlarger exposure too.** It is
                                                         // a live PRINT field: sent as a delta the engine
                                                         // updates the session's copy while the render
@@ -511,11 +513,11 @@ final class ExportWorker extends HostWorker {
                                                         // if the slider had never moved (6/6 exports at
                                                         // 0.41, `export-params` in D1). Opening with it
                                                         // puts it on the pipeline from the first frame.
-                                                        + "\"print_exposure\":" + host.f("%.6f", host.printExposure) + ","
+                                                        + "\"print_exposure\":" + host.fViaHost("%.6f", host.getPrintExposure()) + ","
                                                         + "\"preview_long_edge\":2048}",
                                                 exportPixels, exportEdge);
                             } catch (Throwable ignored) { fresh = null; }
-                            CrashTrail.markNow(host,
+                            CrashTrail.markNow(host.context(),
                                     "export:raw-session " + (fresh != null ? "fresh" : "none"));
                         }
                         // **Never swap the global session for an export.**
@@ -551,18 +553,18 @@ final class ExportWorker extends HostWorker {
                             final boolean wasSuspended = keepSuspended;
                             // 5.1 planes of 12 B/px plus the encoder's tables,
                             // measured on the host at 20.9 MP (`mem_export`).
-                            final long needBytes = (long) host.sourceWidth * host.sourceHeight * 12L * 51L / 10L
+                            final long needBytes = (long) host.getSourceWidth() * host.getSourceHeight() * 12L * 51L / 10L
                                     + (160L << 20);
                             // **More than half of what is left is more than the
                             // two of them can share.** `avail` is MemAvailable,
                             // so it already excludes the preview's own arena;
                             // this asks whether one export working set still
                             // fits in what remains after it.
-                            final long avail = host.availableMemoryBytes();
+                            final long avail = host.availableMemoryBytesHostCall();
                             final boolean tight = avail > 0 && needBytes > avail * 55L / 100L;
                             if (!wasSuspended || tight) {
                                 try { keep.close(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37461", ignored); }
-                                if (host.session == keep) host.session = null;
+                                if (host.getSession() == keep) host.setSession(null);
                                 keepSuspended = false;
                                 keepClosed = true;
                                 try {
@@ -581,7 +583,7 @@ final class ExportWorker extends HostWorker {
                                 DebugSink.text("export-error", "tier=" + tier + " no session for the export");
                             } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37479", ignored); }
                             host.runOnUiThread(() -> {
-                                host.showInAppToast("这张照片还没准备好，跳过");
+                                host.showInAppToastHostCall("这张照片还没准备好，跳过");
                                 if (onDone != null) onDone.run();
                             });
                             return;
@@ -620,9 +622,9 @@ final class ExportWorker extends HostWorker {
                             // was a no-op, so every export kept the parameters
                             // its session was opened with -- the enlarger
                             // exposure among them.
-                            host.applyParamsTo(exportSession, host.filmStock,
-                                    host.printStock == null ? "kodak_portra_endura" : host.printStock,
-                                    host.PREVIEW_LONG_EDGE, "sRGB", true);
+                            host.applyParamsToHostCall(exportSession, host.getFilmStock(),
+                                    host.getPrintStock() == null ? "kodak_portra_endura" : host.getPrintStock(),
+                                    host.getPREVIEW_LONG_EDGE(), "sRGB", true);
                             // **Same frame, same EV, same node.** Pinning puts
                             // the meter's gain back in `film_prefix`, where the
                             // canvas applied it -- not after the highlight
@@ -633,7 +635,7 @@ final class ExportWorker extends HostWorker {
                             // what the canvas would have got.
                             try {
                                 if (pinEv) {
-                                    exportSession.pinAutoExposureEv(host.lastAppliedEv);
+                                    exportSession.pinAutoExposureEv(host.getLastAppliedEv());
                                 } else if (exportAutoExposure) {
                                     // **A batch walks the strip without rendering**,
                                     // so the canvas' measured EV belongs to the
@@ -657,13 +659,13 @@ final class ExportWorker extends HostWorker {
                                         if (by != null && by.has(m)) ev = by.optDouble(m, Double.NaN);
                                     } catch (Throwable ignored2) { ev = Double.NaN; }
                                     final boolean sane = !Double.isNaN(ev) && Math.abs(ev) <= 8.0;
-                                    if (!sane) ev = host.lastAppliedEvValid ? host.lastAppliedEv : 0.0;
+                                    if (!sane) ev = host.getLastAppliedEvValid() ? host.getLastAppliedEv() : 0.0;
                                     exportSession.pinAutoExposureEv(ev);
                                     try {
                                         DebugSink.text("export-meter", "method=" + exportMeter
-                                                + " solved=" + host.f("%.4f", ev)
+                                                + " solved=" + host.fViaHost("%.4f", ev)
                                                 + (sane ? "" : " (clamped)")
-                                                + " sameFrame=" + host.lastAppliedEvValid);
+                                                + " sameFrame=" + host.getLastAppliedEvValid());
                                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37564", ignored); }
                                 } else {
                                     exportSession.clearPinAutoExposureEv();
@@ -688,11 +690,11 @@ final class ExportWorker extends HostWorker {
                                 DebugSink.text("export-exposure", "tier=" + tier
                                         + " auto=" + exportAutoExposure
                                         + " method=" + (exportMeter.isEmpty() ? "balanced" : exportMeter)
-                                        + " pin=" + (pinEv ? host.f("%.4f", host.lastAppliedEv) + " same-frame" : "none")
-                                        + " seenEv=" + host.f("%.4f", host.lastAppliedEv)
-                                        + (host.lastAppliedEvValid ? "" : " (none)")
-                                        + " solveEv=" + host.f("%.4f", host.meteredEv)
-                                        + " offset=" + host.f("%.2f", host.cameraEv));
+                                        + " pin=" + (pinEv ? host.fViaHost("%.4f", host.getLastAppliedEv()) + " same-frame" : "none")
+                                        + " seenEv=" + host.fViaHost("%.4f", host.getLastAppliedEv())
+                                        + (host.getLastAppliedEvValid() ? "" : " (none)")
+                                        + " solveEv=" + host.fViaHost("%.4f", host.getMeteredEv())
+                                        + " offset=" + host.fViaHost("%.2f", host.getCameraEv()));
                             } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37593", ignored); }
                             try {
                                 DebugSink.text("overscan-geom", "tier=" + tier + " before "
@@ -703,16 +705,16 @@ final class ExportWorker extends HostWorker {
                             // appends one APP1 segment and then the ICC profile;
                             // nothing reopens the finished file afterwards.
                             try {
-                                if (host.rawFilePath != null && host.session != null) {
-                                    final String[] meta = host.sourceExifForExport();
+                                if (host.getRawFilePath() != null && host.getSession() != null) {
+                                    final String[] meta = host.sourceExifForExportHostCall();
                                     SpektraLabEngine.setExportExif(meta[0], meta[1], meta[2],
                                             meta[3], meta[4], meta[5], meta[6]);
                                     DebugSink.text("exif", "raw source metadata: "
                                             + meta[0] + " / " + meta[1] + " / " + meta[2]
                                             + " / " + meta[3] + "s / f" + meta[4]
                                             + " / ISO" + meta[5] + " / " + meta[6] + "mm");
-                                } else if (host.sourceUri != null) {
-                                    final String[] meta = host.jpegSourceExif();
+                                } else if (host.getSourceUri() != null) {
+                                    final String[] meta = host.jpegSourceExifHostCall();
                                     SpektraLabEngine.setExportExif(meta[0], meta[1], meta[2],
                                             meta[3], meta[4], meta[5], meta[6]);
                                 }
@@ -731,8 +733,8 @@ final class ExportWorker extends HostWorker {
                                 DebugSink.text("export-ident", "call hash=" + System.identityHashCode(exportSession)
                                         + " " + (j >= 0 ? gp.substring(j, Math.min(gp.length(), j + 34)) : "no-pex"));
                             } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37630", ignored); }
-                            CrashTrail.markNow(host, "export:write " + tier + " " + format);
-                            Thread wtick = host.startTick("export", exportSession);
+                            CrashTrail.markNow(host.context(), "export:write " + tier + " " + format);
+                            Thread wtick = host.startTickHostCall("export", exportSession);
                             try {
                                 info = dng
                                         ? exportSession.exportDng(tmp.getAbsolutePath(), tier)
@@ -744,9 +746,9 @@ final class ExportWorker extends HostWorker {
                                         ? exportSession.exportUltraHdr(tmp.getAbsolutePath(), 95, 512, tier)
                                         : exportSession.exportJpeg(tmp.getAbsolutePath(), 95, 512, tier);
                             } finally {
-                                host.stopTick(wtick);
+                                host.stopTickViaHost(wtick);
                             }
-                            CrashTrail.markNow(host, "export:written " + info[0] + "x" + info[1]);
+                            CrashTrail.markNow(host.context(), "export:written " + info[0] + "x" + info[1]);
                             try {
                                 DebugSink.text("overscan-geom", "tier=" + tier + " " + info[0] + "x" + info[1]
                                         + " " + exportSession.overscanGeometry());
@@ -760,21 +762,21 @@ final class ExportWorker extends HostWorker {
                                 // come out of an arena the export is still
                                 // sitting in -- the whole reason the preview was
                                 // suspended is that the two do not fit at once.
-                                try { host.engine.trimPool(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37660", ignored); }
+                                try { host.getEngine().trimPool(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37660", ignored); }
                             }
                             if (keepSuspended && keep != null) {
                                 try { keep.resume(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37663", ignored); }
                             }
-                            final boolean closedForExport = keepClosed && !host.batchExportRunning;
+                            final boolean closedForExport = keepClosed && !host.getBatchExportRunning();
                             if (closedForExport) {
                                 // The preview session was closed to make room for
                                 // the export, so the canvas has nothing behind it.
                                 // Re-open the same frame the way a chip does.
                                 host.runOnUiThread(() -> {
-                                    if (!host.uiReady) return;
-                                    if (host.currentFrame < 0 || host.currentFrame >= host.frames.size()) return;
-                                    CrashTrail.mark(host, "export:reopen after close");
-                                    host.reopenFrameForced(host.currentFrame);
+                                    if (!host.getUiReady()) return;
+                                    if (host.getCurrentFrame() < 0 || host.getCurrentFrame() >= host.getFrames().size()) return;
+                                    CrashTrail.mark(host.context(), "export:reopen after close");
+                                    host.reopenFrameForcedHostCall(host.getCurrentFrame());
                                 });
                             }
                         }
@@ -787,20 +789,20 @@ final class ExportWorker extends HostWorker {
                         // evicted and the phone froze for about a minute after
                         // an export that had itself succeeded.
                         try {
-                            final long freed = host.engine.trimPool();
+                            final long freed = host.getEngine().trimPool();
                             DebugSink.text("export", "pool trim freed "
-                                    + (freed >> 20) + " MiB; report " + host.engine.memoryReport());
+                                    + (freed >> 20) + " MiB; report " + host.getEngine().memoryReport());
                         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37690", ignored); }
                     }
                 } finally {
                     spinning.set(false);
                     try { memTicker.interrupt(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37694", ignored); }
                     host.runOnUiThread(() -> {
-                        if (host.beforeBitmap == null) host.beforeBitmap = savedBefore;
-                        if (host.lastRenderedBitmap == null) host.lastRenderedBitmap = savedAfter;
-                        if (host.compare != null) {
-                            host.compare.setBefore(host.beforeBitmap);
-                            host.compare.setAfter(host.lastRenderedBitmap);
+                        if (host.getBeforeBitmap() == null) host.setBeforeBitmap(savedBefore);
+                        if (host.getLastRenderedBitmap() == null) host.setLastRenderedBitmap(savedAfter);
+                        if (host.getCompare() != null) {
+                            host.getCompare().setBefore(host.getBeforeBitmap());
+                            host.getCompare().setAfter(host.getLastRenderedBitmap());
                         }
                     });
                 }
@@ -808,8 +810,8 @@ final class ExportWorker extends HostWorker {
                 // One file goes to the album, so this happens before the write,
                 // not after.
                 if (liveClipPath != null) {
-                    host.runOnUiThread(() -> host.statusText.setText("导出中：动图逐帧冲洗..."));
-                    final java.io.File withClip = host.attachLiveClip(tmp, liveClipPath, liveTsUs, liveEdge);
+                    host.runOnUiThread(() -> host.getStatusText().setText("导出中：动图逐帧冲洗..."));
+                    final java.io.File withClip = host.attachLiveClipHostCall(tmp, liveClipPath, liveTsUs, liveEdge);
                     if (withClip != null) {
                         final java.io.File stillOnly = tmp;
                         tmp = withClip;
@@ -817,8 +819,8 @@ final class ExportWorker extends HostWorker {
                         liveDone[0] = true;
                     }
                 }
-                host.uploadExportProgress(tmp);
-                host.uploadVkLog();
+                host.uploadExportProgressHostCall(tmp);
+                host.uploadVkLogHostCall();
                 int w = info[0], h = info[1];
                 long renderMs = info[2];
                 if (w <= 0 || h <= 0 || !tmp.exists() || tmp.length() == 0) {
@@ -831,17 +833,17 @@ final class ExportWorker extends HostWorker {
                 // `"jpg".equals(ext)` against an `ext` of ".jpg", so for a whole
                 // release no export carried any of it -- silently.)
                 final int fw = w, fh = h;
-                host.runOnUiThread(() -> host.statusText.setText("导出中：写入相册 " + fw + "x" + fh + "..."));
+                host.runOnUiThread(() -> host.getStatusText().setText("导出中：写入相册 " + fw + "x" + fh + "..."));
                 // **A negative says so in its name.** The engine already exports
                 // one (`negative` / `cineon-log`), and once it is a file in the
                 // album the only thing that separates it from the positives is
                 // what we call it -- 观片台 lists the folder, not the medium.
-                final boolean negMedium = "negative".equals(host.printStock)
-                        || "cineon-log".equals(host.printStock);
+                final boolean negMedium = "negative".equals(host.getPrintStock())
+                        || "cineon-log".equals(host.getPrintStock());
                 String fileName = "SpektraLab_" + (negMedium ? "NEG_" : "")
                         + System.currentTimeMillis() + ext;
-                final Uri outUri = host.writeExportFile(tmp, fileName, ext, mime);
-                host.lastExportOutUri = outUri;
+                final Uri outUri = host.writeExportFileHostCall(tmp, fileName, ext, mime);
+                host.setLastExportOutUri(outUri);
                 // **Does the file look like the picture we think we wrote?**
                 // Two measurements of the smoothed result: the mean difference
                 // between neighbouring rows and between neighbouring columns.
@@ -849,7 +851,7 @@ final class ExportWorker extends HostWorker {
                 // stretched along one axis does not. Cheap enough for every
                 // export, and the only evidence a "garbled, once, never again"
                 // report can leave behind.
-                host.exportCorruptNow = false;
+                host.setExportCorruptNow(false);
                 // **Neither a TIFF nor a DNG can be decoded here** (see
                 // `inspectContainer`): both checks below take a different route
                 // for them, and both blocks need to know which one this is.
@@ -864,8 +866,8 @@ final class ExportWorker extends HostWorker {
                     // container intact and does it carry the pixels the header
                     // promises. A truncated write is the failure they actually
                     // suffer from.
-                    final double ncc = (host.batchExportRunning || noPixels) ? -1
-                            : host.exportMatchesCanvas(tmp.getAbsolutePath(), host.lastRenderedBitmap);
+                    final double ncc = (host.getBatchExportRunning() || noPixels) ? -1
+                            : host.exportMatchesCanvasViaHost(tmp.getAbsolutePath(), host.getLastRenderedBitmap());
                     // **The measurement that actually catches this.** A frame
                     // replaced by row-to-row noise survives every check that
                     // averages: at 48 columns the noise is flat grey, so a
@@ -876,14 +878,14 @@ final class ExportWorker extends HostWorker {
                     // either one failing condemns the file.
                     final int stripes = info.length > 7 ? info[7] : -1;
                     if ((ncc >= 0 && ncc < 0.55) || stripes >= 3500) {
-                        host.exportCorruptNow = true;
+                        host.setExportCorruptNow(true);
                         try {
                             DebugSink.textNow("export-corrupt",
                                     String.format(java.util.Locale.US,
                                         "canvas NCC %.3f rows %d at %dx%d tier=%s overscan=%s — retrying",
-                                        ncc, stripes, w, h, tier, host.overscanOn)
-                                        + "\n" + host.rowSignature(tmp.getAbsolutePath())
-                                        + "\n" + host.reportHead());
+                                        ncc, stripes, w, h, tier, host.getOverscanOn())
+                                        + "\n" + host.rowSignatureViaHost(tmp.getAbsolutePath())
+                                        + "\n" + host.reportHeadHostCall());
                         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37784", ignored); }
                     } else if (ncc >= 0) {
                         try { DebugSink.text("export-selfcheck", String.format(
@@ -892,9 +894,9 @@ final class ExportWorker extends HostWorker {
                     }
                 }
                 {
-                    final String verdict = host.exportCorruptNow ? null
-                            : (noPixels ? host.inspectContainer(tmp.getAbsolutePath(), w, h)
-                                        : host.inspectExportedFile(tmp.getAbsolutePath()));
+                    final String verdict = host.getExportCorruptNow() ? null
+                            : (noPixels ? host.inspectContainerViaHost(tmp.getAbsolutePath(), w, h)
+                                        : host.inspectExportedFileViaHost(tmp.getAbsolutePath()));
                     if (verdict != null) {
                         try { DebugSink.textNow("export-selfcheck", verdict); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37796", ignored); }
                         // **Say it out loud.** This measurement has existed since
@@ -907,8 +909,8 @@ final class ExportWorker extends HostWorker {
                         // The file stays -- the render cost minutes -- but it
                         // is named as suspect and the user is told to try again.
                         host.runOnUiThread(() -> {
-                            if (host.statusText != null) host.statusText.setText("导出结构异常：" + verdict);
-                            host.showInAppToast("这张导出结构异常（可能花屏），请再导一次");
+                            if (host.getStatusText() != null) host.getStatusText().setText("导出结构异常：" + verdict);
+                            host.showInAppToastHostCall("这张导出结构异常（可能花屏），请再导一次");
                         });
                     }
                 }
@@ -918,17 +920,17 @@ final class ExportWorker extends HostWorker {
                 // a side, a spacing or a canvas size. One upload, only when the
                 // answer is not null: a clean export stays silent.
                 {
-                    final String ruler = host.edgeRulerVerdict(tmp.getAbsolutePath() + ".prog");
+                    final String ruler = host.edgeRulerVerdictViaHost(tmp.getAbsolutePath() + ".prog");
                     if (ruler != null) {
                         // **Synchronous.** This runs on the export worker, not
                         // the UI thread, and the whole point is that the report
                         // survives the user switching away mid-export -- the
                         // queued path is exactly what lost the last three.
                         try {
-                            DebugSink.textNow("edge-ruler", ruler + "\n" + host.reportHead());
+                            DebugSink.textNow("edge-ruler", ruler + "\n" + host.reportHeadHostCall());
                         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37826", ignored); }
                         host.runOnUiThread(() -> {
-                            if (host.statusText != null) host.statusText.setText("边缘检测：" + ruler);
+                            if (host.getStatusText() != null) host.getStatusText().setText("边缘检测：" + ruler);
                         });
                     }
                 }
@@ -949,7 +951,7 @@ final class ExportWorker extends HostWorker {
                         DebugSink.bytes("export", "out-" + tier + ext, buf, mime);
                     }
                 } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37848", ignored); }
-                final long secs = Math.max(1, (host.nowMs() - t0) / 1000);
+                final long secs = Math.max(1, (host.nowMsViaHost() - t0) / 1000);
                 final long fRender = renderMs;
                 // **Did the file get its map?** A paper with no shoulder inside
                 // the ramp has nothing to give back, and the writer says so
@@ -961,89 +963,89 @@ final class ExportWorker extends HostWorker {
                 final String sizeLabel = bytes > 0
                         ? String.format("%.1f MB", bytes / 1048576.0) : "?";
                 host.runOnUiThread(() -> {
-                    host.lastExportUri = outUri;
-                    host.lastExportMime = mime;
+                    host.setLastExportUri(outUri);
+                    host.setLastExportMime(mime);
                     // A separate control, and only when it has something to do:
                     // every other format opens where it lands, and a permanent
                     // share button on a photograph app reads as "post to
                     // social", which is not what this is.
-                    if (host.sharePill != null) host.sharePill.setVisibility((tiff || dng) ? View.VISIBLE : View.GONE);
+                    if (host.getSharePill() != null) host.getSharePill().setVisibility((tiff || dng) ? View.VISIBLE : View.GONE);
                     // Dimensions and file size together: "3.3 MB" alone reads as
                     // a bug when the frame is 16 MP, and the reason is worth
                     // saying out loud rather than guessing at later.
-                    final String canvas = host.overscanCanvasLabel();
+                    final String canvas = host.overscanCanvasLabelHostCall();
                     final String canvasNote = canvas.isEmpty() ? "" : " · 画布 " + canvas;
                     final String tiffHint = tiff
                             ? "（TIFF：点导出旁边的「分享」发给手机版 Lightroom 即可使用）"
                             : dng ? "（DNG：线性 16 位，给电脑上的 Lightroom / ACR；手机版打不开，已知问题，不必反馈）" : "";
                     final String liveNote = liveDone[0] ? " · 实况（含动图）"
                             : (liveClipPath != null ? " · 动图未写入" : "");
-                    if (!host.exportCorruptNow)
-                        host.showInAppToast("已保存 " + fw + "x" + fh + canvasNote + " · " + sizeLabel
+                    if (!host.getExportCorruptNow())
+                        host.showInAppToastHostCall("已保存 " + fw + "x" + fh + canvasNote + " · " + sizeLabel
                                 + liveNote + uhdrNote + tiffHint);
                     else
-                        host.showInAppToast("导出内容异常，正在自动重导一次…");
-                    host.statusText.setText("已导出 " + fw + "x" + fh + canvasNote + " · " + sizeLabel
+                        host.showInAppToastHostCall("导出内容异常，正在自动重导一次…");
+                    host.getStatusText().setText("已导出 " + fw + "x" + fh + canvasNote + " · " + sizeLabel
                         + "（" + secs + " 秒，其中渲染 " + (fRender / 1000.0) + " 秒）" + tiffHint);
-                    host.hideBusy();
-                    host.setStep(2);
+                    host.hideBusyHostCall();
+                    host.setStepHostCall(2);
                 });
             } catch (Throwable e) {
-                final String msg = host.describe(e);
+                final String msg = host.describeViaHost(e);
                 try { DebugSink.text("export-error", "tier=" + tier + " " + msg); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37890", ignored); }
                 // **The gate is the one failure worth retrying blind.** The
                 // engine names the frame it was handed, so re-picking from that
                 // number is a real answer rather than a guess; everything else
                 // (a plane that does not fit, a lost device) fails the same way
                 // a second time and should just be reported.
-                if (host.exportHeals < 2 && host.healCanvasFromError(msg)) {
-                    ++host.exportHeals;
+                if (host.getExportHeals() < 2 && host.healCanvasFromErrorHostCall(msg)) {
+                    host.setExportHeals(host.getExportHeals() + 1);
                     final String f2 = format, t2 = tier;
                     host.runOnUiThread(() -> {
-                        if (host.exportProgressBar != null) host.hideBusy();
-                        host.statusText.setText("片边太大，已关闭，重试导出…");
-                        host.exportImage(f2, t2, onDone);
+                        if (host.getExportProgressBar() != null) host.hideBusyHostCall();
+                        host.getStatusText().setText("片边太大，已关闭，重试导出…");
+                        host.exportImageHostCall(f2, t2, onDone);
                     });
                     return;
                 }
-                if (host.exportHeals < 2 && host.healGateFromError(msg)) {
-                    ++host.exportHeals;
+                if (host.getExportHeals() < 2 && host.healGateFromErrorHostCall(msg)) {
+                    host.setExportHeals(host.getExportHeals() + 1);
                     final String f2 = format, t2 = tier;
                     host.runOnUiThread(() -> {
-                        if (host.exportProgressBar != null) host.hideBusy();
-                        host.statusText.setText("按片门比例重试导出…");
-                        host.exportImage(f2, t2, onDone);
+                        if (host.getExportProgressBar() != null) host.hideBusyHostCall();
+                        host.getStatusText().setText("按片门比例重试导出…");
+                        host.exportImageHostCall(f2, t2, onDone);
                     });
                     return;
                 }
-                host.uploadExportProgress(tmp);
-                host.uploadVkLog();
+                host.uploadExportProgressHostCall(tmp);
+                host.uploadVkLogHostCall();
                 host.runOnUiThread(() -> {
-                    host.statusText.setText("导出失败 " + SpkError.shortForm(msg));
-                    host.showErrorDialog("导出失败", SpkError.format(msg)
-                            + "\n\n" + host.sourceWidth + "×" + host.sourceHeight
-                            + "\n" + host.probe.describe());
-                    host.hideBusy();
-                    host.setStep(2);
+                    host.getStatusText().setText("导出失败 " + SpkError.shortForm(msg));
+                    host.showErrorDialogHostCall("导出失败", SpkError.format(msg)
+                            + "\n\n" + host.getSourceWidth() + "×" + host.getSourceHeight()
+                            + "\n" + host.getProbe().describe());
+                    host.hideBusyHostCall();
+                    host.setStepHostCall(2);
                 });
                 final int code = SpkError.codeOf(msg);
-                if (code == 1001 || code == 1009) host.offerSmallerImport();
+                if (code == 1001 || code == 1009) host.offerSmallerImportHostCall();
             } finally {
                 if (tmp.exists()) tmp.delete();
                 // **An export that came back as noise is not an export.**
                 // The render cost fifteen seconds; a silent bad file costs the
                 // user a trip to the gallery and a bug report. Retry once, on
                 // the UI thread, and let the second attempt report.
-                if (host.exportCorruptNow && !host.exportRetried && !host.batchExportRunning) {
-                    host.exportRetried = true;
+                if (host.getExportCorruptNow() && !host.getExportRetried() && !host.getBatchExportRunning()) {
+                    host.setExportRetried(true);
                     // **The bad file goes before the second attempt.** It is
                     // already committed to the album by `writeExportFile`, and
                     // this retry used to leave it there -- so one export ended
                     // as two files, one of them corrupt. That is the whole of
                     // "一口气导出了两张重复文件".
                     try {
-                        final Uri bad = host.lastExportOutUri;
-                        host.lastExportOutUri = null;
+                        final Uri bad = host.getLastExportOutUri();
+                        host.setLastExportOutUri(null);
                         if (bad != null) host.getContentResolver().delete(bad, null, null);
                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37945", ignored); }
                     // **A deterministic failure is not retried the same way.**
@@ -1060,31 +1062,31 @@ final class ExportWorker extends HostWorker {
                     // Only when there is still a preview session to borrow: if
                     // the first attempt had to close it for room, the borrow
                     // would find nothing and the retry would refuse itself.
-                    host.exportReuseCanvas = !host.overscanOn && host.session != null;
+                    host.setExportReuseCanvas(!host.getOverscanOn() && host.getSession() != null);
                     // **A retry nobody can see is indistinguishable from a slow
                     // render.** This one changes which session draws the file,
                     // and that is the whole difference between the two attempts
                     // -- so it goes in the ledger, named.
-                    SelfHeal.repaired("export-corrupt", host.exportReuseCanvas
+                    SelfHeal.repaired("export-corrupt", host.getExportReuseCanvas()
                             ? "second attempt on the canvas' own session"
                             : "second attempt on a fresh session (nothing to borrow)");
                     host.runOnUiThread(() -> {
-                        if (host.statusText != null) host.statusText.setText(host.exportReuseCanvas
+                        if (host.getStatusText() != null) host.getStatusText().setText(host.getExportReuseCanvas()
                                 ? "导出内容异常，换一条路重导一次…"
                                 : "导出内容异常，自动重导一次…");
-                        host.loadAlbum();
-                        host.exportImage(format, tier, onDone);
+                        host.loadAlbumHostCall();
+                        host.exportImageHostCall(format, tier, onDone);
                     });
                     return;
                 }
-                if (host.exportCorruptNow) {
+                if (host.getExportCorruptNow()) {
                     // **A file we know is wrong does not stay in the gallery.**
                     // Telling the user was not enough: the bad file is already
                     // in 相册 by the time this runs, and the next thing they see
                     // is a striped picture they paid two minutes of rendering
                     // for. Delete this attempt and say what happened.
                     try {
-                        final Uri bad = host.lastExportOutUri;
+                        final Uri bad = host.getLastExportOutUri();
                         if (bad != null) host.getContentResolver().delete(bad, null, null);
                     } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37986", ignored); }
                     // **The wall must forget it too.** The file is gone, but
@@ -1092,9 +1094,9 @@ final class ExportWorker extends HostWorker {
                     // stayed on 观片台 as a black rectangle with no way to
                     // remove it -- the whole of SL-261118-7167's first
                     // complaint. A rescan is what drops it.
-                    host.runOnUiThread(host::loadAlbum);
+                    host.runOnUiThread(host::loadAlbumHostCall);
                     final String ref = DebugSink.REF;
-                    host.runOnUiThread(() -> host.showErrorDialog("这次导出没有成功",
+                    host.runOnUiThread(() -> host.showErrorDialogHostCall("这次导出没有成功",
                             "写出来的画面是坏的：整幅几乎同一个颜色，或整幅逐行噪声。"
                             + "不是你的图的问题。\n\n"
                             + "已经换了一条渲染路径重试，还是这样，所以这次没有把文件留在相册里。"
