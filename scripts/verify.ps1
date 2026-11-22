@@ -276,4 +276,4 @@ Write-Host 'All offline checks passed.'
 # A diagnostic engine/JNI check may leave a non-zero native exit code even
 # though it was only a WARN. Do not let that turn a successful run into a
 # failed CI step; real failures throw above.
-$LASTEXITCODE = 0
+$global:LASTEXITCODE = 0
