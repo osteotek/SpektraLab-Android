@@ -373,6 +373,13 @@ JNI(void, nativeFreePixels)(JNIEnv*, jclass, jlong addr) {
     if (addr) std::free(reinterpret_cast<void*>(addr));
 }
 
+// Compatibility with the extracted workers, which still fill a direct
+// ByteBuffer before opening a session. Returns its native address.
+JNI(jlong, nativeBufferAddress)(JNIEnv* env, jclass, jobject buffer) {
+    if (!buffer) return 0;
+    return reinterpret_cast<jlong>(env->GetDirectBufferAddress(buffer));
+}
+
 // One row of ARGB ints -> interleaved float32 RGB. Division by 255, not a
 // reciprocal multiply: the two round differently and the pixels must stay
 // bit-identical to what the old per-pixel loop produced.

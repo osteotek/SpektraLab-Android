@@ -215,6 +215,20 @@ public class SpektraLabEngine implements AutoCloseable, EngineApi {
     private static native long nativeAllocPixels(long bytes);
     private static native void nativeFreePixels(long addr);
     private static native void nativeFillRow(long addr, long pixelOffset, int[] argb, int count);
+    private static native long nativeBufferAddress(java.nio.ByteBuffer buffer);
+
+    /** Compatibility shims for the extracted workers (direct ByteBuffer API). */
+    public static java.nio.ByteBuffer allocDirect(long bytes) {
+        return java.nio.ByteBuffer.allocateDirect((int) bytes);
+    }
+
+    public static void freeDirect(java.nio.ByteBuffer buffer) {
+        // Direct buffers are reclaimed by the GC; nothing to release explicitly.
+    }
+
+    public Session openSession(java.nio.ByteBuffer pixels, int width, int height, int channels) {
+        return openSession(nativeBufferAddress(pixels), width, height, channels);
+    }
 
     public Session openSession(long pixels, int width, int height, int channels) {
         long sessionHandle = nativeOpenSession(handle, pixels, width, height, channels);

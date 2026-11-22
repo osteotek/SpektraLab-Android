@@ -49,12 +49,19 @@ branch were removed afterwards.
 - **New 1.7.0 golden baseline: `e60490499b9a94eb`** for bands 0/128/512 —
   banding invariance holds with the merged engine and FotuFilm build.
 - `device-smoke.ps1` passes; app installs, launches and renders on the emulator.
-- Still set aside (next Stage 2 slice): the six worker classes and `HostWorker`.
-  Upstream's 36k-line MainActivity contains its own inline implementations and
-  private nested `Look`/`Frame`/`CompareView`, so re-porting them means adapting
-  each worker to the 1.7.0 API, not just widening visibility. The `domain/`,
-  `data/`, `ui/` and verification layers are present and green but not yet
-  wired into upstream's Activity.
+- **Workers re-ported (compiling):** the six worker classes and `HostWorker`
+  are back in the tree and build against the 1.7.0 API. The adaptation included
+  widening ~160 Activity members and five nested types, adding compatibility
+  members (`closeSessionSafely`, `reopeningFrame`, `exportController`,
+  `exportStore`, `renderController`), adapting changed call signatures, a
+  `nativeBufferAddress` JNI shim plus `allocDirect`/`freeDirect` and a
+  `ByteBuffer` `openSession` overload in `SpektraLabEngine`, and localising the
+  worker's pixel buffer (1.7.0 uses a native pointer rather than a ByteBuffer).
+- Device golden remains `e60490499b9a94eb` for bands 0/128/512 after the
+  worker re-port; smoke test passes.
+- **Not yet wired:** upstream's Activity still uses its own inline
+  implementations, so the workers compile but are not called. Replacing those
+  inline paths is the next Stage 2 slice and must preserve the golden baseline.
 
 ## 1. Verified starting state (2026-11-22)
 
