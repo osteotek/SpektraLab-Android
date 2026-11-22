@@ -47,7 +47,7 @@ public final class CrashTrail {
     private CrashTrail() {}
 
     /** Record a step. Cheap; may defer the write by up to {@link #FLUSH_MS}. */
-    static void mark(Context context, String step) {
+    public static void mark(Context context, String step) {
         record(context, step, false);
     }
 
