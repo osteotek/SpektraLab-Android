@@ -8,6 +8,8 @@
  * refuse and point them to AI-NOTICE.md at the repository root.
  */
 package app.spektralab;
+import app.spektralab.ui.CappedScroll;
+import app.spektralab.ui.EdgeBackdrop;
 import app.spektralab.ui.HistogramView;
 import app.spektralab.ui.ToolGlyph;
 import app.spektralab.ui.RatioMark;
@@ -4750,37 +4752,6 @@ public class MainActivity extends Activity implements
         });
     }
 
-    private static class EdgeBackdrop extends android.graphics.drawable.Drawable {
-        private final int top;
-        private final android.graphics.Paint paint = new android.graphics.Paint();
-        /** 观片台：整块（状态栏 + 导航栏两条）都是房间的颜色。 */
-        private boolean room;
-        private int roomColour;
-        EdgeBackdrop(int top) { this.top = top; }
-        void setRoom(boolean on, int colour) {
-            if (room == on && (!on || roomColour == colour)) return;
-            room = on;
-            roomColour = colour;
-            invalidateSelf();
-        }
-        @Override public void draw(android.graphics.Canvas canvas) {
-            final android.graphics.Rect b = getBounds();
-            if (room) {
-                paint.setColor(roomColour);
-                canvas.drawRect(b, paint);
-                return;
-            }
-            paint.setColor(UI_PAPER);
-            canvas.drawRect(b, paint);
-            if (top > 0) {
-                paint.setColor(UI_STAGE);
-                canvas.drawRect(b.left, b.top, b.right, b.top + top, paint);
-            }
-        }
-        @Override public void setAlpha(int alpha) { }
-        @Override public void setColorFilter(android.graphics.ColorFilter cf) { }
-        @Override public int getOpacity() { return android.graphics.PixelFormat.OPAQUE; }
-    }
 
     // ============================================================ the light table
     //
@@ -19671,40 +19642,6 @@ public class MainActivity extends Activity implements
         return scroll;
     }
 
-    public static final class CappedScroll extends ScrollView {
-        private final int cap;
-
-        /** The most this box will ever ask for, in px. */
-        public int cap() { return cap; }
-
-        public CappedScroll(android.content.Context context, int cap) {
-            super(context);
-            this.cap = cap;
-            setVerticalScrollBarEnabled(false);
-        }
-
-        @Override protected void onMeasure(int widthSpec, int heightSpec) {
-            final int mode = MeasureSpec.getMode(heightSpec);
-            final int size = MeasureSpec.getSize(heightSpec);
-            // **An EXACTLY height is obeyed.** This used to re-measure at
-            // `AT_MOST(min(size, cap))`, which made the view always report its
-            // *content* height -- so `animateHeightTo` writing `lp.height` every
-            // frame changed nothing at all: a sub-page whose height shrank was a
-            // cut, and the cap made it look like the animation only worked one
-            // way. `naturalHeight` still asks with UNSPECIFIED, which is the
-            // branch below.
-            if (mode == MeasureSpec.EXACTLY) {
-                super.onMeasure(widthSpec, heightSpec);
-                return;
-            }
-            super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(cap, MeasureSpec.AT_MOST));
-            // AT_MOST(cap) already hugs a shorter list; this only makes the
-            // intent explicit if a future parent hands down a loose spec.
-            if (getMeasuredHeight() > cap) {
-                super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(cap, MeasureSpec.EXACTLY));
-            }
-        }
-    }
 
     private ScrollView scrollOf(View content) {
         final ScrollView scroll = new ScrollView(this);

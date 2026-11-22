@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.CappedScroll;
 import app.spektralab.ui.HistogramView;
 
 /** Narrow Activity surface used by the extracted 1.7.0 panel builders.
@@ -139,7 +140,7 @@ public interface PanelHost {
     android.widget.LinearLayout[] getViewPages();
     android.widget.LinearLayout getViewRoot();
     void setViewRoot(android.widget.LinearLayout value);
-    app.spektralab.MainActivity.CappedScroll[] getViewScrolls();
+    CappedScroll[] getViewScrolls();
     float getYFilter();
     void setYFilter(float value);
     android.view.View bigCardHostCall(java.lang.String a0, java.lang.String a1, java.util.function.Supplier<java.lang.String> a2, java.lang.Runnable a3);

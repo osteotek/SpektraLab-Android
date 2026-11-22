@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.CappedScroll;
 import app.spektralab.ui.Square;
 
 import static app.spektralab.AppLanguage.tr;
@@ -6,7 +7,7 @@ import android.view.View;
 import android.widget.*;
 import app.spektralab.DebugSink;
 import app.spektralab.Diagnostics;
-import app.spektralab.MainActivity.CappedScroll;
+import app.spektralab.ui.CappedScroll;
 
 /** FotuGroups builders extracted from MainActivity (architecture Phase C). */
 public final class FotuGroups {

@@ -13,6 +13,8 @@ public final class CappedScroll extends android.widget.ScrollView {
             setVerticalScrollBarEnabled(false);
         }
 
+        public int cap() { return cap; }
+
         @Override protected void onMeasure(int widthSpec, int heightSpec) {
             final int mode = MeasureSpec.getMode(heightSpec);
             final int size = MeasureSpec.getSize(heightSpec);

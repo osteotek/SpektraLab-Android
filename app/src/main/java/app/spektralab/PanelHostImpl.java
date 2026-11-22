@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.CappedScroll;
 import app.spektralab.ui.HistogramView;
 
 /** Plugin-free implementation of the panel host, kept out of MainActivity
@@ -149,7 +150,7 @@ final class PanelHostImpl implements app.spektralab.ui.panels.PanelHost {
     @Override public android.widget.LinearLayout[] getViewPages() {  return activity.viewPages; }
     @Override public android.widget.LinearLayout getViewRoot() {  return activity.viewRoot; }
     @Override public void setViewRoot(android.widget.LinearLayout value) {  activity.viewRoot = value; }
-    @Override public app.spektralab.MainActivity.CappedScroll[] getViewScrolls() {  return activity.viewScrolls; }
+    @Override public CappedScroll[] getViewScrolls() {  return activity.viewScrolls; }
     @Override public float getYFilter() {  return activity.yFilter; }
     @Override public void setYFilter(float value) {  activity.yFilter = value; }
     @Override public android.view.View bigCardHostCall(java.lang.String a0, java.lang.String a1, java.util.function.Supplier<java.lang.String> a2, java.lang.Runnable a3) { return activity.bigCard(a0, a1, a2, a3); }

@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.CappedScroll;
 import app.spektralab.ui.Square;
 
 /** Narrow Activity surface for the ViewPages builders. Implemented by ViewPagesHostImpl. */
@@ -73,7 +74,7 @@ public interface ViewPagesHost {
     java.util.List<java.lang.Runnable> getViewRefreshers();
     float getViewSaturation();
     void setViewSaturation(float value);
-    app.spektralab.MainActivity.CappedScroll[] getViewScrolls();
+    CappedScroll[] getViewScrolls();
     float getViewShadows();
     void setViewShadows(float value);
     float getViewSharpen();

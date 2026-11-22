@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.CappedScroll;
 import app.spektralab.ui.Square;
 
 /** Delegating implementation of ViewPagesHost. */
@@ -76,7 +77,7 @@ final class ViewPagesHostImpl implements app.spektralab.ui.panels.ViewPagesHost 
     @Override public java.util.List<java.lang.Runnable> getViewRefreshers() { return activity.viewRefreshers; }
     @Override public float getViewSaturation() { return activity.viewSaturation; }
     @Override public void setViewSaturation(float value) { activity.viewSaturation = value; }
-    @Override public app.spektralab.MainActivity.CappedScroll[] getViewScrolls() { return activity.viewScrolls; }
+    @Override public CappedScroll[] getViewScrolls() { return activity.viewScrolls; }
     @Override public float getViewShadows() { return activity.viewShadows; }
     @Override public void setViewShadows(float value) { activity.viewShadows = value; }
     @Override public float getViewSharpen() { return activity.viewSharpen; }

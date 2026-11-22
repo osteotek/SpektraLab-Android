@@ -1,4 +1,5 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.CappedScroll;
 import app.spektralab.ui.HistogramView;
 
 import static app.spektralab.AppLanguage.tr;
@@ -11,7 +12,7 @@ import app.spektralab.DebugSink;
 import app.spektralab.Diagnostics;
 import app.spektralab.MainActivity.Frame;
 import app.spektralab.Look;
-import app.spektralab.MainActivity.CappedScroll;
+import app.spektralab.ui.CappedScroll;
 import app.spektralab.MainActivity.Knob;
 import app.spektralab.MainActivity.LiveClip;
 import app.spektralab.ui.*;
