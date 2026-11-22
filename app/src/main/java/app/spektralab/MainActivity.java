@@ -42,6 +42,7 @@ import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
+import app.spektralab.ui.panels.SettingsDialogs;
 import app.spektralab.ui.panels.PrintEdge;
 import app.spektralab.ui.panels.AppDialogs;
 import app.spektralab.ui.panels.FotuGroups;
@@ -925,7 +926,7 @@ public class MainActivity extends Activity implements
      */
     private static int uiOnCanvas() { return 0xFFF1F1EE; }
     /** True when the dark palette is in force; the canvas chrome asks. */
-    private static boolean darkTheme = false;
+    static boolean darkTheme = false;
 
     /**
      * Orange on black: the same seven roles, re-coloured. Orange is the accent
@@ -3194,7 +3195,7 @@ public class MainActivity extends Activity implements
     private static final String[] GLOW_STYLE_IDS = { "1", "0", "2", "3", "4" };
 
     private final TextView[] tabLabels = new TextView[6];
-    private android.widget.FrameLayout uiRoot;
+    android.widget.FrameLayout uiRoot;
     private TextView inAppToast;
     private final Runnable hideUiToast = () -> {
         if (inAppToast == null) return;
@@ -3302,7 +3303,7 @@ public class MainActivity extends Activity implements
      * 编辑器（顶上画布蓝、下面纸）。以前它们一直是编辑器的颜色：灯一开，米白的
      * 房间被上下两条黑框夹着，白色的状态栏图标落在米白上看不见。
      */
-    private void syncRoomBars() {
+    void syncRoomBars() {
         if (crossing || uiRoot == null) return;
         // **设置页是一张纸。** 它盖住整个窗口，顶上那条状态栏如果还是画布的蓝
         // （或暗房的炭黑），白底上会浮一条别人的颜色。所以设置开着的时候，两条
@@ -4450,7 +4451,7 @@ public class MainActivity extends Activity implements
      */
     private Boolean arrivalAnimCache;
 
-    private boolean arrivalAnim() {
+    boolean arrivalAnim() {
         if (arrivalAnimCache == null)
             arrivalAnimCache = getSharedPreferences("ui", MODE_PRIVATE)
                     .getBoolean("arrival_anim", true);
@@ -4591,7 +4592,7 @@ public class MainActivity extends Activity implements
      * `w` already 1, the print's white landed at 13x SDR white. The floor is a
      * choice, and the row above says which one is in force.
      */
-    private void showHdrSheet() {
+    void showHdrSheet() {
         if (!hdrDisplaySupported()) {
             showActionSheet(tr("ui170.039"),
                     tr("ui170.040")
@@ -4705,7 +4706,7 @@ public class MainActivity extends Activity implements
         }, "SpektraLab-hdr").start();
     }
 
-    private void setArrivalAnim(boolean on) {
+    void setArrivalAnim(boolean on) {
         arrivalAnimCache = on;
         getSharedPreferences("ui", MODE_PRIVATE).edit()
                 .putBoolean("arrival_anim", on).apply();
@@ -5278,7 +5279,7 @@ public class MainActivity extends Activity implements
         @Override public void updateMeasureState(android.text.TextPaint p) { p.setTypeface(tf); }
     }
 
-    private CharSequence mixedText(String text) {
+    CharSequence mixedText(String text) {
         android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder(text);
         int i = 0;
         while (i < text.length()) {
@@ -14411,7 +14412,7 @@ public class MainActivity extends Activity implements
         } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:14271", ignored); }
     }
 
-    private String buildLine() {
+    String buildLine() {
         try { return SpektraLabEngine.buildInfo(); } catch (Throwable t) { return "(native side not loaded)"; }
     }
 
@@ -17680,7 +17681,7 @@ public class MainActivity extends Activity implements
     /** The rendered result's RGB distribution; null until the panel is built. */
     HistogramView histogram = null;
     /** A display preference, not a look: it is stored beside the theme. */
-    private boolean histogramOn = true;
+    boolean histogramOn = true;
     /** Live frames between histogram refreshes (see `drawLivePreview`). */
     private int liveHistCounter;
     /** Which 光学 sub-page is showing; 重置 acts on this one only. */
@@ -21802,7 +21803,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void showPresetsPanel() {
+    void showPresetsPanel() {
         final org.json.JSONArray list = presetList();
         final android.app.Dialog dialog = new android.app.Dialog(this);
         LinearLayout sheet = new LinearLayout(this);
@@ -22351,7 +22352,7 @@ public class MainActivity extends Activity implements
         return row;
     }
 
-    private void showFeedbackGroup(final boolean auto) { AppDialogs.showFeedbackGroup(new AppDialogsHostImpl(this), auto); }
+    void showFeedbackGroup(final boolean auto) { AppDialogs.showFeedbackGroup(new AppDialogsHostImpl(this), auto); }
 
     boolean copyToClipboard(String labelText, String text) {
         try {
@@ -26005,7 +26006,7 @@ public class MainActivity extends Activity implements
         }, "canary-probe").start();
     }
 
-    private DeviceProbe probeNow() {
+    DeviceProbe probeNow() {
         if (!probe.valid && engine == null) {
             // tr("ui170.344") can be opened before anything is imported, which is the
             // usual way this reads as a failure: there is no engine yet, so
@@ -26085,7 +26086,7 @@ public class MainActivity extends Activity implements
      * ceiling and the hard cap have had their say -- picking 50 MP on a phone
      * with 4.5 GB free legitimately lands at half that.
      */
-    private void showPixelCapSheet() {
+    void showPixelCapSheet() {
         final int[] caps = {0, 20, 30, 40, 50};
         final int[] sims = {0, 128, 256};
         final int[] bands = {0, 16777216, 100000000};
@@ -26114,7 +26115,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 「关于」现在是设置里的一页；这个名字留给所有旧调用点。 */
-    private void showAbout() { showSettings("about"); }
+    private void showAbout() { SettingsDialogs.showAbout(new SettingsDialogsHostImpl(this)); }
 
     // ================================================================ 设置
     //
@@ -26130,318 +26131,52 @@ public class MainActivity extends Activity implements
     // 动作单继续留给「从一组里选一个」的场合（HDR 的七档、预设列表），那里它
     // 仍然是对的。
 
-    private View settingsScreen;
-    private ScrollView settingsScroll;
-    private LinearLayout settingsBody;
-    private TextView settingsTitle, settingsDone;
+    View settingsScreen;
+    ScrollView settingsScroll;
+    LinearLayout settingsBody;
+    TextView settingsTitle, settingsDone;
     /** null = 根页；theme / about / licence = 子页。 */
-    private String settingsSection;
-    private boolean settingsOpen;
+    String settingsSection;
+    boolean settingsOpen;
 
     private void showSettings() { showSettings(null); }
 
-    private void showSettings(String section) {
-        if (uiRoot == null) return;
-        settingsSection = section;
-        if (settingsScreen == null) {
-            settingsScreen = buildSettingsScreen();
-            uiRoot.addView(settingsScreen, new android.widget.FrameLayout.LayoutParams(-1, -1));
-        }
-        if (!settingsOpen) {
-            settingsOpen = true;
-            settingsScreen.setVisibility(View.VISIBLE);
-            settingsScreen.setAlpha(0f);
-            settingsScreen.animate().alpha(1f).setDuration(200)
-                    .setInterpolator(EASE_OUT).start();
-            syncRoomBars();
-        }
-        fillSettings();
-    }
+    private void showSettings(String section) { SettingsDialogs.showSettings(new SettingsDialogsHostImpl(this), section); }
 
-    private void closeSettings() {
-        if (!settingsOpen) return;
-        settingsOpen = false;
-        settingsSection = null;
-        settingsScreen.animate().cancel();
-        settingsScreen.animate().alpha(0f).setDuration(140)
-                .withEndAction(() -> {
-                    // **淡出途中又被打开时，这一下不能把它藏掉。** `showSettings`
-                    // 会把同一个 view 的 alpha 反向拉回 1，但旧动画的末段回调仍
-                    // 然排在那里 —— 少了这道判断，连按「完成」再按 ☰ 就是一页空白。
-                    if (settingsScreen != null && !settingsOpen)
-                        settingsScreen.setVisibility(View.GONE);
-                    // 系统栏等纸退干净再交还给房间，否则顶上那一条会比页面早 140 ms
-                    // 变色。
-                    syncRoomBars();
-                })
-                .start();
-    }
+    private void closeSettings() { SettingsDialogs.closeSettings(new SettingsDialogsHostImpl(this)); }
 
-    private View buildSettingsScreen() {
-        final android.widget.FrameLayout page = new android.widget.FrameLayout(this);
-        page.setBackgroundColor(UI_PAPER);
-        page.setClickable(true);          // 挡住下面那一层的手势
-
-        final LinearLayout column = new LinearLayout(this);
-        column.setOrientation(LinearLayout.VERTICAL);
-
-        final LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.HORIZONTAL);
-        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.setPadding(dp(6), 0, dp(10), 0);
-
-        final TextView back = label("\u2039", 20, UI_INK, tfBody);
-        back.setGravity(android.view.Gravity.CENTER);
-        back.setBackground(settingsPress());
-        back.setContentDescription(tr("ui170.345"));
-        back.setOnClickListener(v -> { if (settingsSection == null) closeSettings(); else showSettings(null); });
-        head.addView(back, new LinearLayout.LayoutParams(dp(44), dp(48)));
-
-        settingsTitle = mixedLabel(tr("editor.settings"), 13f, UI_INK);
-        head.addView(settingsTitle, new LinearLayout.LayoutParams(0, -2, 1f));
-
-        settingsDone = label(tr("ui170.146"), 9.5f, UI_BLUE, tfHan);
-        settingsDone.setGravity(android.view.Gravity.CENTER);
-        settingsDone.setBackground(settingsPress());
-        settingsDone.setPadding(dp(12), 0, dp(12), dp(12));
-        settingsDone.setOnClickListener(v -> closeSettings());
-        head.addView(settingsDone, new LinearLayout.LayoutParams(-2, dp(48)));
-        column.addView(head, new LinearLayout.LayoutParams(-1, dp(52)));
-
-        final View hair = new View(this);
-        hair.setBackgroundColor(UI_LINE);
-        column.addView(hair, new LinearLayout.LayoutParams(-1, Math.max(1, Math.round(dp(0.6f)))));
-
-        settingsScroll = new ScrollView(this);
-        settingsScroll.setVerticalScrollBarEnabled(false);
-        settingsScroll.setFillViewport(true);
-        settingsBody = new LinearLayout(this);
-        settingsBody.setOrientation(LinearLayout.VERTICAL);
-        settingsBody.setPadding(0, 0, 0, dp(26));
-        settingsScroll.addView(settingsBody, new android.widget.FrameLayout.LayoutParams(-1, -2));
-        column.addView(settingsScroll, new LinearLayout.LayoutParams(-1, 0, 1f));
-
-        page.addView(column, new android.widget.FrameLayout.LayoutParams(-1, -1));
-        return page;
-    }
+    private View buildSettingsScreen() { return SettingsDialogs.buildSettingsScreen(new SettingsDialogsHostImpl(this)); }
 
     /** 上一次填的是哪一页：换页才回到顶部、才播进场。 */
-    private String settingsFilledSection = "\u0000";
+    String settingsFilledSection = "\u0000";
 
-    private void fillSettings() {
-        if (settingsBody == null) return;
-        final boolean root = settingsSection == null;
-        final boolean moved = !String.valueOf(settingsSection).equals(settingsFilledSection);
-        final int keepY = settingsScroll == null ? 0 : settingsScroll.getScrollY();
-        settingsFilledSection = String.valueOf(settingsSection);
-        settingsTitle.setText(mixedText(root ? tr("editor.settings")
-                : "theme".equals(settingsSection) ? tr("ui170.346")
-                : "about".equals(settingsSection) ? tr("ui170.347")
-                : "licence".equals(settingsSection) ? tr("ui170.348") : tr("editor.settings")));
-        settingsDone.setVisibility(root ? View.VISIBLE : View.GONE);
-        settingsBody.removeAllViews();
-
-        if (root) fillSettingsRoot();
-        else if ("theme".equals(settingsSection)) fillSettingsTheme();
-        else if ("about".equals(settingsSection)) fillSettingsAbout();
-        else fillSettingsLicence();
-
-        final TextView foot = mixedLabel("SpektraLab Android \u00b7 "
-                + UpdateCheck.versionName(this) + " (" + UpdateCheck.versionCode(this) + ")", 7.5f, UI_MUTED);
-        foot.setGravity(android.view.Gravity.CENTER);
-        foot.setPadding(0, dp(28), 0, dp(4));
-        settingsBody.addView(foot);
-
-        // **换页回到顶部，改一行不动。** 在「驱动报告」上按一下就把页面弹回最上
-        // 面，是那种用户会以为是 bug 的小动作。
-        settingsScroll.scrollTo(0, moved ? 0 : keepY);
-        settingsBody.animate().cancel();
-        if (moved) {
-            settingsBody.setAlpha(0.35f);
-            settingsBody.setTranslationY(dp(8));
-            settingsBody.animate().alpha(1f).translationY(0f)
-                    .setDuration(180).setInterpolator(EASE_OUT).start();
-        } else {
-            settingsBody.setAlpha(1f);
-            settingsBody.setTranslationY(0f);
-        }
-    }
+    private void fillSettings() { SettingsDialogs.fillSettings(new SettingsDialogsHostImpl(this)); }
 
     /** Pick the editor language; a restart reloads every translated label. */
-    private void showLanguageSheet() {
-        final java.util.List<AppLanguage.Language> languages = AppLanguage.available();
-        final java.util.List<String> labels = new java.util.ArrayList<>();
-        for (AppLanguage.Language language : languages) labels.add(language.name);
-        showChoiceSheet(tr("ui170.349"), labels, AppLanguage.current().name, picked -> {
-            for (AppLanguage.Language language : languages) {
-                if (language.name.equals(picked)) {
-                    AppLanguage.select(this, language);
-                    recreate();
-                    return;
-                }
-            }
-        });
-    }
+    private void showLanguageSheet() { SettingsDialogs.showLanguageSheet(new SettingsDialogsHostImpl(this)); }
 
-    private void fillSettingsRoot() {
-        settingsGroup("外观 \u00b7 APPEARANCE");
-        settingsAdd(settingsRow(tr("ui170.350"), null, themeValue(), true,
-                () -> showSettings("theme")));
-        settingsRule();
-        settingsAdd(settingsRow(tr("ui170.349"), null,
-                AppLanguage.current().name, true, this::showLanguageSheet));
-        settingsRule();
-        settingsAdd(settingsRow(tr("ui170.351"), tr("ui170.352"), orientationValue(), true,
-                this::showOrientationSheet));
-        settingsRule();
-        settingsAdd(settingsSwitch(tr("ui170.353"), tr("ui170.354"), arrivalAnim(),
-                this::setArrivalAnim));
+    private void fillSettingsRoot() { SettingsDialogs.fillSettingsRoot(new SettingsDialogsHostImpl(this)); }
 
-        settingsGroup("预览 \u00b7 PREVIEW");
-        settingsAdd(settingsSwitch(tr("optics.histogram"), tr("ui170.355"), histogramOn, on -> {
-            histogramOn = on;
-            getSharedPreferences("ui", MODE_PRIVATE).edit()
-                    .putBoolean("histogram", on).apply();
-            if (histogram != null) histogram.setVisibility(on ? View.VISIBLE : View.GONE);
-        }));
-        settingsRule();
-        settingsAdd(settingsRow(tr("ui170.356"), hdrDetailLine(), null, true,
-                this::showHdrSheet));
-        settingsRule();
-        settingsAdd(settingsSwitch(tr("optics.original_brightness"), tr("ui170.357"),
-                rawAutoBright, on -> {
-                    rawAutoBright = on;
-                    getSharedPreferences("ui", MODE_PRIVATE).edit()
-                            .putBoolean("raw_auto_bright", on).apply();
-                    refreshOriginalView();
-                }));
+    private void fillSettingsTheme() { SettingsDialogs.fillSettingsTheme(new SettingsDialogsHostImpl(this)); }
 
-        settingsGroup("工作区 \u00b7 WORKSPACE");
-        settingsAdd(settingsRow(tr("preset.preset"), presetCountLine(), null, true, this::showPresetsPanel));
-        settingsRule();
-        settingsAdd(settingsRow(tr("ui170.358"), tr("ui170.359"), null, true, () -> {
-            loadAlbum();
-            showInAppToast(tr("ui170.360"));
-        }));
+    private void fillSettingsAbout() { SettingsDialogs.fillSettingsAbout(new SettingsDialogsHostImpl(this)); }
 
-        settingsGroup("关于 \u00b7 ABOUT");
-        settingsAdd(settingsRow(tr("ui170.361"), null,
-                UpdateCheck.versionName(this) + "\uff08" + UpdateCheck.versionCode(this) + "\uff09",
-                true, () -> showSettings("about")));
-        settingsRule();
-        settingsAdd(settingsRow(tr("settings.check_for_updates"), null, null, true,
-                () -> UpdateCheck.check(this, true)));
-        settingsRule();
-        settingsAdd(settingsSwitch(tr("ui170.362"), deviceReportLine(), DeviceReport.enabled(this),
-                on -> DeviceReport.setEnabled(this, on)));
-        settingsRule();
-        // **上传步骤与仓库都归「关于与诊断」。** 一个是出问题才用，一个看一次就
-        // 够；根页只留每天会碰的那几行，这页才不会变成第二条动作单。
-        settingsAdd(settingsRow(tr("ui170.363"), tr("ui170.364"), null, true,
-                () -> showFeedbackGroup(false)));
-        settingsRule();
-        settingsAdd(settingsRow(tr("ui170.348"), tr("ui170.365"), null, true,
-                () -> showSettings("licence")));
-    }
-
-    private void fillSettingsTheme() {
-        final boolean dark = getSharedPreferences("ui", MODE_PRIVATE).getBoolean("dark", false);
-        final boolean pending = dark != darkTheme;
-        final TextView note = mixedLabel(pending
-                ? tr("ui170.366")
-                : tr("ui170.367"),
-                8.5f, UI_MUTED);
-        note.setPadding(dp(16), dp(16), dp(16), dp(2));
-        note.setLineSpacing(dp(2), 1f);
-        settingsBody.addView(note);
-
-        settingsGroup("配色 \u00b7 PALETTE");
-        settingsAdd(settingsCheckRow(tr("ui170.368"), "纸白面板 \u00b7 克莱因蓝", !dark, () -> {
-            getSharedPreferences("ui", MODE_PRIVATE).edit().putBoolean("dark", false).apply();
-            fillSettings();
-        }));
-        settingsRule();
-        settingsAdd(settingsCheckRow("暗黑 \u00b7 黑橙", "近黑面板 \u00b7 橙色强调", dark, () -> {
-            getSharedPreferences("ui", MODE_PRIVATE).edit().putBoolean("dark", true).apply();
-            fillSettings();
-        }));
-
-        if (pending) {
-            settingsGroup("生效 \u00b7 APPLY");
-            settingsAdd(settingsRow(tr("ui170.369"), tr("ui170.370"), null, true,
-                    this::relaunchForTheme));
-        }
-    }
-
-    private void fillSettingsAbout() {
-        probeNow();
-        settingsGroup("本机 \u00b7 DEVICE");
-        settingsInfo("GPU", probe.describe());
-        settingsInfo(tr("ui170.371"), String.format(java.util.Locale.US, "%.1f MP \uff08内存上限\uff09",
-                maxImportPixels(false) / 1e6));
-        settingsInfo(tr("ui170.372"), buildLine());
-        // **Two engines, two lines.** The shelf merges both catalogues, so a page
-        // that named only the Vulkan one read as if the other did not exist.
-        settingsInfo(tr("ui170.373"), FotuFilm.buildInfo(this));
-        // **Only when something was repaired.** A permanent tr("ui170.374") row is
-        // noise; a row that appears is a signal, and it is the first thing to
-        // ask for when a report says the picture came out strange.
-        final String healed = SelfHeal.summary();
-        if (!"nothing repaired".equals(healed)) {
-            settingsInfo(tr("ui170.375"), healed);
-        }
-
-        settingsGroup("维护 \u00b7 SUPPORT");
-        settingsAdd(settingsRow(tr("ui170.376"), debugSummaryLine(), null, true,
-                this::showPixelCapSheet));
-        settingsRule();
-        settingsAdd(settingsRow(tr("ui170.377"), DebugSink.REF + " \u00b7 点一下复制", null, true, () -> {
-            copyToClipboard(tr("ui170.378"), DebugSink.REF);
-            showInAppToast(tr("ui170.379") + DebugSink.REF);
-        }));
-        settingsRule();
-        settingsAdd(settingsRow(tr("ui170.380"), tr("ui170.381"), null, true,
-                this::uploadRecentSteps));
-    }
-
-    private void fillSettingsLicence() {
-        settingsBody.addView(licenceBlock(tr("ui170.382"),
-                "spektrafilm \u2014 Andrea Volpato。胶片过程模型、实测彩色 profile 与放大 LUT，"
-                + tr("ui170.383")));
-        settingsBody.addView(licenceBlock(tr("ui170.384"),
-                "SpektraLab \u2014 Hanze Qiu。把上面的引擎重写成 C++ / Metal 并做出 macOS 应用，"
-                + tr("ui170.385")));
-        settingsBody.addView(licenceBlock("第二引擎 \u2014 Fotufilm",
-                "Fotufilm \u2014 MUAStudio Inc.（fotufilm.com）。引擎代码以 Apache-2.0 分发；"
-                + tr("ui170.386")
-                + tr("ui170.387")));
-        settingsBody.addView(licenceBlock(tr("ui170.388"),
-                tr("ui170.389")
-                + tr("ui170.390")));
-        settingsBody.addView(licenceBlock(tr("ui170.391"),
-                tr("ui170.392")));
-        settingsGroup("全文 \u00b7 LICENCE");
-        settingsAdd(settingsRow(tr("ui170.393"), "GPL-3.0-or-later、CC BY-SA 4.0、Apache-2.0",
-                null, true, this::openRepo));
-        settingsRule();
-        settingsAdd(settingsRow(tr("ui170.394"), tr("ui170.395"),
-                null, true, () -> openUrl(REPO + "/blob/master/AI-NOTICE.md")));
-    }
+    private void fillSettingsLicence() { SettingsDialogs.fillSettingsLicence(new SettingsDialogsHostImpl(this)); }
 
     // ---- 这一页的零件 ----------------------------------------------------
 
     /** 一组的小标题：中文 + 拉丁小字，和冲印页的 section 头同一套。 */
     // ------------------------------------------------------------------ 屏幕方向
 
-    private static final String[] ORIENT_IDS = {"auto", "portrait", "landscape"};
-    private static String[] ORIENT_NAMES = {tr("ui170.396"), tr("ui170.397"), tr("ui170.398")};
+    static final String[] ORIENT_IDS = {"auto", "portrait", "landscape"};
+    static String[] ORIENT_NAMES = {tr("ui170.396"), tr("ui170.397"), tr("ui170.398")};
 
-    private String orientationPref() {
+    String orientationPref() {
         final String v = getSharedPreferences("ui", MODE_PRIVATE).getString("orientation", "auto");
         return v == null ? "auto" : v;
     }
 
-    private String orientationValue() {
+    String orientationValue() {
         final String v = orientationPref();
         return ORIENT_NAMES["portrait".equals(v) ? 1 : "landscape".equals(v) ? 2 : 0];
     }
@@ -26453,7 +26188,7 @@ public class MainActivity extends Activity implements
      * 永远看不到横屏布局；这里能把横屏按住，也能反过来把竖屏钉死。
      * `SENSOR_LANDSCAPE` 允许左右两个横，`PORTRAIT` 只给正的竖。
      */
-    private void applyOrientationPref() {
+    void applyOrientationPref() {
         final String v = orientationPref();
         final int want = "portrait".equals(v)
                 ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -26463,48 +26198,17 @@ public class MainActivity extends Activity implements
         try { setRequestedOrientation(want); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:27942", ignored); }
     }
 
-    private void showOrientationSheet() {
-        final String cur = orientationPref();
-        int active = 0;
-        for (int i = 0; i < ORIENT_IDS.length; ++i) if (ORIENT_IDS[i].equals(cur)) active = i;
-        final String note = "横屏：照片在左，参数在右一栏，页签在栏顶。\n"
-                + tr("ui170.399");
-        final String[] names = new String[ORIENT_NAMES.length];
-        for (int i = 0; i < names.length; ++i) {
-            names[i] = i == active ? ORIENT_NAMES[i] + "  \u00b7 现在" : ORIENT_NAMES[i];
-        }
-        showActionSheet(tr("ui170.351"), note, names, which -> {
-            if (which < 0 || which >= ORIENT_IDS.length) return;
-            getSharedPreferences("ui", MODE_PRIVATE).edit()
-                    .putString("orientation", ORIENT_IDS[which]).apply();
-            applyOrientationPref();
-            if (settingsOpen) fillSettings();
-        });
-    }
+    private void showOrientationSheet() { SettingsDialogs.showOrientationSheet(new SettingsDialogsHostImpl(this)); }
 
-    private void settingsGroup(String title) {
-        final TextView t = mixedLabel(title, 8.5f, UI_MUTED);
-        t.setLetterSpacing(0.10f);
-        t.setPadding(dp(16), dp(26), dp(16), dp(7));
-        settingsBody.addView(t, new LinearLayout.LayoutParams(-1, -2));
-    }
+    private void settingsGroup(String title) { SettingsDialogs.settingsGroup(new SettingsDialogsHostImpl(this), title); }
 
-    private void settingsAdd(View row) {
-        settingsBody.addView(row, new LinearLayout.LayoutParams(-1, -2));
-    }
+    private void settingsAdd(View row) { SettingsDialogs.settingsAdd(new SettingsDialogsHostImpl(this), row); }
 
     /** 行与行之间的发丝线，左边留 16 dp —— 系统设置的做法。 */
-    private void settingsRule() {
-        final View v = new View(this);
-        v.setBackgroundColor(UI_LINE);
-        final LinearLayout.LayoutParams lp =
-                new LinearLayout.LayoutParams(-1, Math.max(1, Math.round(dp(0.6f))));
-        lp.leftMargin = dp(16);
-        settingsBody.addView(v, lp);
-    }
+    private void settingsRule() { SettingsDialogs.settingsRule(new SettingsDialogsHostImpl(this)); }
 
     /** 按下时的一层极淡的墨：这个 app 没有 Ripple，这是同一件事的最小实现。 */
-    private android.graphics.drawable.Drawable settingsPress() {
+    android.graphics.drawable.Drawable settingsPress() {
         final android.graphics.drawable.StateListDrawable d =
                 new android.graphics.drawable.StateListDrawable();
         d.addState(new int[]{android.R.attr.state_pressed},
@@ -26514,7 +26218,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 一行：标题、可选副标题、可选右侧值、可选箭头。 */
-    private LinearLayout settingsRow(String title, String sub, String value,
+    LinearLayout settingsRow(String title, String sub, String value,
                                      boolean chevron, Runnable tap) {
         final LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -26554,7 +26258,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 一行：标题左、平台开关右。整行都能点。 */
-    private LinearLayout settingsSwitch(String title, String sub, boolean on,
+    LinearLayout settingsSwitch(String title, String sub, boolean on,
                                         java.util.function.Consumer<Boolean> set) {
         final LinearLayout row = settingsRow(title, sub, null, false, null);
         final SettingsSwitch sw = new SettingsSwitch(this);
@@ -26568,7 +26272,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 一行带着勾的选项（主题、以后别的「选一个」）。 */
-    private LinearLayout settingsCheckRow(String title, String sub, boolean checked, Runnable tap) {
+    LinearLayout settingsCheckRow(String title, String sub, boolean checked, Runnable tap) {
         final LinearLayout row = settingsRow(title, sub, null, false, tap);
         final CheckMark tick = new CheckMark(this);
         tick.setVisibility(checked ? View.VISIBLE : View.INVISIBLE);
@@ -26657,7 +26361,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 只读的一条：小字标题在上，值在下，可长按复制。 */
-    private void settingsInfo(String key, String value) {
+    void settingsInfo(String key, String value) {
         final LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(16), dp(10), dp(16), dp(10));
@@ -26670,7 +26374,7 @@ public class MainActivity extends Activity implements
         settingsBody.addView(box, new LinearLayout.LayoutParams(-1, -2));
     }
 
-    private View licenceBlock(String title, String body) {
+    View licenceBlock(String title, String body) {
         final LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(16), dp(14), dp(16), dp(6));
@@ -26692,7 +26396,7 @@ public class MainActivity extends Activity implements
      * 放进设置页就会变成「HDR 屏幕预览 / HDR 屏幕预览：开」的自言自语。这里
      * 只留值，和别的行同一套写法。
      */
-    private String hdrDetailLine() {
+    String hdrDetailLine() {
         if (!hdrDisplaySupported()) return tr("ui170.400");
         if (android.os.Build.VERSION.SDK_INT < 26) return tr("ui170.401");
         if (!hdrPreviewPref()) return tr("ui170.402");
@@ -26700,22 +26404,22 @@ public class MainActivity extends Activity implements
                 hdrHeadroomStops(), hdrFloor());
     }
 
-    private String themeValue() {
+    String themeValue() {
         final boolean dark = getSharedPreferences("ui", MODE_PRIVATE).getBoolean("dark", false);
         return (dark ? "暗黑 \u00b7 黑橙" : "蓝白") + (dark != darkTheme ? " \u00b7 待生效" : "");
     }
 
-    private String presetCountLine() {
+    String presetCountLine() {
         final int n = presetList().length();
         return n == 0 ? tr("ui170.404") : n + tr("ui170.405");
     }
 
-    private String deviceReportLine() {
+    String deviceReportLine() {
         final String last = DeviceReport.lastAnswer(this);
         return tr("ui170.406") + (last == null || last.isEmpty() ? "" : " \u00b7 " + last);
     }
 
-    private String debugSummaryLine() {
+    String debugSummaryLine() {
         final int mp = debugPixelCapMp(), sim = debugStorageLimitMib(), band = debugBandCap();
         if (mp == 0 && sim == 0 && band == 0) return tr("ui170.407");
         final StringBuilder b = new StringBuilder();
@@ -26726,7 +26430,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 主题换了但界面还是旧的一套：保存进度，然后让这个 Activity 自己重建。 */
-    private void relaunchForTheme() {
+    void relaunchForTheme() {
         try { saveLookIntoFrames(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28209", ignored); }
         try { saveSessionState(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28210", ignored); }
         try {
@@ -26737,7 +26441,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 动作单时代那个分支，搬到这里；设置页关掉之后仍然给出同一张对话框。 */
-    private void uploadRecentSteps() {
+    void uploadRecentSteps() {
         final String ring = CrashTrail.snapshot(this);
         final String head = "user-report\n" + reportHead()
                 + "steps=" + DebugSink.ringSize() + "\n";
@@ -26754,11 +26458,11 @@ public class MainActivity extends Activity implements
         }, "SpektraLab-report").start();
     }
 
-    private static final String REPO = "https://github.com/SAINTTaiYi/SpektraLab-Android";
+    static final String REPO = "https://github.com/SAINTTaiYi/SpektraLab-Android";
 
-    private void openRepo() { openUrl(REPO); }
+    void openRepo() { openUrl(REPO); }
 
-    private void openUrl(String url) {
+    void openUrl(String url) {
         try {
             startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
                     android.net.Uri.parse(url)));

@@ -29,9 +29,9 @@ public final class AppLanguage {
     private static Language english = EMPTY_ENGLISH;
     private static volatile Language selected = EMPTY_ENGLISH;
 
-    static final class Language {
+    public static final class Language {
         final String tag;
-        final String name;
+        public final String name;
         final Locale locale;
         private final Map<String, String> strings;
 
@@ -56,16 +56,16 @@ public final class AppLanguage {
         selected = match == null ? english : match;
     }
 
-    static void select(Context context, Language language) {
+    public static void select(Context context, Language language) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putString(KEY_LANGUAGE, language.tag).apply();
     }
 
-    static Language current() {
+    public static Language current() {
         return selected;
     }
 
-    static synchronized List<Language> available() {
+    public static synchronized List<Language> available() {
         return catalogs == null ? Collections.singletonList(EMPTY_ENGLISH)
                 : new ArrayList<>(catalogs.values());
     }

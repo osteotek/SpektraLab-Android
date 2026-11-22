@@ -43,7 +43,7 @@ import java.net.URL;
  * <p>The switch lives in 关于 and defaults on. A failure is silent: this is a
  * diagnostic, and a diagnostic that complains is a bug.
  */
-final class DeviceReport {
+public final class DeviceReport {
 
     /** Same Worker as the update channel; `/report` is its own route. */
     private static final String ENDPOINT = "https://report.workshop.skin/report";
@@ -65,12 +65,12 @@ final class DeviceReport {
      * one-row error report sent when an error dialog is shown. Off by default:
      * a user who never opened 关于 must not have anything uploaded.
      */
-    static boolean enabled(Context c) {
+    public static boolean enabled(Context c) {
         final SharedPreferences p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         return p.getBoolean(KEY_ENABLED, false);
     }
 
-    static void setEnabled(Context c, boolean on) {
+    public static void setEnabled(Context c, boolean on) {
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putBoolean(KEY_ENABLED, on).apply();
     }
