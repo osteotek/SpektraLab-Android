@@ -242,10 +242,6 @@ if ($EngineRoot) {
                   "-I$(Join-Path $eng 'src/core')", "-I$(Join-Path $eng 'src/pipeline')",
                   "-I$(Join-Path $eng 'src/io')", "-I$(Join-Path $eng 'src/gpu')",
                   "-I$include", "-I$jpeg", "-I$jpegSrc", "-include$shim")
-        if (!$__spkIsWindows -and (Test-Path '/usr/include/jpeglib.h')) {
-            # CI installs libjpeg-dev system-wide instead of a local jpeg build.
-            $incs += '-I/usr/include'
-        }
         # Only shim APIs that this engine header truly lacks. A complete patched
         # tree declares them all, and redeclaring them here would be a compile
         # error (conflicting return types / ambiguous overloads).
