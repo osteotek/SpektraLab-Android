@@ -68,12 +68,15 @@ catalog (translation stays in the UI via `decorateStockLabel`), with fakes for
 the pure interfaces.
 
 Phase C (skill §3): the seven 1.7.0 panel builders moved to
-`app.spektralab.ui.panels.PanelFactories`, each a function of a narrow
-`PanelHost` implemented by the root-package `PanelHostImpl`. `MainActivity`
+`app.spektralab.ui.panels.PanelFactories`, and the page builders to
+`ViewPages`, `ComposePages`, `FotuGroups` and `PrintEdge` in the same package.
+Each is a function of a narrow host interface implemented by a root-package
+delegating adapter (`PanelHostImpl`, `ViewPagesHostImpl`, etc.). `MainActivity`
 keeps only one-line delegators, so it is lifecycle + wiring + state rather than
-panel construction. Shared sheet/panel shells live in `ui/SheetDialogs` and
-`ui/PanelViews`. The package checker rejects direct `MainActivity` coupling in
-`ui/`, workers and domain/data. Golden bands 0/128/512 and panel smoke pass.
+panel construction (~32,650 lines, down from ~34,000). Shared sheet/panel shells
+live in `ui/SheetDialogs` and `ui/PanelViews`. The package checker rejects direct
+`MainActivity` coupling in `ui/`, workers and domain/data. Golden bands 0/128/512
+and panel smoke pass.
 
 Phase C started: theme tokens moved to `app.spektralab.ui.UiPalette`, and five
 self-contained Views (`Square`, `ArrowView`, `ToolGlyph`, `CappedScroll`,
