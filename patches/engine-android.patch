@@ -1,5 +1,5 @@
 diff --git a/engine/include/spektrafilm/spk_engine.h b/engine/include/spektrafilm/spk_engine.h
-index b0c2a45..168df2a 100644
+index b0c2a45..b2661f9 100644
 --- a/engine/include/spektrafilm/spk_engine.h
 +++ b/engine/include/spektrafilm/spk_engine.h
 @@ -130,6 +130,10 @@ typedef struct {
@@ -28,7 +28,7 @@ index b0c2a45..168df2a 100644
  /* --- the baked print+scan LUTs ----------------------------------------
   *
   * Three methods that used to live in Python and be refused here by name
-@@ -391,6 +403,25 @@ void spk_string_free(char* s);
+@@ -391,6 +403,60 @@ void spk_string_free(char* s);
   * nothing has failed. Valid until the next failed call on this thread. */
  const char* spk_last_error(spk_engine* engine);
  
@@ -50,6 +50,41 @@ index b0c2a45..168df2a 100644
 + * 9000 for one the table does not recognise. The message is always worth
 + * showing next to it: the code classifies, it does not explain. */
 +int spk_error_code(const char* message);
++
++/* --- Android host additions -------------------------------------------------
++ * These are the remaining entry points the JNI facade calls. They are kept on
++ * the same C ABI as everything above: no C++ type crosses the boundary, and
++ * strings/pointers returned here are engine-owned until the next call. */
++
++/* Ask the driver whether it really honours `max_storage_buffer_range`. The
++ * probe allocates 2x/4x/8x `need_bytes` and reports which sizes landed, so the
++ * host can choose an import cap from the device rather than a guess. */
++const char* spk_probe_canary(spk_engine* engine, uint64_t need_bytes);
++
++/* Give the render pool back now, down to its floor. Returns bytes freed. */
++size_t spk_trim_pool(spk_engine* engine);
++
++/* Pin the EV the auto-exposure node applies, so an export reproduces the frame
++ * the canvas showed. Clearing returns metering to the session's own meter. */
++void spk_pin_auto_exposure_ev(spk_session* session, double ev);
++void spk_clear_pin_auto_exposure_ev(spk_session* session);
++
++/* Write the decoded source instead of the print (used by the export codecs). */
++void spk_set_output_linear(spk_session* session, int enabled);
++
++/* A short, three-try-safe snapshot of the current render stage for a crash
++ * trail. Writes at most `capacity` bytes including the terminator. */
++int spk_stage_snapshot(spk_session* session, char* buffer, size_t capacity);
++
++/* Move a session's device planes to a temporary file and back, so a fresh
++ * export can use the memory without two sessions' planes resident at once. */
++spk_status spk_suspend_session(spk_session* session);
++spk_status spk_resume_session(spk_session* session);
++
++/* The enlarger's print exposure and the paper gain from the last print run,
++ * for the export progress line. Neither value drives the render. */
++double spk_debug_print_exposure(spk_session* session);
++double spk_debug_print_gain(spk_session* session);
 +
  /* Build identity, for `capabilities.backend` and for a human reading a bug
   * report: version, git-ish build stamp, the Metal math mode the kernels were
@@ -1064,7 +1099,7 @@ index 16014f3..39633aa 100644
  
  }  // namespace spk
 diff --git a/engine/src/pipeline/engine.cpp b/engine/src/pipeline/engine.cpp
-index ee4ffb0..de5de9a 100644
+index ee4ffb0..384f76c 100644
 --- a/engine/src/pipeline/engine.cpp
 +++ b/engine/src/pipeline/engine.cpp
 @@ -57,6 +57,7 @@
@@ -1075,15 +1110,27 @@ index ee4ffb0..de5de9a 100644
  #include "print_lut.hpp"
  #include "setup_cache.hpp"
  #if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
-@@ -317,6 +318,7 @@ struct spk_engine {
+@@ -265,6 +266,10 @@ struct spk_session {
+         ExposureEvs evs;
+     } meter;
+ 
++    // A canvas-pinned EV overrides this session's own meter until cleared, so
++    // an export reproduces the frame the user actually judged.
++    std::optional<double> pinned_auto_exposure_ev;
++
+     // RFC-023: the medium probe and the scene statistic behind
+     // `spk_scene_latitude`, each kept until something it read changes. The
+     // medium is a render of a neutral ramp (§8.1), so it is worth keeping;
+@@ -317,6 +322,8 @@ struct spk_engine {
      std::string cached_capabilities;
      std::string cached_schema;
      std::string cached_memory_report;
 +    std::string cached_device_profile;
++    std::string cached_canary;
      std::vector<spk_session*> sessions;
      // RFC-020 §3.1: the frame the pool's buffers were made for. A pool is a
      // set of planes of *some* frame, and this is what says whether the frame
-@@ -571,9 +573,9 @@ bool downscale(gpu::Gpu* gpu, const Image& src, uint32_t max_size, Image& out, s
+@@ -571,13 +578,22 @@ bool downscale(gpu::Gpu* gpu, const Image& src, uint32_t max_size, Image& out, s
      out.buf = gpu->alloc(out.bytes(), error);
      if (!out.buf) return false;
      const uint32_t meta[4] = {cur.h, cur.w, oh, ow};
@@ -1095,7 +1142,20 @@ index ee4ffb0..de5de9a 100644
  }
  
  }  // namespace
-@@ -605,6 +607,11 @@ const char* spk_last_error(spk_engine* engine) {
+ 
++// The residency helpers are defined further down, after the device-only code.
++// Declare them here so the C ABI wrappers can call them.
++#if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
++namespace spk { namespace view {
++bool suspend(spk_session* session, std::string& error);
++bool resume(spk_session* session, std::string& error);
++}}  // namespace spk::view
++#endif
++
+ // ---------------------------------------------------------------------------
+ // the C ABI
+ // ---------------------------------------------------------------------------
+@@ -605,6 +621,11 @@ const char* spk_last_error(spk_engine* engine) {
  
  void spk_string_free(char* s) { std::free(s); }
  
@@ -1107,7 +1167,7 @@ index ee4ffb0..de5de9a 100644
  spk_engine* spk_engine_create(const char* resources_dir, void* device) {
      g_error.clear();
      if (!resources_dir) { g_error = "resources_dir is null"; return nullptr; }
-@@ -669,6 +676,63 @@ const char* spk_capabilities(spk_engine* engine) {
+@@ -669,6 +690,63 @@ const char* spk_capabilities(spk_engine* engine) {
      return engine->cached_capabilities.c_str();
  }
  
@@ -1171,7 +1231,7 @@ index ee4ffb0..de5de9a 100644
  const char* spk_params_schema(spk_engine* engine) {
      return engine ? engine->cached_schema.c_str() : "";
  }
-@@ -1117,6 +1181,10 @@ bool ensure_meter(spk_session* session, std::string& error) {
+@@ -1117,6 +1195,10 @@ bool ensure_meter(spk_session* session, std::string& error) {
  // anything -- and one call site each, so the graph cannot drift between them.
  bool run_film_for(spk_session* session, const Image& source, Image& negative,
                    Progress* progress, std::string& error) {
@@ -1182,7 +1242,25 @@ index ee4ffb0..de5de9a 100644
      if (session->params.settings.striped) {
          return session->pipeline->run_film_striped(source, negative, progress, error);
      }
-@@ -1156,6 +1224,19 @@ bool negative_for(spk_session* session, const Tier& tier, Progress* progress, Im
+@@ -1144,9 +1226,14 @@ bool negative_for(spk_session* session, const Tier& tier, Progress* progress, Im
+     // Every tier's node applies the frame's one EV (RFC-015 P.1).
+     if (!ensure_meter(session, error)) return false;
+     const CameraParams& camera = session->params.camera;
+-    session->pipeline->set_auto_exposure_ev(
+-        camera.auto_exposure ? std::optional<double>(session->meter.evs.of(camera.auto_exposure_method))
+-                             : std::nullopt);
++    // A pinned EV wins over the meter: it is the EV the canvas applied to the
++    // frame the user judged, and an export that re-meters can differ by stops.
++    if (session->pinned_auto_exposure_ev)
++        session->pipeline->set_auto_exposure_ev(session->pinned_auto_exposure_ev);
++    else
++        session->pipeline->set_auto_exposure_ev(
++            camera.auto_exposure ? std::optional<double>(session->meter.evs.of(camera.auto_exposure_method))
++                                 : std::nullopt);
+     Image negative;
+     if (!run_film_for(session, source, negative, progress, error)) return false;
+     state.applied_ev = session->pipeline->last_auto_exposure_ev();
+@@ -1156,6 +1243,19 @@ bool negative_for(spk_session* session, const Tier& tier, Progress* progress, Im
      // has to outlive the frame arena. Copying it here is also what makes a
      // reprint grain-consistent for free: the realisation is baked in and is
      // never redrawn.
@@ -1202,7 +1280,7 @@ index ee4ffb0..de5de9a 100644
      gpu::Gpu* gpu = session->engine->gpu;
      if (!gpu->flush(error)) return false;
      Image kept;
-@@ -1189,20 +1270,36 @@ bool materialise(spk_session* session, const Image& rgb, spk_result* out, std::s
+@@ -1189,20 +1289,36 @@ bool materialise(spk_session* session, const Image& rgb, spk_result* out, std::s
      const uint32_t align = gpu->texture_row_alignment_px();
      const uint32_t stride = ((rgb.w + align - 1) / align) * align;
      const size_t bytes = size_t(stride) * rgb.h * 4 * sizeof(uint16_t);
@@ -1245,7 +1323,7 @@ index ee4ffb0..de5de9a 100644
  #if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
          // The headless Vulkan result owns a separate CPU copy. The dispatch
          // buffer is released when this function returns.
-@@ -1244,6 +1341,7 @@ spk_status render_tier(spk_session* session, const char* tier_name, bool use_rep
+@@ -1244,6 +1360,7 @@ spk_status render_tier(spk_session* session, const char* tier_name, bool use_rep
      session->tiers[tier->name].view_print = Image{};
  #endif
  
@@ -1253,7 +1331,7 @@ index ee4ffb0..de5de9a 100644
      gpu->begin_frame();
      // RFC-020 §3.2, after the frame marker so that an event arriving as this
      // render starts belongs to it. One-shot: the flag describes *this* render,
-@@ -1268,7 +1366,9 @@ spk_status render_tier(spk_session* session, const char* tier_name, bool use_rep
+@@ -1268,7 +1385,9 @@ spk_status render_tier(spk_session* session, const char* tier_name, bool use_rep
      Image tier_source;
      bool ok = tier_image(session, *tier, tier_source, error);
      if (ok) session->pipeline->set_source_shape(tier_source.w, tier_source.h, session->source.w, session->source.h);
@@ -1263,7 +1341,7 @@ index ee4ffb0..de5de9a 100644
      // After the negative, which a film run lays out for itself: this is for
      // the cached one, whose layout the pipeline may never have made (a
      // print-layer rebuild) or may have replaced with another tier's.
-@@ -1277,7 +1377,9 @@ spk_status render_tier(spk_session* session, const char* tier_name, bool use_rep
+@@ -1277,7 +1396,9 @@ spk_status render_tier(spk_session* session, const char* tier_name, bool use_rep
          ok = session->pipeline->set_overscan_frame(state.overscan_frame_w, state.overscan_frame_h, error);
      }
      if (ok) ok = run_print_for(session, negative, rgb, &session->progress, error);
@@ -1273,7 +1351,7 @@ index ee4ffb0..de5de9a 100644
      gpu->end_frame();
  
      if (!ok) {
-@@ -1304,6 +1406,34 @@ spk_status spk_render(spk_session* session, const char* tier, spk_result* out) {
+@@ -1304,6 +1425,163 @@ spk_status spk_render(spk_session* session, const char* tier, spk_result* out) {
      return render_tier(session, tier, /*use_reprint=*/false, out);
  }
  
@@ -1305,10 +1383,139 @@ index ee4ffb0..de5de9a 100644
 +    return SPK_OK;
 +}
 +
++// --- Android host additions -------------------------------------------------
++// These complete the small set of JNI entry points that were missing from the
++// published header. They deliberately reuse the engine's own primitives: the
++// meter, the residency file, the render pool and the pipeline diagnostics are
++// not reimplemented here.
++
++const char* spk_probe_canary(spk_engine* engine, uint64_t need_bytes) {
++    if (!engine) return "{}";
++    std::lock_guard<std::mutex> guard(engine->lock);
++    const uint64_t reported = engine->gpu ? engine->gpu->max_storage_buffer_range() : 0;
++    const uint64_t cap = reported ? reported * 8ull : (1ull << 30);
++    std::string out = "{\"reported\":" + std::to_string(reported) + ",\"ok\":[";
++    bool first = true;
++    for (unsigned multiplier : {2u, 4u, 8u}) {
++        uint64_t bytes = need_bytes * multiplier;
++        if (bytes > cap || bytes == 0) bytes = cap;
++        std::string error;
++        gpu::BufferRef probe = engine->gpu
++            ? engine->gpu->alloc(size_t(bytes), error) : gpu::BufferRef();
++        if (!first) out += ',';
++        first = false;
++        out += static_cast<bool>(probe) ? '1' : '0';
++    }
++    out += "]}";
++    engine->cached_canary = out;
++    return engine->cached_canary.c_str();
++}
++
++size_t spk_trim_pool(spk_engine* engine) {
++    if (!engine || !engine->gpu) return 0;
++    return engine->gpu->trim_pool(0);
++}
++
++spk_status spk_suspend_session(spk_session* session) {
++    if (!session) { g_error = "session is null"; return SPK_ERR_INVALID_ARG; }
++    g_error.clear();
++#if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
++    std::string error;
++    if (!spk::view::suspend(session, error)) { g_error = error; return SPK_ERR_USER; }
++    return SPK_OK;
++#else
++    g_error = "session residency is not available on this backend";
++    return SPK_ERR_UNSUPPORTED;
++#endif
++}
++
++spk_status spk_resume_session(spk_session* session) {
++    if (!session) { g_error = "session is null"; return SPK_ERR_INVALID_ARG; }
++    g_error.clear();
++#if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
++    std::string error;
++    if (!spk::view::resume(session, error)) { g_error = error; return SPK_ERR_USER; }
++    return SPK_OK;
++#else
++    g_error = "session residency is not available on this backend";
++    return SPK_ERR_UNSUPPORTED;
++#endif
++}
++
++void spk_pin_auto_exposure_ev(spk_session* session, double ev) {
++    if (!session) return;
++    std::lock_guard<std::mutex> guard(session->lock);
++    session->pinned_auto_exposure_ev = ev;
++    // The cached negative was made with the old EV: a reprint must not reuse it.
++    for (auto& entry : session->tiers) {
++        entry.second.has_negative = false;
++        entry.second.negative = Image();
++#if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
++        entry.second.view_print = Image();
++#endif
++    }
++}
++
++void spk_clear_pin_auto_exposure_ev(spk_session* session) {
++    if (!session) return;
++    std::lock_guard<std::mutex> guard(session->lock);
++    session->pinned_auto_exposure_ev.reset();
++    for (auto& entry : session->tiers) {
++        entry.second.has_negative = false;
++        entry.second.negative = Image();
++#if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
++        entry.second.view_print = Image();
++#endif
++    }
++}
++
++void spk_set_output_linear(spk_session* session, int enabled) {
++    if (!session) return;
++    std::lock_guard<std::mutex> guard(session->lock);
++    const bool encode = enabled != 0;
++    if (session->params.io.output_cctf_encoding == encode) return;
++    session->params.io.output_cctf_encoding = encode;
++    auto pipeline = std::make_unique<Pipeline>(session->engine->gpu, &session->engine->colour,
++                                               &session->engine->blob, &session->engine->setup_cache);
++    std::string error;
++    if (pipeline->build(session->params, error)) {
++        session->pipeline = std::move(pipeline);
++        // Cached view prints carry the old transfer function.
++        for (auto& entry : session->tiers) entry.second.view_print = Image();
++    } else {
++        // Keep the previous pipeline: a failed diagnostic toggle must not
++        // leave the session with no render path at all.
++        g_error = error;
++    }
++}
++
++int spk_stage_snapshot(spk_session* session, char* buffer, size_t capacity) {
++    if (!session || !buffer || capacity < 8) return 0;
++    std::lock_guard<std::mutex> guard(session->lock);
++    const Progress& progress = session->progress;
++    const double ev = progress.auto_exposure_ev ? *progress.auto_exposure_ev : 0.0;
++    const int written = std::snprintf(buffer, capacity, "stage=%s fired=%d/%d ev=%g done=%d",
++                                      progress.stage.c_str(), progress.fired,
++                                      progress.total_nodes, ev, progress.done ? 1 : 0);
++    return written > 0 && size_t(written) < capacity;
++}
++
++double spk_debug_print_exposure(spk_session* session) {
++    if (!session || !session->pipeline) return 1.0;
++    std::lock_guard<std::mutex> guard(session->lock);
++    return session->pipeline->debug_print_exposure();
++}
++
++double spk_debug_print_gain(spk_session* session) {
++    if (!session || !session->pipeline) return 1.0;
++    std::lock_guard<std::mutex> guard(session->lock);
++    return session->pipeline->debug_print_gain();
++}
++
  }  // extern "C"
  
  #if !defined(__APPLE__) || defined(SPK_VULKAN_BACKEND)
-@@ -2156,11 +2286,12 @@ spk_status spk_preview_stock_lut(spk_session* session, const char* print_stock,
+@@ -2156,11 +2434,12 @@ spk_status spk_preview_stock_lut(spk_session* session, const char* print_stock,
          ok = static_cast<bool>(rgb.buf);
          if (ok) {
              const uint32_t meta[2] = {uint32_t(rgb.pixels()), lut->size};
@@ -1322,7 +1529,7 @@ index ee4ffb0..de5de9a 100644
                                 rgb.pixels(), error) && gpu->flush(error);
          }
          apply_ms = std::chrono::duration<double, std::milli>(
-@@ -2225,11 +2356,11 @@ spk_status spk_export_di(spk_session* session, const char* print_stock, spk_resu
+@@ -2225,11 +2504,11 @@ spk_status spk_export_di(spk_session* session, const char* print_stock, spk_resu
      }
      if (ok) {
          const uint32_t n = uint32_t(di.elements());
@@ -1336,7 +1543,7 @@ index ee4ffb0..de5de9a 100644
      }
      if (ok) ok = materialise(session, di, out, error);
      gpu->end_frame();
-@@ -2951,9 +3082,11 @@ void spk_result_free(spk_result* result) {
+@@ -2951,9 +3230,11 @@ void spk_result_free(spk_result* result) {
      if (!result || !result->texture) return;
      // The engine kept no reference to hand back, so this is the caller's own
      // +1 going away -- and with it the buffer `rgba16` pointed into.
@@ -2362,7 +2569,7 @@ index 828ac50..45eb11c 100644
      out = cur.cur;
      return true;
 diff --git a/engine/src/pipeline/pipeline.hpp b/engine/src/pipeline/pipeline.hpp
-index 5fd77be..18d17f0 100644
+index 5fd77be..bc76c2c 100644
 --- a/engine/src/pipeline/pipeline.hpp
 +++ b/engine/src/pipeline/pipeline.hpp
 @@ -552,6 +552,18 @@ public:
@@ -2384,7 +2591,19 @@ index 5fd77be..18d17f0 100644
      bool run_print_striped(const Image& cmy, Image& out, Progress* progress, std::string& error);
  
      // The film's pixel pitch for the frame most recently run through
-@@ -584,19 +596,60 @@ private:
+@@ -568,6 +580,11 @@ public:
+ 
+     int node_count() const { return node_count_; }
+ 
++    // The print-side factors the last run actually applied. Read-only, for the
++    // JNI export diagnostics; neither value can drive a render decision.
++    double debug_print_exposure() const { return print_exposure_gain_[0]; }
++    double debug_print_gain() const { return print_gain_[0]; }
++
+ private:
+     struct Timer;
+ 
+@@ -584,19 +601,60 @@ private:
      static ExposureEvs exposure_evs_from(const std::vector<double>& Y, uint32_t sh, uint32_t sw);
  
      /// The film side split at the one place the strips can cut it. The prefix
@@ -2454,7 +2673,7 @@ index 5fd77be..18d17f0 100644
      bool film_segment(const Image& in, Image& out, std::string& error);
      /// The print side's split. Its prefix is the enlarger's live-mutable
      /// constants, which are host constants rather than pixels, and its segment
-@@ -699,6 +752,14 @@ private:
+@@ -699,6 +757,14 @@ private:
  
      // --- helpers ---------------------------------------------------------
      bool alloc_like(const Image& img, Image& out, std::string& error);
