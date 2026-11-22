@@ -42,6 +42,7 @@ import app.spektralab.ui.PanelViews;
 import app.spektralab.ui.panels.PanelFactories;
 import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
+import app.spektralab.ui.panels.PrintEdge;
 import app.spektralab.ui.panels.FotuGroups;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -360,8 +361,8 @@ public class MainActivity extends Activity implements
     String meterMethod = "protect_highlights";
     TextView meterChip;
     /** The EDR switch in the print panel; `edrOn` is still the value. */
-    private Square edrMark, spotMark, edrPlusMark;
-    private Square hueOwnMark;
+    Square edrMark, spotMark, edrPlusMark;
+    Square hueOwnMark;
 
     /** Order is the sheet's order; `""` first so "off" is the first row. */
     private static final String[] METER_IDS = {
@@ -476,17 +477,17 @@ public class MainActivity extends Activity implements
     float mFilter = 0.0f;          // -1..1, enlarger magenta
     float filterScale = 1.0f;      // 1..60 CC
     float preflash = 0.0f;         // 0..1
-    private float edgeFog = 1.0f;          // 0..4
+    float edgeFog = 1.0f;          // 0..4
     /** 印刷边框 (fotufilm's print-frame model). */
     private String pfKind = "none";
     /** The user actually picked a print frame (see `Look.pfChosen`). */
     private boolean pfChosen = false;
-    private float pfMargin = 3.0f, pfFx = 0f, pfFy = 0f;
-    private SeekBar pfMarginBar, pfFxBar, pfFyBar;
-    private TextView pfValue;
-    private LinearLayout pfPage;
-    private float edgeLeaks = 0.0f;        // 0..4
-    private float frameNumber = 0.0f;      // 0..99
+    float pfMargin = 3.0f, pfFx = 0f, pfFy = 0f;
+    SeekBar pfMarginBar, pfFxBar, pfFyBar;
+    TextView pfValue;
+    LinearLayout pfPage;
+    float edgeLeaks = 0.0f;        // 0..4
+    float frameNumber = 0.0f;      // 0..99
     float halationOn = 1f, grainOn = 1f, couplersOn = 1f, antihalationRemoved = 0f;
     /**
      * **一条片上两格。** `overscan_pair` 把 135 半格并排画出来（18 mm 画面、
@@ -494,11 +495,11 @@ public class MainActivity extends Activity implements
      * 那个比例。第二段曲线是后半格自己的 `scene_latitude_b_*` —— 一格对着
      * 窗户、一格背着光，可以各有各的高光。
      */
-    private boolean overscanPair = false;
-    private boolean pairTone = false;
-    private float pairSplit = 0.514f;
-    private float pairHighKnee = 1.0f, pairHighRoom = 2.0f;
-    private float pairShadowKnee = -1.0f, pairShadowRoom = 0.0f;
+    boolean overscanPair = false;
+    boolean pairTone = false;
+    float pairSplit = 0.514f;
+    float pairHighKnee = 1.0f, pairHighRoom = 2.0f;
+    float pairShadowKnee = -1.0f, pairShadowRoom = 0.0f;
     // **On by default.** EDR is the print profile's own extended shoulder: it moves
     // paper white from 220/255 to 251/255 and lifts the clipping point from +3.9 to
     // +5.3 stops, while mid-grey stays bit-identical (staircase: 116.0 both ways).
@@ -522,7 +523,7 @@ public class MainActivity extends Activity implements
     // 1 = undo the measured hue drift completely (greens land where the source
     // had them); 0 = leave each stock's own colour alone. The correction is what
     // made every stock converge on one palette -- the "no film character" report.
-    private float hueCorrection = 1f;
+    float hueCorrection = 1f;
     /**
      * Stocks whose green drift the spectral model gets wrong by more than 20
      * degrees on both test frames. Correcting them measures worse than leaving
@@ -536,11 +537,11 @@ public class MainActivity extends Activity implements
                     "kodak_vision3_50d", "cinestill_800t", "kodak_verita_200d",
                     "fujifilm_pro_400h"));
     float shadowRolloff = 2f, maxLift = 4f;
-    private String cameraFilter = "", sceneNorm = "power";
-    private String edgeMode = "strip", edgeGate = "auto", edgeHoles = "white", edgeCarrier = "none";
-    private String datePlacement = "frame", dateCorner = "br", dateStyle = "lcd";
-    private float dateInsetX = 3f, dateInsetY = 2.4f;
-    private float edgeFNumber = 0f, dateSize = 1f, dateEv = 5.5f;
+    String cameraFilter = "", sceneNorm = "power";
+    String edgeMode = "strip", edgeGate = "auto", edgeHoles = "white", edgeCarrier = "none";
+    String datePlacement = "frame", dateCorner = "br", dateStyle = "lcd";
+    float dateInsetX = 3f, dateInsetY = 2.4f;
+    float edgeFNumber = 0f, dateSize = 1f, dateEv = 5.5f;
     // A drag on the canvas: where the finger started, and where the imprint's
     // centre was at that moment (both normalised to the picture).
     private boolean dateDragOn = false;
@@ -549,10 +550,10 @@ public class MainActivity extends Activity implements
      *  inside 320 ms restore the fit; one of them renders nothing. */
     private long dateTapMs = 0L;
     private float dateDownX, dateDownY;
-    private boolean edgeTextOn = true;
-    private String dataText = "", dateTextB = "";
-    private int cameraSeed = 1, frameSeed = 1;
-    private float filmFormatMm = 36.0f;    // frame's long edge, 135 = 36 mm
+    boolean edgeTextOn = true;
+    String dataText = "", dateTextB = "";
+    int cameraSeed = 1, frameSeed = 1;
+    float filmFormatMm = 36.0f;    // frame's long edge, 135 = 36 mm
     boolean uiReady = false;
     String lastImportError = null;
     /// Where `reportPreviousExit` left the file, if there was one this launch.
@@ -908,7 +909,7 @@ public class MainActivity extends Activity implements
      * became un-clickable-looking holes on a black background.
      */
     /** The two switch rows, so the page's dimming can skip them. */
-    private View overscanRow, dateRow;
+    View overscanRow, dateRow;
 
     static int uiToggleOff() { return darkTheme ? 0xFF7A736A : 0x66171717; }
 
@@ -1012,14 +1013,14 @@ public class MainActivity extends Activity implements
     private TextView knobTitle, knobValue, knobHintView, knobCost;
     private SeekBar knobBar;
     private LinearLayout knobStrip;
-    private SeekBar edgeFogBar, edgeLeaksBar, frameNoBar, dateSizeBar, dateEvBar;
+    SeekBar edgeFogBar, edgeLeaksBar, frameNoBar, dateSizeBar, dateEvBar;
     /** 光圈值 is a stop list, not a dial: this is the readout the tap opens. */
-    private TextView edgeFNumValue;
-    private SeekBar dateInsetXBar, dateInsetYBar;
-    private Square edgeTextMark;
+    TextView edgeFNumValue;
+    SeekBar dateInsetXBar, dateInsetYBar;
+    Square edgeTextMark;
     LinearLayout edgeRoot, edgePage, datePage, edgeInner, dateInner;
-    private TextView edgeFotuNote;
-    private LinearLayout edgeShapeRow;
+    TextView edgeFotuNote;
+    LinearLayout edgeShapeRow;
     int edgePageIndex = -1;
     /** Ceiling for a 边框 sub-page, in dp.
      *
@@ -1027,20 +1028,20 @@ public class MainActivity extends Activity implements
      *  at 340. 400 leaves that alone and still refuses the height a page grew to
      *  on 1.7.0, which took the canvas and the tab bar with it. */
     private static final int EDGE_SUBPAGE_CAP_DP = 400;
-    private static final String[] MODE_IDS = {"strip", "filed"};
-    private static String[] MODE_LABELS = {tr("meter.full_strip"), tr("meter.filed_edge")};
-    private static final String[] GATE_IDS = {"auto", "square", "rounded", "eared", "shouldered", "kicked"};
-    private static String[] GATE_LABELS = {tr("meter.auto"), tr("meter.square"), tr("meter.rounded"), tr("meter.tabbed"), tr("meter.shouldered"), tr("meter.notched")};
-    private static final String[] HOLES_IDS = {"white", "black"};
-    private static String[] HOLES_LABELS = {tr("meter.white_sprocket_holes_scan"), tr("meter.black_sprocket_holes_darkroom")};
-    private static final String[] CARRIER_IDS = {"none", "black", "open"};
-    private static String[] CARRIER_LABELS = {tr("meter.none"), tr("meter.black_holder"), tr("meter.open")};
-    private static final String[] PLACE_IDS = {"frame", "rebate"};
-    private static String[] PLACE_LABELS = {tr("meter.in_image"), tr("border.film_border")};
-    private static final String[] CORNER_IDS = {"br", "bl", "tr", "tl"};
-    private static final String[] STYLE_IDS = {"lcd", "dots", "data"};
-    private static String[] STYLE_LABELS = {tr("meter.seven_segment_lcd"), tr("meter.dot_matrix"), tr("meter.shooting_data")};
-    private static String[] CORNER_LABELS = {tr("meter.bottom_right"), tr("meter.bottom_left"), tr("meter.top_right"), tr("meter.top_left")};
+    static final String[] MODE_IDS = {"strip", "filed"};
+    static String[] MODE_LABELS = {tr("meter.full_strip"), tr("meter.filed_edge")};
+    static final String[] GATE_IDS = {"auto", "square", "rounded", "eared", "shouldered", "kicked"};
+    static String[] GATE_LABELS = {tr("meter.auto"), tr("meter.square"), tr("meter.rounded"), tr("meter.tabbed"), tr("meter.shouldered"), tr("meter.notched")};
+    static final String[] HOLES_IDS = {"white", "black"};
+    static String[] HOLES_LABELS = {tr("meter.white_sprocket_holes_scan"), tr("meter.black_sprocket_holes_darkroom")};
+    static final String[] CARRIER_IDS = {"none", "black", "open"};
+    static String[] CARRIER_LABELS = {tr("meter.none"), tr("meter.black_holder"), tr("meter.open")};
+    static final String[] PLACE_IDS = {"frame", "rebate"};
+    static String[] PLACE_LABELS = {tr("meter.in_image"), tr("border.film_border")};
+    static final String[] CORNER_IDS = {"br", "bl", "tr", "tl"};
+    static final String[] STYLE_IDS = {"lcd", "dots", "data"};
+    static String[] STYLE_LABELS = {tr("meter.seven_segment_lcd"), tr("meter.dot_matrix"), tr("meter.shooting_data")};
+    static String[] CORNER_LABELS = {tr("meter.bottom_right"), tr("meter.bottom_left"), tr("meter.top_right"), tr("meter.top_left")};
     private static final String[] PF_IDS = {
             "none", "film", "film-positive", "slide-mount",
             "paper-4x6", "paper-5x7", "paper-8x10", "paper-5x5",
@@ -1058,12 +1059,12 @@ public class MainActivity extends Activity implements
     // frame was cut from, and the date a point-and-shoot burned into it.
     boolean overscanOn = false;
     String overscanFormat = "135";
-    private boolean dateOn = false;
+    boolean dateOn = false;
     String dateText = null;
     Square overscanMark, dateMark, pairMark, pairToneMark;
-    private View pairRow;
-    private LinearLayout pairBox;
-    private SeekBar pairSplitBar, pairHighKneeBar, pairHighRoomBar,
+    View pairRow;
+    LinearLayout pairBox;
+    SeekBar pairSplitBar, pairHighKneeBar, pairHighRoomBar,
             pairShadowKneeBar, pairShadowRoomBar;
 
     /** 片边: the ten carriers the engine's overscan knows. */
@@ -1120,7 +1121,7 @@ public class MainActivity extends Activity implements
      *  is the tr("ui170.023") report: the preview had been drawn with the
      *  old gate, the export with the new one. Choosing a gate now chooses the
      *  frame that fits it. */
-    private static final float[] EDGE_MM = {
+    static final float[] EDGE_MM = {
             36f, 24f, 65f, 56f, 56f, 69.5f, 76f, 84f, 112f, 168f,
             24.92f, 12.35f, 5.79f, 120f, 62f, 62f, 99f};
     /** Each gate's frame as a ratio caption. Read off `EDGE_RATIOS`, rounded to
@@ -1169,7 +1170,7 @@ public class MainActivity extends Activity implements
         refreshFormatFoot();
         rebuildFormatCards();
     }
-    private final List<String> edgeLabels = new ArrayList<>(), edgeIds = new ArrayList<>();
+    final List<String> edgeLabels = new ArrayList<>(), edgeIds = new ArrayList<>();
     LinearLayout controls, panelHolder, filmCardStrip, brandRow, formatCardStrip;
     HorizontalScrollView filmScroll, formatScroll;
 
@@ -2871,7 +2872,7 @@ public class MainActivity extends Activity implements
      *  frame, or null. Phones ship `ProfileToneCurve`; cameras do not. */
     float[] sourceToneCurve = null;
     private String brandFilter = "all";
-    private int formatIndex = 0;
+    int formatIndex = 0;
     private final List<View> filmCards = new ArrayList<>();
     /** Real previews, per stock, from that stock's own render. A card never
      *  pretends to be a look the engine has not produced for this frame. */
@@ -3112,7 +3113,7 @@ public class MainActivity extends Activity implements
     // told apart from "6x6", and two of the ten gates had no card at all. Now
     // index i is EDGE_IDS[i], which is what `applyGate` needs.
     private static final String[] FORMAT_NAMES = EDGE_LABELS;
-    private static final float[] FORMAT_MM = EDGE_MM;
+    static final float[] FORMAT_MM = EDGE_MM;
     private final View[] tabCells = new View[6];
     /** The one 26 x 3 dp bar that travels between the six tabs. */
     private View tabUnderline;
@@ -4906,7 +4907,7 @@ public class MainActivity extends Activity implements
      * of explanation is a page you have to scroll to read one slider. The mark
      * keeps the row to one line and the explanation one tap away.
      */
-    private View bangFor(final java.util.function.Supplier<String> text) {
+    View bangFor(final java.util.function.Supplier<String> text) {
         final android.widget.FrameLayout cell = new android.widget.FrameLayout(this);
         final android.graphics.drawable.GradientDrawable ring =
                 new android.graphics.drawable.GradientDrawable();
@@ -16842,7 +16843,7 @@ public class MainActivity extends Activity implements
     }
 
     /** True when the stock's hue table is not trustworthy enough to apply. */
-    private static boolean hueFixUnsupported(String stock) {
+    static boolean hueFixUnsupported(String stock) {
         return stock != null && HUE_FIX_UNSUPPORTED.contains(stock);
     }
 
@@ -16852,7 +16853,7 @@ public class MainActivity extends Activity implements
         return hueFixUnsupported(stock) ? 0f : hueCorrection;
     }
 
-    private void refreshHueOwnMark() {
+    void refreshHueOwnMark() {
         if (hueOwnMark != null) hueOwnMark.setLit(hueFixUnsupported(filmStock) || hueCorrection < 0.5f);
     }
 
@@ -17493,7 +17494,7 @@ public class MainActivity extends Activity implements
      * <p>它在 view 层、印完之后：能把印偏的地方拉回来，救不回纸白以上的东西
      * —— 那几档只能走 EDR / Ultra HDR。
      */
-    private boolean spotOn = false;
+    boolean spotOn = false;
     float spotX = 0.5f, spotY = 0.5f, spotR = 0.25f, spotEv = -0.6f;
     /**
      * **相纸宽容度.** RFC-024's virtual contrast mask: the darkroom's own
@@ -17510,8 +17511,8 @@ public class MainActivity extends Activity implements
      * the shadow half from 1.3 with 0.81 to 13.3 with 4.77. Every tier is
      * monotonic in both halves.
      */
-    private int printLatitude = 0;
-    private static String[] LATITUDE_LABELS = {tr("ui170.133"), tr("ui170.054"), tr("ui170.134"), tr("ui170.135"), tr("ui170.136")};
+    int printLatitude = 0;
+    static String[] LATITUDE_LABELS = {tr("ui170.133"), tr("ui170.054"), tr("ui170.134"), tr("ui170.135"), tr("ui170.136")};
     /**
      * **`core` is the tier ladder; `highlights`/`shadows` are held fixed.**
      *
@@ -17552,7 +17553,7 @@ public class MainActivity extends Activity implements
      * and `提升上限` are that curve's shape and ceiling -- dead once its rooms
      * are zero, which is what the mask wants them to be.
      */
-    private final java.util.List<View> latGated = new java.util.ArrayList<>();
+    final java.util.List<View> latGated = new java.util.ArrayList<>();
 
     private float latHl, latSh, latCore, latScale, latReach;
     private boolean latActive;
@@ -17561,7 +17562,7 @@ public class MainActivity extends Activity implements
      * needed: `setAlpha` alone still takes the touch, and `setEnabled` alone is
      * invisible on a DialBar whose track colour does not depend on it.
      */
-    private void gateLatitude() {
+    void gateLatitude() {
         final boolean on = printLatitude > 0;
         int rows = 0;
         // **A list of the rows, never a tag.** `animateHeightTo` and the T9
@@ -17629,7 +17630,7 @@ public class MainActivity extends Activity implements
             for (int i = 0; i < group.getChildCount(); ++i) gateEnabled(group.getChildAt(i), enabled);
         }
     }
-    private void refreshLatitude() {
+    void refreshLatitude() {
         final int i = Math.max(0, Math.min(4, printLatitude));
         latActive = i > 0;
         latHl = LAT_HL[i]; latSh = LAT_SH[i]; latCore = LAT_CORE[i];
@@ -19007,9 +19008,9 @@ public class MainActivity extends Activity implements
     LinearLayout buildOpticsPanel() { return PanelFactories.buildOpticsPanel(new PanelHostImpl(this)); }
 
     /** Which page of the print panel is in front; the strip shows the same one. */
-    private int printGroup = 0;
+    int printGroup = 0;
     LinearLayout printBody;
-    private final java.util.List<Runnable> printRefreshers = new java.util.ArrayList<>();
+    final java.util.List<Runnable> printRefreshers = new java.util.ArrayList<>();
 
     /**
      * One page of the print panel.
@@ -19020,228 +19021,12 @@ public class MainActivity extends Activity implements
      * a lens, onto a sheet. The rows are the first engine's own parameters,
      * filed by the stage they act on instead of by the order they were added.
      */
-     void showPrintGroup(int index) {
-        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
-            final int wanted = index;
-            runOnUiThread(() -> showPrintGroup(wanted));
-            return;
-        }
-        if (index < 0 || index >= FOTU_GROUPS.length) index = 0;
-        final boolean moved = index != printGroup;
-        printGroup = index;
-        if (printBody == null) return;
-        try {
-            buildPrintGroup(index);
-        } catch (Throwable t) {
-            printRefreshers.clear();
-            printBody.removeAllViews();
-            printBody.addView(label(tr("ui170.186") + t, 8f, UI_INK, tfHan));
-            try {
-                DebugSink.text("printpanel", "group " + index + ": " + t + "\n"
-                        + android.util.Log.getStackTraceString(t));
-            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:19464", ignored); }
-        }
-        syncSubRowActive();
-        refreshKnob();
-        if (moved) {
-            final View box = printBody.getParent() instanceof View
-                    ? (View) printBody.getParent() : null;
-            final int cap = box instanceof CappedScroll
-                    ? ((CappedScroll) box).cap() : Integer.MAX_VALUE;
-            final int w = printBody.getWidth() > 0 ? printBody.getWidth()
-                    : (box != null ? box.getWidth() : 0);
-            final int was = box != null ? box.getHeight() : 0;
-            final int want = w > 0 ? Math.min(naturalHeight(printBody, w), cap) : 0;
-            componentArrival(printBody);
-            if (box != null && want > 0 && was > 0 && want != was) {
-                animateHeightTo(box, was, want);
-            }
-        }
-    }
+    void showPrintGroup(int index) { PrintEdge.showPrintGroup(new PrintEdgeHostImpl(this), index); }
 
-    private void buildPrintGroup(int index) {
-        printRefreshers.clear();
-        printBody.removeAllViews();
-        latGated.clear();
-        switch (index) {
-            case 0:   // 影调
-                // **Three controls, one row.** They were three full-width rows
-                // -- 46 + 48 + 46 dp of the page's 250 for a button, a switch and
-                // a picker that each need a third of the width. Side by side, in
-                // square boxes, is how Lightroom stacks a page's switches.
-                final LinearLayout toneCells = new LinearLayout(this);
-                toneCells.setOrientation(LinearLayout.HORIZONTAL);
-                choiceCell(toneCells, tr("print.color_timing"), tr("print.rebalance_print"), tv -> resolvePrinting());
-                edrMark = new Square(this, UI_BLUE, uiToggleOff());
-                toggleCell(toneCells, tr("print.dynamic_range"), "EDR", edrMark, () -> edrOn > 0.5f, on -> {
-                    edrOn = on ? 1f : 0f;
-                    if (uiReady && session != null) {
-                        showingOriginal = false;
-                        setOriginalVisual(false);
-                        renderImage();
-                    }
-                });
-                choiceCell(toneCells, tr("print.protection_basis"),
-                        labelOf(NORM_LABELS, NORM_IDS, sceneNorm), tv ->
-                        showChoiceMapping(tr("print.basis_for_highlight_and_shadow"), NORM_LABELS, NORM_IDS,
-                                sceneNorm, id -> {
-                                    sceneNorm = id;
-                                    tv.setText(labelOf(NORM_LABELS, NORM_IDS, id));
-                                    applyParams();
-                                    if (uiReady && session != null) {
-                                        showingOriginal = false;
-                                        setOriginalVisual(false);
-                                        renderImage();
-                                    }
-                                }));
-                spotMark = new Square(this, UI_BLUE, uiToggleOff());
-                toggleCell(toneCells, tr("ui170.187"), tr("ui170.188"), spotMark, () -> spotOn, on -> {
-                    spotOn = on;
-                    applyParams();
-                    if (uiReady && session != null) {
-                        showingOriginal = false;
-                        setOriginalVisual(false);
-                        renderImage();
-                    }
-                });
-                printBody.addView(toneCells, new LinearLayout.LayoutParams(-1, dp(46)));
-
-                // **相纸宽容度：这是唯一能真正tr("ui170.189")相纸那条 7 档线的控件。**
-                // 它不是把纸的曲线拉直（物理上做不到），而是给每个大尺度区域
-                // 它自己那一份曝光 —— 暗房里的遮挡和加深，自动做在负片的纸曝光
-                // 上。高光那边多给一点光把它从肩部拉回来，暗部那边少给一点把它
-                // 从趾部推出去；照片内部的细节（base 跟不上的那一层）一点没动。
-                printBody.addView(choiceRow(tr("ui170.190"),
-                        LATITUDE_LABELS[Math.max(0, Math.min(4, printLatitude))] + "  ›",
-                        tv -> showChoiceMapping(tr("ui170.191"),
-                                LATITUDE_LABELS, new String[]{"0", "1", "2", "3", "4"},
-                                String.valueOf(printLatitude), id -> {
-                                    printLatitude = Math.max(0, Math.min(4, Integer.parseInt(id)));
-                                    refreshLatitude();
-                                    tv.setText(LATITUDE_LABELS[printLatitude] + "  ›");
-                                    gateLatitude();
-                                    Probe.log("toggle", "printLatitude " + printLatitude);
-                                    if (uiReady && session != null) {
-                                        showingOriginal = false;
-                                        setOriginalVisual(false);
-                                        renderImage();
-                                    }
-                                })),
-                        new LinearLayout.LayoutParams(-1, -2));
-                printRow(tr("print.knob.enlarger_exposure_right_is_darker"));
-                printRow(tr("print.knob.highlight_protection"));
-                printRow(tr("print.knob.shadow_protection"));
-                printRow(tr("ui170.138"));
-                printRow(tr("ui170.139"));
-                printRow(tr("ui170.140"));
-                printRow(tr("ui170.141"));
-                printRow(tr("ui170.181"));
-                printRow(tr("ui170.182"));
-                printRow(tr("ui170.183"));
-                printRow(tr("ui170.184"));
-                printRow(tr("print.knob.curve_softness"));
-                printRow(tr("print.knob.maximum_shadow_lift"));
-                printRow(tr("print.knob.density_curve"));
-                printRow(tr("print.knob.pre_flash"));
-                break;
-            case 1:   // 色彩
-                hueOwnMark = new Square(this, UI_BLUE, uiToggleOff());
-                printBody.addView(toggleRow(tr("ui170.192"), hueOwnMark,
-                        () -> hueFixUnsupported(filmStock) || hueCorrection < 0.5f,
-                        on -> {
-                            if (hueFixUnsupported(filmStock)) {
-                                refreshHueOwnMark();
-                                showActionSheet(tr("print.hue_correction_unavailable_for_this"),
-                                        tr("print.this_stock_s_spectral_calibration")
-                                        + tr("print.correction_would_shift_the_hues")
-                                        + tr("print.choose_a_different_film_to"),
-                                        new String[]{tr("print.ok")}, which -> { });
-                                return;
-                            }
-                            hueCorrection = on ? 0f : 1f;
-                            if (uiReady && session != null) {
-                                showingOriginal = false;
-                                setOriginalVisual(false);
-                                renderImage();
-                            }
-                        }));
-                printRow(tr("print.knob.interlayer_inhibition"));
-                printRow(tr("ui170.185"));
-                break;
-            case 2:   // 胶片
-                printRow(tr("print.knob.digital_intermediate"));
-                printRow(tr("print.knob.output_encoding"));
-                printRow(tr("print.knob.scan_whites"));
-                printRow(tr("print.knob.scan_blacks"));
-                break;
-            case 3:   // 颗粒
-                printRow(tr("print.knob.grain"));
-                printRow(tr("print.knob.enable_grain"));
-                break;
-            case 4:   // 光晕
-                printRow(tr("print.knob.halation"));
-                printRow(tr("print.knob.enable_halation"));
-                printRow(tr("print.knob.halation_boost"));
-                printRow(tr("print.knob.halation_headroom"));
-                printRow(tr("print.knob.remove_anti_halation"));
-                printRow(tr("print.knob.emulsion_scatter"));
-                printRow(tr("print.knob.scatter_radius"));
-                break;
-            case 5:   // 镜头
-                printRow(tr("print.knob.lens_blur"));
-                printRow(tr("print.knob.scanner_blur"));
-                addChoice(printBody, tr("print.lens_filter"),
-                        labelOf(FILTER_LABELS, FILTER_IDS, cameraFilter), tv ->
-                        showChoiceMapping(tr("print.lens_filter_wratten"), FILTER_LABELS, FILTER_IDS,
-                                cameraFilter, id -> {
-                                    cameraFilter = id;
-                                    tv.setText(labelOf(FILTER_LABELS, FILTER_IDS, id));
-                                    applyParams();
-                                    if (uiReady && session != null) {
-                                        showingOriginal = false;
-                                        setOriginalVisual(false);
-                                        renderImage();
-                                    }
-                                }));
-                break;
-            default:  // 相纸
-                printRow(tr("print.knob.yellow_filter"));
-                printRow(tr("print.knob.magenta_filter"));
-                printRow(tr("print.knob.filter_strength"));
-                printRow(tr("print.knob.glare"));
-                printRow(tr("print.knob.enable_glare"));
-                // **What the canvas is drawn in.** Not a look parameter: it never
-                // reaches a file, and two exports of the same frame in different
-                // canvas spaces are the same bytes.
-                addChoice(printBody, tr("print.preview_gamut"), previewSpace, tv -> {
-                    final java.util.List<String> labels = java.util.Arrays.asList(SPACES);
-                    showChoiceSheet(tr("print.preview_gamut_display_only_exports"),
-                            labels, previewSpace, picked -> {
-                                final int i = labels.indexOf(picked);
-                                if (i >= 0) previewSpace = SPACES[i];
-                                tv.setText(previewSpace);
-                                if (uiReady && session != null) {
-                                    applyParams();
-                                    renderImage();
-                                }
-                            });
-                });
-                break;
-        }
-        // **After the switch, not inside one branch.** `showPrintGroup` returns
-        // here on every path, so the gate always runs on the page that was just
-        // built -- and on the rows that exist now, not on the ones the previous
-        // page left in `latGated`.
-        gateLatitude();
-        // The arrival animation owns the rows' alpha (`enterPanel` writes 1 on
-        // every row), so put the dim back once the frame trace has finished.
-        // The colour and the disabled state are already in place and do not
-        // need this.
-        if (printBody != null) printBody.postDelayed(this::gateLatitude, 900);
-    }
+    private void buildPrintGroup(int index) { PrintEdge.buildPrintGroup(new PrintEdgeHostImpl(this), index); }
 
     /** One named row for a registered knob: the name, its "!", the value, the bar. */
-    private java.util.List<View> printRow(final String label) {
+    java.util.List<View> printRow(final String label) {
         final Knob k = knobNamed(label);
         if (k == null) {
             try { DebugSink.text("printpanel", "no knob named " + label); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:19669", ignored); }
@@ -19311,7 +19096,7 @@ public class MainActivity extends Activity implements
     }
 
     /** Repaint every row of the print page in front (and nothing else). */
-    private void refreshKnob() {
+    void refreshKnob() {
         for (Runnable r : printRefreshers) {
             try { r.run(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:19738", ignored); }
         }
@@ -19321,7 +19106,7 @@ public class MainActivity extends Activity implements
     }
 
     /** A label + current value + arrow, the same shape as the paper picker. */
-    private TextView addChoice(LinearLayout parent, String title, String value,
+    TextView addChoice(LinearLayout parent, String title, String value,
                                java.util.function.Consumer<TextView> onTap) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -19410,7 +19195,7 @@ public class MainActivity extends Activity implements
 
 
     /** A picker whose rows show labels but whose callback delivers ids. */
-    private void showChoiceMapping(String title, String[] labels, String[] ids, String currentId,
+    void showChoiceMapping(String title, String[] labels, String[] ids, String currentId,
                                    java.util.function.Consumer<String> onPick) {
         int at = -1;
         for (int i = 0; i < ids.length; ++i) if (ids[i].equals(currentId)) { at = i; break; }
@@ -19436,11 +19221,11 @@ public class MainActivity extends Activity implements
     }
 
     /** One text field, in the same sheet shape as the pickers. */
-    private void askText(String title, String initial, java.util.function.Consumer<String> onDone) {
+    void askText(String title, String initial, java.util.function.Consumer<String> onDone) {
         askText(title, initial, false, onDone);
     }
 
-    private void askText(String title, String initial, boolean numeric,
+    void askText(String title, String initial, boolean numeric,
                          java.util.function.Consumer<String> onDone) {
         final android.app.Dialog dialog = new android.app.Dialog(this);
         LinearLayout sheet = new LinearLayout(this);
@@ -19517,7 +19302,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private static String labelOf(String[] labels, String[] ids, String id) {
+    static String labelOf(String[] labels, String[] ids, String id) {
         for (int i = 0; i < ids.length; ++i) if (ids[i].equals(id)) return labels[i];
         return id == null ? "" : id;
     }
@@ -19539,14 +19324,14 @@ public class MainActivity extends Activity implements
      * <p>What this changes is the screen, not a file: exports stay sRGB,
      * because a P3 JPEG would need a P3 ICC the writer does not carry yet.
      */
-    private static final String[] SPACES = {"sRGB", "Display P3"};
-    private String previewSpace = "sRGB";
+    static final String[] SPACES = {"sRGB", "Display P3"};
+    String previewSpace = "sRGB";
 
-    private static final String[] FILTER_IDS = {"", "w8", "w11", "w12", "w15", "w21", "w25", "w47", "w58"};
-    private static String[] FILTER_LABELS = {tr("meter.none"), tr("meter.w8_yellow"), tr("meter.w11_yellow_green"), tr("meter.w12_deep_yellow"), tr("meter.w15_deep_yellow"),
+    static final String[] FILTER_IDS = {"", "w8", "w11", "w12", "w15", "w21", "w25", "w47", "w58"};
+    static String[] FILTER_LABELS = {tr("meter.none"), tr("meter.w8_yellow"), tr("meter.w11_yellow_green"), tr("meter.w12_deep_yellow"), tr("meter.w15_deep_yellow"),
             tr("meter.w21_orange"), tr("meter.w25_red"), tr("meter.w47_blue"), tr("meter.w58_green")};
-    private static final String[] NORM_IDS = {"power", "y", "max"};
-    private static String[] NORM_LABELS = {tr("meter.power"), tr("meter.luminance_y"), tr("meter.peak_max")};
+    static final String[] NORM_IDS = {"power", "y", "max"};
+    static String[] NORM_LABELS = {tr("meter.power"), tr("meter.luminance_y"), tr("meter.peak_max")};
 
     /** One line per knob, short enough to fit the row. */
     private static String knobHint(String label) {
@@ -19661,7 +19446,7 @@ public class MainActivity extends Activity implements
 
     /** The aspect of what the canvas is showing: the file, after any crop
      *  already applied. The pending frame is measured in that space. */
-    private float currentAspect() {
+    float currentAspect() {
         return originalAspect() * (geometryCropW / Math.max(1e-4f, geometryCropH));
     }
 
@@ -21053,7 +20838,7 @@ public class MainActivity extends Activity implements
         return pfKind != null && pfKind.startsWith("paper-");
     }
 
-    private String pfLabel() {
+    String pfLabel() {
         final int i = java.util.Arrays.asList(PF_IDS).indexOf(pfKind == null ? "none" : pfKind);
         return i >= 0 ? PF_LABELS[i] : PF_LABELS[0];
     }
@@ -21063,7 +20848,7 @@ public class MainActivity extends Activity implements
         return pfLabel() + (pfNeedsMargin() ? tr("ui170.227") + fmt1(pfMargin) + " mm" : "");
     }
 
-    private void refreshPfRows() {
+    void refreshPfRows() {
         final boolean off = pfKind == null || "none".equals(pfKind);
         if (pfValue != null) pfValue.setText(pfLabel());
         if (pfMarginBar != null) {
@@ -21091,7 +20876,7 @@ public class MainActivity extends Activity implements
         refreshPfRows();
     }
 
-    private void showPfPicker() {
+    void showPfPicker() {
         showChoiceSheet(tr("ui170.226"), java.util.Arrays.asList(PF_LABELS), pfLabel(), picked -> {
             final int i = java.util.Arrays.asList(PF_LABELS).indexOf(picked);
             if (i < 0) return;
@@ -21103,354 +20888,14 @@ public class MainActivity extends Activity implements
     }
 
     /** The print frame: what happens after the picture is formed. */
-    private void buildPrintFramePage() {
-        pfPage = new LinearLayout(this);
-        pfPage.setOrientation(LinearLayout.VERTICAL);
-        pfPage.addView(pageHead(tr("ui170.228")), new LinearLayout.LayoutParams(-1, dp(38)));
-
-        TextView note = label(tr("ui170.229")
-                + tr("ui170.230")
-                + tr("ui170.231")
-                + tr("ui170.232"),
-                7.5f, UI_MUTED, tfHan);
-        note.setPadding(dp(2), 0, dp(2), dp(6));
-        pfPage.addView(note, new LinearLayout.LayoutParams(-1, -2));
-
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(row, tr("ui170.233"), pfLabel(), tv -> { pfValue = tv; showPfPicker(); });
-        pfPage.addView(row, new LinearLayout.LayoutParams(-1, dp(46)));
-
-        // **The body scrolls, like the other two sub-pages.** 片边 and 日期水印
-        // both sit inside a `cappedScroll`; this page was the only one whose
-        // rows hung straight off the page, so its natural height was whatever
-        // the device made of three rows and a note -- and the page is a child of
-        // the panel, which is `wrap_content` inside a column where the canvas is
-        // the only weight. A page that measures tall therefore takes the canvas
-        // with it: 边框 → 印刷边框 covered the whole window, tab bar and all.
-        // Capped at 240 dp the same rows scroll, and the photograph keeps its
-        // half of the screen whatever the font scale does.
-        LinearLayout body = new LinearLayout(this);
-        body.setOrientation(LinearLayout.VERTICAL);
-
-        pfMarginBar = rangeRow(body, tr("ui170.234"), tr("ui170.235"),
-                0.5f, 20f, pfMargin, 0.5f, v -> pfMargin = v);
-        pfFxBar = rangeRow(body, tr("ui170.236"), tr("ui170.237"),
-                -1f, 1f, pfFx, 0.01f, v -> pfFx = v);
-        pfFyBar = rangeRow(body, tr("ui170.238"), tr("ui170.239"),
-                -1f, 1f, pfFy, 0.01f, v -> pfFy = v);
-
-        TextView only = label(tr("ui170.240"),
-                7.5f, UI_MUTED, tfHan);
-        only.setPadding(dp(2), dp(8), dp(2), dp(4));
-        body.addView(only, new LinearLayout.LayoutParams(-1, -2));
-        pfPage.addView(cappedScroll(body, 240), new LinearLayout.LayoutParams(-1, -2));
-        refreshPfRows();
-    }
+    private void buildPrintFramePage() { PrintEdge.buildPrintFramePage(new PrintEdgeHostImpl(this)); }
 
     /** The two detail pages, built once, shown one at a time. */
-     void buildEdgePages() {
-        // **`onEdgeChanged`, not a copy of it.** This hook rebuilt the frame
-        // through the session, which a fotufilm frame does not have -- so on that
-        // engine every drawn control (片边文字, 片基雾, 张数, the date's four)
-        // moved its number and changed nothing on the canvas. `onEdgeChanged`
-        // owns both answers: recompose where the border is drawn, render where
-        // the engine develops it.
-        final java.util.function.Consumer<Void> redraw = v -> onEdgeChanged();
-
-        edgePage = new LinearLayout(this);
-        edgePage.setOrientation(LinearLayout.VERTICAL);
-        edgePage.addView(pageHead(tr("border.film_border_2")), new LinearLayout.LayoutParams(-1, dp(38)));
-        edgeFotuNote = label(tr("ui170.241")
-                + tr("ui170.242"), 7.5f, UI_MUTED, tfHan);
-        edgeFotuNote.setPadding(dp(2), 0, dp(2), dp(6));
-        edgeFotuNote.setVisibility(View.GONE);
-        edgePage.addView(edgeFotuNote, new LinearLayout.LayoutParams(-1, -2));
-        overscanMark = new Square(this, UI_BLUE, uiToggleOff());
-        overscanRow = toggleRow(tr("border.enable_film_border"), overscanMark, () -> overscanOn, on -> {
-            if (on && edgeIds.isEmpty()) {
-                overscanMark.setLit(false);
-                // **Point at the way out.** A 16:9 frame has no gate at all, and
-                // this switch used to answer "does not correspond to any gate"
-                // while the picker that could fix it was dimmed a few rows down.
-                showInAppToast(tr("border.choose_a_film_gate_first"));
-                return;
-            }
-            overscanOn = on;
-            if (on && isFotuStock(filmStock)) {
-                // **Nothing can refuse the shape here.** The first engine's
-                // overscan rejects a frame that is not its gate's shape (E-1305)
-                // and the UI heals the gate from that error; a drawn strip has
-                // nothing to refuse with, so the crop happens up front -- the
-                // same cut the gate picker makes.
-                final double want = EDGE_RATIOS[gateIndexOf(overscanFormat)];
-                final float cur = currentAspect();
-                if (cur <= 0f || Math.abs(cur / (float) want - 1f) > 0.045f) {
-                    applyGate(overscanFormat);
-                    return;
-                }
-            }
-            refreshEdgeGroups();
-            onEdgeChanged();
-        });
-        edgePage.addView(overscanRow, new LinearLayout.LayoutParams(-1, dp(52)));
-        // **The field, not a local that shadows it.** `refreshEdgeGroups` dims
-        // `edgeInner`, and a local here left the field null -- so every switch
-        // it was meant to grey stayed lit and enabled, which is the opposite of
-        // what the page says it does.
-        edgeInner = new LinearLayout(this);
-        edgeInner.setOrientation(LinearLayout.VERTICAL);
-
-        // **The two rows that *decide* the shape live outside the dimmed block.**
-        // `refreshEdgeGroups` disables `edgeInner` while the rebate is off, and
-        // these two used to be inside it -- so a 1.777:1 frame could not be
-        // given a gate at all: the 开启片边 switch refused ("no gate fits"),
-        // and the picker one row below was greyed out and untappable. The only
-        // way through was to crop in 构图 first. Now the entries stay live and
-        // choosing a gate crops the picture and turns the rebate on.
-        LinearLayout gateRow = new LinearLayout(this);
-        gateRow.setOrientation(LinearLayout.HORIZONTAL);
-        {
-            final int at = edgeIds.indexOf(overscanFormat);
-            final String current = at >= 0 && at < edgeLabels.size() ? edgeLabels.get(at) : overscanFormat;
-            choiceCell(gateRow, tr("border.film_gate_format"), current, tv -> {
-                edgeValue = tv;
-                showEdgePicker();
-            });
-        }
-        // **方向, where the user looks for it.** A rebate is cut by a gate and a
-        // gate's shape is fixed -- the film runs along the picture's short edge
-        // -- so "turn the rebate" can only mean "turn the picture". That is one
-        // quarter turn, and `commitCompose` then re-picks the gates for the new
-        // shape. The rebate follows; the canvas shows both.
-        choiceCell(gateRow, tr("border.border_orientation"), tr("border.rotate_90"), tv -> {
-            turnBy(1);
-            showInAppToast(tr("border.rotated_90_the_border_follows"));
-        });
-        edgePage.addView(gateRow, new LinearLayout.LayoutParams(-1, dp(46)));
-
-        // **半格对：一条片上两格。** 引擎的 `overscan_pair` 只认 `135_half`
-        // 的片门，而且要求画面正好是 37:24（两格 18 mm 夹着 19 mm 走片），
-        // 所以打开它先选片门、再把照片裁成那个比例。第二引擎没有这个概念
-        // （它的片边是画出来的），所以那一侧整行禁用。
-        pairMark = new Square(this, UI_BLUE, uiToggleOff());
-        pairRow = toggleRow(tr("ui170.243"), pairMark, () -> overscanPair, on -> {
-            if (isFotuStock(filmStock)) {
-                pairMark.setLit(false);
-                showInAppToast(tr("ui170.244"));
-                return;
-            }
-            overscanPair = on;
-            pairMark.setLit(on);
-            if (on) {
-                overscanFormat = "135_half";
-                filmFormatMm = EDGE_MM[1];
-                formatIndex = 1;
-            }
-            applyGate(overscanFormat);
-            refreshPairRows();
-        });
-        edgePage.addView(pairRow, new LinearLayout.LayoutParams(-1, dp(52)));
-
-        edgeTextMark = new Square(this, UI_BLUE, uiToggleOff());
-        edgeInner.addView(toggleRow(tr("border.edge_markings_brand_frame_number"), edgeTextMark, () -> edgeTextOn, on -> {
-            edgeTextOn = on;
-            redraw.accept(null);
-        }), new LinearLayout.LayoutParams(-1, dp(52)));
-        edgeFogBar = rangeRow(edgeInner, tr("border.base_fog"), tr("border.haze_in_the_film_base"),
-                0.0f, 4.0f, edgeFog, 0.1f, v -> edgeFog = v);
-        edgeLeaksBar = rangeRow(edgeInner, tr("border.light_leak"), tr("border.light_leaking_into_the_roll"),
-                0.0f, 4.0f, edgeLeaks, 0.1f, v -> edgeLeaks = v);
-        frameNoBar = rangeRow(edgeInner, tr("border.frame_number"), tr("ui170.245"),
-                0.0f, 99.0f, frameNumber, 1f, v -> frameNumber = v);
-        // **The aperture: a stop list, not a number line.** f/1.2 -> f/1.4 is
-        // a hair at the left of a 0..64 dial and half its travel is past any
-        // lens anyone owns -- and the value used to be sent as "%.0f", so
-        // f/1.4 shipped as f/1 (the 取整 in the report). A tap opens the
-        // standard stops plus a typed field.
-        LinearLayout fNumRow = new LinearLayout(this);
-        fNumRow.setOrientation(LinearLayout.HORIZONTAL);
-        fNumRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        fNumRow.addView(label(tr("border.aperture"), 8, UI_INK, tfHan), new LinearLayout.LayoutParams(-2, -2));
-        fNumRow.addView(bangFor(() -> tr("border.recorded_f_number_affects_the")));
-        fNumRow.addView(new View(this), new LinearLayout.LayoutParams(0, -2, 1f));
-        edgeFNumValue = label(fNumLabel(edgeFNumber), 8, UI_BLUE, tfBody);
-        edgeFNumValue.setFontFeatureSettings("tnum");    // live number, not typed
-        edgeFNumValue.setGravity(android.view.Gravity.END);
-        edgeFNumValue.setPadding(dp(12), dp(10), dp(2), dp(10));
-        fNumRow.addView(edgeFNumValue, new LinearLayout.LayoutParams(-2, -2));
-        fNumRow.setOnClickListener(v -> showApertureSheet());
-        edgeInner.addView(fNumRow, new LinearLayout.LayoutParams(-1, dp(40)));
-
-        edgeShapeRow = new LinearLayout(this);
-        edgeShapeRow.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(edgeShapeRow, tr("border.border_style"), labelOf(MODE_LABELS, MODE_IDS, edgeMode), tv ->
-                showChoiceMapping(tr("border.border_style"), MODE_LABELS, MODE_IDS, edgeMode, id -> {
-                    edgeMode = id;
-                    tv.setText(labelOf(MODE_LABELS, MODE_IDS, id));
-                    redraw.accept(null);
-                }));
-        choiceCell(edgeShapeRow, tr("border.gate_shape"), labelOf(GATE_LABELS, GATE_IDS, edgeGate), tv ->
-                showChoiceMapping(tr("border.gate_shape"), GATE_LABELS, GATE_IDS, edgeGate, id -> {
-                    edgeGate = id;
-                    tv.setText(labelOf(GATE_LABELS, GATE_IDS, id));
-                    redraw.accept(null);
-                }));
-        choiceCell(edgeShapeRow, tr("border.sprocket_holes"), labelOf(HOLES_LABELS, HOLES_IDS, edgeHoles), tv ->
-                showChoiceMapping(tr("border.what_appears_through_the_sprocket"), HOLES_LABELS, HOLES_IDS, edgeHoles, id -> {
-                    edgeHoles = id;
-                    tv.setText(labelOf(HOLES_LABELS, HOLES_IDS, id));
-                    redraw.accept(null);
-                }));
-        edgeInner.addView(edgeShapeRow, new LinearLayout.LayoutParams(-1, dp(46)));
-
-        LinearLayout edgeSeedRow = new LinearLayout(this);
-        edgeSeedRow.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(edgeSeedRow, tr("border.film_holder"), labelOf(CARRIER_LABELS, CARRIER_IDS, edgeCarrier), tv ->
-                showChoiceMapping(tr("border.what_appears_alongside_the_film"), CARRIER_LABELS, CARRIER_IDS, edgeCarrier, id -> {
-                    edgeCarrier = id;
-                    tv.setText(labelOf(CARRIER_LABELS, CARRIER_IDS, id));
-                    redraw.accept(null);
-                }));
-        choiceCell(edgeSeedRow, tr("border.border_seed"), String.valueOf(cameraSeed), tv ->
-                askText(tr("border.random_seed_for_the_film"), String.valueOf(cameraSeed), true, v -> {
-                    try { cameraSeed = Math.max(0, Integer.parseInt(v)); } catch (Exception ignored) { return; }
-                    tv.setText(String.valueOf(cameraSeed));
-                    redraw.accept(null);
-                }));
-        choiceCell(edgeSeedRow, tr("border.frame_seed"), String.valueOf(frameSeed), tv ->
-                askText(tr("border.random_seed_for_the_frame"), String.valueOf(frameSeed), true, v -> {
-                    try { frameSeed = Math.max(0, Integer.parseInt(v)); } catch (Exception ignored) { return; }
-                    tv.setText(String.valueOf(frameSeed));
-                    redraw.accept(null);
-                }));
-        LinearLayout.LayoutParams edgeSeedLp = new LinearLayout.LayoutParams(-1, dp(46));
-        edgeSeedLp.topMargin = dp(6);
-        edgeInner.addView(edgeSeedRow, edgeSeedLp);
-
-        // **后半格自己的宽容度。** 两格并排时它们可以是两个场景：一格对着
-        // 窗户、一格背着光，一条片上各自印对。`位置` 是第二段沿着片长开始的
-        // 地方 —— 0.514 就是 18 mm 画面 + 1 mm 间隙，共 37 mm。
-        pairBox = new LinearLayout(this);
-        pairBox.setOrientation(LinearLayout.VERTICAL);
-        pairToneMark = new Square(this, UI_BLUE, uiToggleOff());
-        pairBox.addView(toggleRow(tr("ui170.246"), pairToneMark, () -> pairTone, on -> {
-            pairTone = on;
-            pairToneMark.setLit(on);
-            onEdgeChanged();
-        }), new LinearLayout.LayoutParams(-1, dp(52)));
-        pairSplitBar = rangeRow(pairBox, tr("ui170.247"),
-                tr("ui170.248"),
-                0.30f, 0.70f, pairSplit, 0.002f, v -> pairSplit = v);
-        pairHighKneeBar = rangeRow(pairBox, tr("ui170.249"),
-                tr("ui170.250"),
-                -6.0f, 6.0f, pairHighKnee, 0.1f, v -> pairHighKnee = v);
-        pairHighRoomBar = rangeRow(pairBox, tr("ui170.251"),
-                tr("ui170.252"),
-                0.0f, 8.0f, pairHighRoom, 0.1f, v -> pairHighRoom = v);
-        pairShadowKneeBar = rangeRow(pairBox, tr("ui170.253"),
-                tr("ui170.254"), -6.0f, 6.0f, pairShadowKnee, 0.1f, v -> pairShadowKnee = v);
-        pairShadowRoomBar = rangeRow(pairBox, tr("ui170.255"),
-                tr("ui170.256"),
-                0.0f, 8.0f, pairShadowRoom, 0.1f, v -> pairShadowRoom = v);
-        edgeInner.addView(pairBox, new LinearLayout.LayoutParams(-1, -2));
-
-        this.edgeInner = edgeInner;
-        // **240, not 340.** 片门格式 and 片边方向 moved out of the scroll and
-        // into the page, so the block keeps its old total height instead of
-        // pushing the tab bar off the bottom of a 640 dp screen.
-        edgePage.addView(cappedScroll(edgeInner, 240), new LinearLayout.LayoutParams(-1, -2));
-        edgeRoot.addView(edgePage, new LinearLayout.LayoutParams(-1, -2));
-
-        datePage = new LinearLayout(this);
-        datePage.setOrientation(LinearLayout.VERTICAL);
-        datePage.addView(pageHead(tr("border.date_stamp_2")), new LinearLayout.LayoutParams(-1, dp(38)));
-        dateMark = new Square(this, UI_BLUE, uiToggleOff());
-        dateRow = toggleRow(tr("border.enable_date_stamp"), dateMark, () -> dateOn, on -> {
-            dateOn = on;
-            if (dateOn && dateText == null) dateText = imprintDate();
-            refreshEdgeGroups();
-            onEdgeChanged();
-        });
-        datePage.addView(dateRow, new LinearLayout.LayoutParams(-1, dp(52)));
-        dateInner = new LinearLayout(this);
-        dateInner.setOrientation(LinearLayout.VERTICAL);
-        // 0..200 mm: 30 was the schema's old cap and it stopped the date a
-        // third of the way along a 6x12 / 6x17 rebate.
-        dateInsetXBar = rangeRow(dateInner, tr("border.horizontal_inset"), tr("border.distance_from_the_sides_of"),
-                0.0f, 200.0f, dateInsetX, v -> dateInsetX = v);
-        dateInsetYBar = rangeRow(dateInner, tr("border.vertical_inset"), tr("border.distance_from_the_top_or"),
-                0.0f, 200.0f, dateInsetY, v -> dateInsetY = v);
-        // 8.0: the engine clamps at 8 now, because "make the date bigger" was
-        // the one adjustment the old 3.0 ceiling refused.
-        dateSizeBar = rangeRow(dateInner, tr("border.date_size"), tr("border.relative_character_height_1_0"),
-                0.4f, 8.0f, dateSize, v -> dateSize = v);
-        dateEvBar = rangeRow(dateInner, tr("border.date_brightness"), tr("border.red_light_exposure_above_18"),
-                -2.0f, 8.0f, dateEv, v -> dateEv = v);
-        LinearLayout dateGrid1 = new LinearLayout(this);
-        dateGrid1.setOrientation(LinearLayout.HORIZONTAL);
-        // The one field the app used to decide for the user: it read the date
-        // out of EXIF and gave no way to write a different one.
-        choiceCell(dateGrid1, tr("border.date_text"), dateText == null || dateText.isEmpty() ? imprintDate() : dateText,
-                tv -> askText(tr("border.text_stamped_on_the_image"),
-                        dateText == null || dateText.isEmpty() ? imprintDate() : dateText, v -> {
-                            dateText = v.isEmpty() ? null : v;
-                            tv.setText(dateText == null ? imprintDate() : dateText);
-                            redraw.accept(null);
-                        }));
-        choiceCell(dateGrid1, tr("border.date_placement"), labelOf(PLACE_LABELS, PLACE_IDS, datePlacement), tv ->
-                showChoiceMapping(tr("border.where_to_place_the_date"), PLACE_LABELS, PLACE_IDS, datePlacement, id -> {
-                    datePlacement = id;
-                    tv.setText(labelOf(PLACE_LABELS, PLACE_IDS, id));
-                    redraw.accept(null);
-                }));
-        choiceCell(dateGrid1, tr("border.date_corner"), labelOf(CORNER_LABELS, CORNER_IDS, dateCorner), tv ->
-                showChoiceMapping(tr("border.which_corner_to_stamp"), CORNER_LABELS, CORNER_IDS, dateCorner, id -> {
-                    dateCorner = id;
-                    tv.setText(labelOf(CORNER_LABELS, CORNER_IDS, id));
-                    redraw.accept(null);
-                }));
-        dateInner.addView(dateGrid1, new LinearLayout.LayoutParams(-1, dp(46)));
-
-        LinearLayout dateGrid2 = new LinearLayout(this);
-        dateGrid2.setOrientation(LinearLayout.HORIZONTAL);
-        choiceCell(dateGrid2, tr("border.date_style"), labelOf(STYLE_LABELS, STYLE_IDS, dateStyle), tv ->
-                showChoiceMapping(tr("border.type_of_lettering_for_the"), STYLE_LABELS, STYLE_IDS, dateStyle, id -> {
-                    dateStyle = id;
-                    tv.setText(labelOf(STYLE_LABELS, STYLE_IDS, id));
-                    redraw.accept(null);
-                }));
-        choiceCell(dateGrid2, tr("border.shooting_data"), dataText.isEmpty() ? tr("border.empty") : dataText, tv ->
-                askText(tr("border.shooting_data_to_print_alongside"), dataText, v -> {
-                    dataText = v;
-                    tv.setText(v.isEmpty() ? tr("border.empty") : v);
-                    redraw.accept(null);
-                }));
-        choiceCell(dateGrid2, tr("border.second_frame_date"), dateTextB.isEmpty() ? tr("border.empty") : dateTextB, tv ->
-                askText(tr("border.date_for_the_second_frame"), dateTextB, v -> {
-                    dateTextB = v;
-                    tv.setText(v.isEmpty() ? tr("border.empty") : v);
-                    redraw.accept(null);
-                }));
-        LinearLayout.LayoutParams dateGrid2Lp = new LinearLayout.LayoutParams(-1, dp(46));
-        dateGrid2Lp.topMargin = dp(6);
-        dateInner.addView(dateGrid2, dateGrid2Lp);
-
-        TextView dateTip = label(
-                tr("border.for_an_in_image_stamp"),
-                7.5f, UI_MUTED, tfHan);
-        dateTip.setLineSpacing(dp(1), 1f);
-        dateInner.addView(dateTip, new LinearLayout.LayoutParams(-1, -2));
-        this.dateInner = dateInner;
-        datePage.addView(cappedScroll(dateInner, 340), new LinearLayout.LayoutParams(-1, -2));
-        edgeRoot.addView(datePage, new LinearLayout.LayoutParams(-1, -2));
-        buildPrintFramePage();
-        edgeRoot.addView(pfPage, new LinearLayout.LayoutParams(-1, -2));
-    }
+    void buildEdgePages() { PrintEdge.buildEdgePages(new PrintEdgeHostImpl(this)); }
 
     /** Wrap-content up to `maxDp`, scrollable past it. A plain ScrollView
      *  either takes the whole panel or none of it. */
-    private View cappedScroll(View content, int maxDp) {
+    View cappedScroll(View content, int maxDp) {
         content.setPadding(0, dp(2), 0, dp(10));
         CappedScroll scroll = new CappedScroll(this, dp(maxDp));
         scroll.addView(content, new android.widget.FrameLayout.LayoutParams(-1, -2));
@@ -21499,7 +20944,7 @@ public class MainActivity extends Activity implements
         return scroll;
     }
 
-    private View pageHead(String title) {
+    View pageHead(String title) {
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
@@ -21627,7 +21072,7 @@ public class MainActivity extends Activity implements
      * <p>开关本身一直在（片门之外的第二件事），后半格那五根滑杆只在真的
      * 成对时出现 —— 一堆对着单格没有意义的数比没有更糟。
      */
-    private void refreshPairRows() {
+    void refreshPairRows() {
         if (pairBox != null) pairBox.setVisibility(pairActive() ? View.VISIBLE : View.GONE);
         if (pairMark != null) pairMark.setLit(overscanPair);
         if (pairToneMark != null) pairToneMark.setLit(pairTone);
@@ -21773,7 +21218,7 @@ public class MainActivity extends Activity implements
                 + " aspect=" + originalAspect() + " fits=" + edgeIds);
     }
 
-    private void showEdgePicker() {
+    void showEdgePicker() {
         // **Every gate is usable, because choosing one now gives the picture
         // that shape.** This sheet used to grey out every gate the frame did
         // not already match, so a 3:2 picture offered exactly two rows and both
@@ -23086,7 +22531,7 @@ public class MainActivity extends Activity implements
     }
 
     /** A paper bottom sheet in the same visual language as the cards. */
-    private void showChoiceSheet(String title, List<String> labels, String selected,
+    void showChoiceSheet(String title, List<String> labels, String selected,
                                  java.util.function.Consumer<String> onPick) {
         showChoiceSheet(title, labels, null, selected, null, onPick);
     }
@@ -23102,7 +22547,7 @@ public class MainActivity extends Activity implements
      * by disappearing -- the user should see that the option exists and why it
      * is not for this film.
      */
-    private void showChoiceSheet(String title, List<String> labels, List<String> notes,
+    void showChoiceSheet(String title, List<String> labels, List<String> notes,
                                  String selected,
                                  java.util.function.IntPredicate selectable,
                                  java.util.function.Consumer<String> onPick) {
@@ -23344,7 +22789,7 @@ public class MainActivity extends Activity implements
             {0f, 1.0f, 1.2f, 1.4f, 1.8f, 2.0f, 2.8f, 3.2f, 4.0f, 5.6f, 8f, 11f, 16f, 22f, 32f};
 
     /** `f/2.8`, `f/8`, `未知` -- no trailing `.0`, never `f/0`. */
-    private static String fNumLabel(float f) {
+    static String fNumLabel(float f) {
         if (f <= 0.5f) return tr("ui170.277");
         String t = String.format(java.util.Locale.US, "%.1f", f);
         if (t.endsWith(".0")) t = t.substring(0, t.length() - 2);
@@ -23356,7 +22801,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The stop list, on the app's own chip language, with a typed field. */
-    private void showApertureSheet() {
+    void showApertureSheet() {
         final android.app.Dialog dialog = new android.app.Dialog(this);
         LinearLayout sheet = new LinearLayout(this);
         sheet.setOrientation(LinearLayout.VERTICAL);
@@ -23933,7 +23378,7 @@ public class MainActivity extends Activity implements
         return rebateClosed;
     }
 
-    private void onEdgeChanged() {
+    void onEdgeChanged() {
         // **On the original there is no chain to re-render.** Glow is a pure
         // post-process over whatever the canvas holds, so the only thing to do
         // is rebuild that one copy; `renderImage` would answer "pick a film"
@@ -24700,7 +24145,7 @@ public class MainActivity extends Activity implements
 
     /** "'26 10 31" — a date back's format, from the frame's own EXIF date when
      *  the file has one, from today when it does not. */
-    private String imprintDate() {
+    String imprintDate() {
         // **Clearing the field is not the same as erasing the date.** The sheet
         // hands back "" when the user empties it, and `dateText` is not null, so
         // the whole date disappeared while the 日期水印 switch still read 开 --
@@ -24775,7 +24220,7 @@ public class MainActivity extends Activity implements
      * chevron. `toggleRow`'s shape with a readout instead of a square -- the
      * hit area is the row, so it is the same 46 dp target.
      */
-    private LinearLayout choiceRow(String labelText, String value,
+    LinearLayout choiceRow(String labelText, String value,
                                    java.util.function.Consumer<TextView> onTap) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -24835,12 +24280,12 @@ public class MainActivity extends Activity implements
     }
 
     /** .range-field: an 8 px head with the value in blue, then the 10 px bar. */
-    private SeekBar rangeRow(LinearLayout parent, String name, final float lo, final float hi,
+    SeekBar rangeRow(LinearLayout parent, String name, final float lo, final float hi,
                              float initial, final java.util.function.Consumer<Float> apply) {
         return rangeRow(parent, name, null, lo, hi, initial, apply);
     }
 
-    private SeekBar rangeRow(LinearLayout parent, String name, String hint,
+    SeekBar rangeRow(LinearLayout parent, String name, String hint,
                              final float lo, final float hi,
                              float initial, final java.util.function.Consumer<Float> apply) {
         return rangeRow(parent, name, hint, lo, hi, initial, 0f, apply);
@@ -24855,7 +24300,7 @@ public class MainActivity extends Activity implements
      * the readout prints exactly the step's decimals -- 刻度 for the controls
      * that are scales rather than numbers.
      */
-    private SeekBar rangeRow(LinearLayout parent, String name, String hint,
+    SeekBar rangeRow(LinearLayout parent, String name, String hint,
                              final float lo, final float hi, float initial, final float step,
                              final java.util.function.Consumer<Float> apply) {
         LinearLayout row = new LinearLayout(this);
@@ -28917,7 +28362,7 @@ public class MainActivity extends Activity implements
      * in a delta *is* a stock change), which is what made the sliders feel
      * dead rather than merely slow.
      */
-    private void applyParams() {
+    void applyParams() {
         if (session == null) return;
         // **A delta is never sent from the UI thread.**
         //
@@ -29028,7 +28473,7 @@ public class MainActivity extends Activity implements
      * `printStock`, so every black-and-white card came out sepia -- the shelf
      * showed the wrong recipe and read as "the black-and-white film is broken".
      */
-    private boolean applyParams(String stock, String paper, int longEdge) {
+    boolean applyParams(String stock, String paper, int longEdge) {
         return applyParamsTo(session, stock, paper, longEdge, previewSpace);
     }
 
@@ -29557,7 +29002,7 @@ public class MainActivity extends Activity implements
     /** Same set, at whatever long edge the caller is rendering. The catalogue
      *  pass uses a small one so a whole shelf of films is affordable; a look
      *  the user is about to export still goes out at the preview size. */
-    private void applyParams(int longEdge) {
+    void applyParams(int longEdge) {
         if (session == null) return;
         final String stock = filmStock;
         if (stock == null) return;
@@ -31121,7 +30566,7 @@ public class MainActivity extends Activity implements
     // canvas, the live frame and the export, so what you see is what ships.
 
     /** The gate the 片门 chips name, as an index into {@link #EDGE_IDS}. */
-    private static int gateIndexOf(String id) {
+    static int gateIndexOf(String id) {
         if (id != null) {
             for (int i = 0; i < EDGE_IDS.length; ++i) if (EDGE_IDS[i].equals(id)) return i;
         }
@@ -31885,7 +31330,7 @@ public class MainActivity extends Activity implements
 
     /** The 冲印 page, for the second engine. */
     /** The seven pages the second engine's print panel is read in. */
-    private static String[] FOTU_GROUPS = {
+    static String[] FOTU_GROUPS = {
             tr("ui170.469"), tr("ui170.470"), tr("navigation.film"), tr("print.knob.grain"), tr("print.knob.halation"), tr("ui170.471"), tr("ui170.066"),
     };
     int fotuGroup = 0;
@@ -33557,7 +33002,7 @@ public class MainActivity extends Activity implements
      * magenta, pre-flash) -- the neutral filters themselves are the engine's and
      * are not offsets.
      */
-    private void resolvePrinting() {
+    void resolvePrinting() {
         final SpektraLabEngine.Session s = session;
         if (s == null || filmStock == null) {
             showActionSheet(tr("print.no_photo_to_rebalance"), tr("print.import_a_photo_and_choose"),
