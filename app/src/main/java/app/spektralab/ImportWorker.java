@@ -1,18 +1,33 @@
 package app.spektralab;
 
-import static app.spektralab.AppLanguage.tr;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.view.View;
 import app.spektralab.engine.SpektraLabEngine;
-import java.nio.ByteOrder;
 
-/** Worker extracted from MainActivity; delegates Android/Activity access to host. */
+import java.nio.ByteBuffer;
+import java.util.List;
+
+/** Worker re-extracted from the 1.7.0 Activity; owns the full current path. */
 final class ImportWorker extends HostWorker {
-    private java.nio.ByteBuffer pixels;
     ImportWorker(MainActivity host) { super(host); }
 
-    void run(Uri uri) {
+    void run(Uri uri, int reopenIndex) {
+
         CrashTrail.mark(host, "import:load " + uri);
+        // **The plate waits for the decode, not for the picker.** It used to go
+        // up here, before the two questions this method can ask -- the size
+        // sheet and "this file will not open" -- and both of those `return`.
+        // Nothing took the plate down, so the wave sat over a canvas with no
+        // photograph and the 选择照片 card underneath it: "导入选项不显示",
+        // reported with a 59 MP re-import of one of our own exports
+        // (SL-261118-F773). A RAW raises its own, in `loadRawImage`.
+        // A render of the previous photograph must not land on this one, and
+        // the file path of the previous photograph is not this one's.
+        host.fotuSourcePath = null;
+        host.fotuSourceDead = null;
+        host.fotuGeneration++;
         // Whatever is rendering belongs to the photograph being replaced.
         host.renderEpoch++;
         // **The previous photograph's dimensions are not this one's.**
@@ -45,10 +60,10 @@ final class ImportWorker extends HostWorker {
                     + (sz == null ? "unknown" : sz[0] + "x" + sz[1])
                     + " need=" + (want >> 20) + "MB"
                     + " avail=" + (host.availableMemoryBytes() >> 20) + "MB");
-            Diagnostics.log("import-size", (sz == null ? "unknown" : sz[0] + "x" + sz[1])
+            try { DebugSink.text("import-size", (sz == null ? "unknown" : sz[0] + "x" + sz[1])
                     + " need=" + (want >> 20) + "MB avail=" + (host.availableMemoryBytes() >> 20) + "MB"
-                    + " native=" + host.importAtNativeSize, "sniffImageSize:11191");
-        } catch (Throwable spkIgnored) { Diagnostics.ignored("sniffImageSize:11192", spkIgnored); }
+                    + " native=" + host.importAtNativeSize); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28732", ignored); }
+        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28733", ignored); }
         // A new photograph starts at the two entry cards, never on a page
         // whose switch belonged to the frame before it.
         CrashTrail.mark(host, "import:page");
@@ -63,12 +78,25 @@ final class ImportWorker extends HostWorker {
             // only way out was 「关闭」, which changed nothing. Removed once,
             // here, and the strip is honest afterwards.
             final int dead = host.currentFrame;
-            host.showErrorDialog(tr("import.photo_access_expired"),
-                    tr("import.android_revoked_temporary_access_to")
-                    + tr("import.it_was_removed_from_the")
-                    + tr("import.the_app_will_keep_its"));
-            if (dead >= 0 && dead < host.frames.size() && host.frames.get(dead).uri.equals(uri)) {
-                host.removeFrame(dead);
+            final boolean ownsIt = dead >= 0 && dead < host.frames.size()
+                    && host.frames.get(dead).uri.equals(uri);
+            if (ownsIt) {
+                // **The chip stays, and the way out is one tap.** Removing it
+                // on the spot threw away the look with the grant: the file is
+                // still on the phone, it is the *permission* that expired.
+                host.showActionSheet("照片已不可访问",
+                        "系统收回了文件选择器给的临时授权，这张照片现在读不到了。\n\n"
+                        + "「重新选择这个文件」会把它复制到应用自己的目录——胶片、构图、片边和日期都会保留；"
+                        + "「从照片栏移除」只去掉这一条，文件本身不动。",
+                        new String[]{"重新选择这个文件", "从照片栏移除", "取消"}, which -> {
+                            if (which == 0) { host.repickFrame = dead; host.pickRawFile(); }
+                            else if (which == 1) host.removeFrame(dead);
+                        });
+            } else {
+                host.showErrorDialog("照片已不可访问",
+                        "这张照片的读取权限已经失效——系统收回了文件选择器给的临时授权。\n\n"
+                        + "点「导入」重新选择这张照片；新版本会把文件复制到应用自己的目录，"
+                        + "之后切到别的软件回来也不会丢。");
             }
             return;
         }
@@ -80,8 +108,8 @@ final class ImportWorker extends HostWorker {
         // The frame's own look, stated before any session is built: a chip
         // returns to a photograph *and* to what was done to it; a pick from ＋
         // starts with no film at all.
-        if (host.reopeningFrame && host.currentFrame >= 0 && host.currentFrame < host.frames.size()) {
-            host.applyLook(host.frames.get(host.currentFrame).look);
+        if (reopenIndex >= 0 && reopenIndex < host.frames.size()) {
+            host.applyLook(host.frames.get(reopenIndex).look);
         } else {
             // **A reopen with no frame to reopen is a new photograph.** This
             // used to leave the global fields untouched when the index was
@@ -89,37 +117,35 @@ final class ImportWorker extends HostWorker {
             // the previous one's print exposure and meter switch -- reported
             // as "重新导入一张还是黑灰", gone after a restart for the obvious
             // reason.
-            host.reopeningFrame = false;
             host.applyLook(host.defaultLook());
-        }
-        if (host.testDeterministic) {
-            // Grain and the paper veil are seeded per frame; switch them off so
-            // two renders of the same picture are byte-comparable.
-            host.grainOn = 0f;
-            host.glareActive = 0f;
-        }
-        if (host.testAutoFilm && host.filmStock == null) {
-            for (String id : host.filmIds) {
-                if (!app.spektralab.domain.Defaults.ORIGINAL_ID.equals(id)) { host.filmStock = id; break; }
-            }
         }
         CrashTrail.mark(host, "import:look");
         try {
             // Check if this is a RAW file by extension
             String fileName = host.getFileName(uri);
             CrashTrail.markNow(host, "import:name " + fileName);
-            host.isRawFile = app.spektralab.domain.RawFormats.isRaw(fileName);
+            final String lower = fileName == null ? "" : fileName.toLowerCase();
+            host.isRawFile = lower.endsWith(".rw2") || lower.endsWith(".raw")
+                    || lower.endsWith(".dng") || lower.endsWith(".arw")
+                    || lower.endsWith(".nef") || lower.endsWith(".cr2")
+                    || lower.endsWith(".cr3") || lower.endsWith(".orf")
+                    || lower.endsWith(".raf") || lower.endsWith(".pef")
+                    || lower.endsWith(".srw") || lower.endsWith(".x3f")
+                    || lower.endsWith(".rwl") || lower.endsWith(".3fr")
+                    || lower.endsWith(".mrw") || lower.endsWith(".erf");
             // A RAW container we know of but cannot open still beats decoding
             // its bytes as a JPEG and reporting a mystery.
-            final String unsupported = app.spektralab.domain.RawFormats.knownUnsupported(fileName);
-            if (unsupported != null) {
-                host.showInAppToast(tr("import.e_1107_unsupported_format")
-                        + unsupported + tr("import.suffix"));
-                return;
+            final String[] knownButUnsupported = {".heic.raw", ".iiq", ".mos"};
+            for (String ext : knownButUnsupported) {
+                if (lower.endsWith(ext)) {
+                    host.hideBusy();
+                    host.showInAppToast("[E-1107] 暂不支持 " + ext + " 格式");
+                    return;
+                }
             }
             
             if (host.isRawFile) {
-                host.loadRawImage(uri, -1);
+                host.loadRawImage(uri, reopenIndex);
                 return;
             }
 
@@ -137,7 +163,10 @@ final class ImportWorker extends HostWorker {
                     final long area = (long) full[0] * (long) full[1];
                     final int cap = host.maxImportPixels();
                     if (area > cap || Math.max(full[0], full[1]) > host.IMPORT_LONG_EDGE) {
-                        host.showImportBudgetDialog(uri, full[0], full[1], cap, -1);
+                        // A question is not an import: whatever was on the canvas
+                        // stays, and no plate is left behind.
+                        host.hideBusy();
+                        host.showImportBudgetDialog(uri, full[0], full[1], cap, reopenIndex);
                         return;
                     }
                 }
@@ -163,7 +192,9 @@ final class ImportWorker extends HostWorker {
             // is the SIGSEGV this device logs as `vkCmdCopyBuffer` against a
             // destroyed buffer, and it is what tapping an earlier thumbnail
             // while the shelf was still drawing looked like.
-            host.closeSessionSafely();
+            synchronized (host.renderMutex) {
+                if (host.session != null) { host.session.close(); host.session = null; }
+            }
             // **The old frame's planes go before the new one asks for its own.**
             // `spk_open` allocates the decoded source while the previous
             // session's pool is still resident. On a 16 GB phone a 32 MP pool
@@ -171,7 +202,7 @@ final class ImportWorker extends HostWorker {
             // and it surfaces as `cannot allocate Vulkan result pixels` ->
             // E-1003 even though the frame alone would have fit. The export
             // path already trims for exactly this reason.
-            try { if (host.engine != null) host.engine.trimPool(); } catch (Throwable spkIgnored) { Diagnostics.ignored("maxImportPixels:11315", spkIgnored); }
+            try { if (host.engine != null) host.engine.trimPool(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28872", ignored); }
             host.lastRenderedBitmap = null;
             host.refreshPanelLocks();
             // The plate on the canvas belongs to the frame we just left.
@@ -182,10 +213,10 @@ final class ImportWorker extends HostWorker {
             host.refreshViewPanel();
             host.sourceBitmap = null;
             // `allocDirect` has no cleaner: dropping the field frees nothing.
-            if (pixels != null) { SpektraLabEngine.freeDirect(pixels); pixels = null; }
+            if (host.sourcePixels != 0) { SpektraLabEngine.freePixels(host.sourcePixels); host.sourcePixels = 0; }
             // The previous file's unpacked plane is not this frame's problem.
-            try { SpektraLabEngine.clearRawCache(); } catch (Throwable spkIgnored) { Diagnostics.ignored("maxImportPixels:11328", spkIgnored); }
-            host.filmThumbs.clear();
+            try { SpektraLabEngine.clearRawCache(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28885", ignored); }
+            host.clearShelfCache();
             // The canvas is not a control. `setOriginalVisual` only paints the
             // 原图 button; what CompareView holds is `after` (the last render)
             // and it survives a new session. That was the whole "I changed the
@@ -199,6 +230,20 @@ final class ImportWorker extends HostWorker {
             // so one exact scale follows if the sample still overshoots.
             final boolean nativeSize = host.importAtNativeSize;
             host.importAtNativeSize = false;                       // one import only
+            // **「按原图」 is about the export, not about what the engine
+            // holds.** It used to lift every ceiling here, so a 200 MP file
+            // opened a 200 MP session: 12 B/px of float is 2.4 GB, beside an
+            // 800 MB ARGB bitmap, for a canvas that renders at 2048 and a
+            // negative cache that holds the frame again. That is the 4.9-6.5 GB
+            // low-memory kills in 1.7.0's first four hours, and a five-second
+            // main-thread stall on the way in.
+            //
+            // The session now takes the device's own budget, and
+            // `exportAtNative` sends the export back to the file for its real
+            // size -- `exportImage` already re-decodes and opens a fresh
+            // session for exactly that (the `bigger` branch). Same promise,
+            // a tenth of the frame.
+            host.exportAtNative = nativeSize;
             // A cap the last render failure handed us (see offerSmallerImport):
             // one import's worth, then back to the device's own answer.
             final int forcedCap = host.pendingCapPixels;
@@ -206,12 +251,12 @@ final class ImportWorker extends HostWorker {
             host.e1001Offered = false;
             // An explicit "render smaller" from the failure sheet outranks the
             // native default: the user asked for that one.
-            final int capPixels = forcedCap > 0 ? forcedCap
-                    : (nativeSize ? Integer.MAX_VALUE : host.maxImportPixels());
-            final int edgeCap = nativeSize ? Integer.MAX_VALUE : host.IMPORT_LONG_EDGE;
+            final int capPixels = forcedCap > 0 ? forcedCap : host.maxImportPixels();
+            final int edgeCap = host.IMPORT_LONG_EDGE;
             // The cleanup above (shelf queue, session close, gc) is its own
             // stretch; without this mark a death there would still be reported
             // as `import:look` and blamed on the decoder.
+            host.showBusy("READING");
             CrashTrail.mark(host, "import:decoding");
             host.sourceBitmap = host.decodeImport(uri, capPixels, edgeCap);
             if (host.sourceBitmap == null) {
@@ -219,12 +264,15 @@ final class ImportWorker extends HostWorker {
                 // nothing to act on. A HEIC/HEIF this phone's decoder refuses is
                 // the common case, so the dialog carries the way out instead of
                 // describing it.
-                host.showActionSheet(tr("import.e_1107_this_device_cannot"),
-                        tr("import.it_may_be_heic_heif")
-                                + tr("import.try_the_file_browser_if"),
-                        new String[]{tr("import.file_browser"), tr("editor.cancel")}, which -> {
+                host.showActionSheet("[E-1107] 这张图本机解不开",
+                        "多半是 HEIC/HEIF 或 10-bit 的图（三星、iPhone 默认存这种）。\n"
+                                + "换「从文件选择」再试一次，读不到的话请先另存为 JPEG。",
+                        new String[]{"从文件选择", "取消"}, which -> {
                             if (which == 0) host.pickRawFile();
                         });
+                // The decode ran and gave nothing back; the plate does not owe
+                // the user a reason to stare at it.
+                host.hideBusy();
                 return;
             }
             host.sourceBitmap = host.applyExifRotation(uri, host.sourceBitmap);
@@ -244,23 +292,31 @@ final class ImportWorker extends HostWorker {
             // allocation the app makes. Asking before taking it is what turns
             // an OutOfMemoryError (an Error, so the old `catch (Exception)`
             // never saw it and the process died) into a smaller import.
-            // The downscale decision is pure maths now (ImportPlanner), which
-            // means it has JVM regression tests. "Force original" skips it.
+            double k = 1.0;
+            // **Nothing is scaled when the user asked for the original.** The
+            // memory test below used to run even with `nativeSize`, so "force
+            // original" still came back smaller -- the one place where the
+            // suggestion was a ceiling in disguise.
             final long availBytes = host.availableMemoryBytes();
-            final app.spektralab.domain.ImportPlanner.Plan plan = nativeSize
-                    ? new app.spektralab.domain.ImportPlanner.Plan(
-                            1.0, host.sourceBitmap.getWidth(), host.sourceBitmap.getHeight())
-                    : app.spektralab.domain.ImportPlanner.plan(
-                            host.sourceBitmap.getWidth(), host.sourceBitmap.getHeight(), capPixels, edgeCap);
-            final double k = plan.scale;
+            if (!nativeSize) {
+                if (area > capPixels) k = Math.min(k, Math.sqrt((double) capPixels / (double) area));
+                if (longEdge > edgeCap) k = Math.min(k, (double) edgeCap / longEdge);
+                // **No third ceiling from free RAM.** `capPixels` already came
+                // from the pixel budget, and that budget is now derived from
+                // total RAM rather than whatever happened to be free. Applying
+                // `availMem - 128 MB` *again*, here, is what made two imports of
+                // one file land on different sizes. The float buffer is malloc'd
+                // and its failure has an honest message (`导入这张图需要 N MB`),
+                // so the guess is not needed.
+            }
             if (k < 1.0) {
-                final int nw = plan.width;
-                final int nh = plan.height;
+                final int nw = Math.max(1, (int) Math.round(host.sourceBitmap.getWidth() * k));
+                final int nh = Math.max(1, (int) Math.round(host.sourceBitmap.getHeight() * k));
                 Bitmap scaled = Bitmap.createScaledBitmap(host.sourceBitmap, nw, nh, true);
                 if (scaled != host.sourceBitmap) host.sourceBitmap.recycle();
                 host.sourceBitmap = scaled;
-                Diagnostics.log("import-scale", "k=" + k + " -> " + nw + "x" + nh
-                        + " avail=" + availBytes, "getHeight:11412");
+                try { DebugSink.text("import-scale", "k=" + k + " -> " + nw + "x" + nh
+                        + " avail=" + availBytes); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28986", ignored); }
             }
             host.sourceWidth = host.sourceBitmap.getWidth();
             host.sourceHeight = host.sourceBitmap.getHeight();
@@ -282,27 +338,26 @@ final class ImportWorker extends HostWorker {
             final long pixelBytes = (long) host.sourceWidth * host.sourceHeight * 3L * 4L;
             CrashTrail.mark(host, "import:pixels " + (pixelBytes >> 20) + "MB avail="
                     + (host.availableMemoryBytes() >> 20) + "MB");
-            Diagnostics.log("import-pixels", host.sourceWidth + "x" + host.sourceHeight
+            try { DebugSink.text("import-pixels", host.sourceWidth + "x" + host.sourceHeight
                     + " need=" + (pixelBytes >> 20) + "MB avail="
-                    + (host.availableMemoryBytes() >> 20) + "MB", "getHeight:11436");
+                    + (host.availableMemoryBytes() >> 20) + "MB"); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29010", ignored); }
             // **malloc, not allocateDirect.** The runtime caps direct-buffer
             // memory at the heap growth limit (512 MB on the phone that
             // reported this), and a 50 MP frame is 576 MB of float32, so the
             // old call was refused with 4.3 GB free -- and the message blamed
             // the device. This one asks for memory that exists.
             try {
-                pixels = SpektraLabEngine.allocDirect(pixelBytes)
-                        .order(ByteOrder.nativeOrder());
+                host.sourcePixels = SpektraLabEngine.allocPixels(pixelBytes);
             } catch (Throwable oom) {
-                throw new IllegalStateException(tr("import.this_image_needs") + (pixelBytes >> 20)
-                        + tr("import.mb_of_memory_the_device")
-                        + (host.availableMemoryBytes() >> 20) + " MB)."
-                        + tr("import.import_the_photo_again_and"), oom);
+                throw new IllegalStateException("导入这张图需要 " + (pixelBytes >> 20)
+                        + " MB 内存，本机现在给不出来（可用 "
+                        + (host.availableMemoryBytes() >> 20) + " MB）。"
+                        + "\n\n点「导入」再选一次，这次选「缩到建议尺寸」。", oom);
             }
-            // 1.7.0f perf fix: one getPixels + one JNI call per 64-row band.
-            SpektraLabEngine.liftRows(host.sourceBitmap, pixels,
-                    host.sourceWidth, host.sourceHeight);
-            pixels.rewind();
+            // **A band a call, not a row a call.** One row per `getPixels` and
+            // per JNI call was 16,320 of each on a 200 MP import, on the UI
+            // thread: the five-second freeze behind SL-261121-C907.
+            host.liftRows(host.sourceBitmap, host.sourcePixels, host.sourceWidth, host.sourceHeight);
             
             final int pw = Math.max(1, Math.round(host.sourceWidth * Math.min(1f, 1024f / Math.max(host.sourceWidth, host.sourceHeight))));
             final int ph = Math.max(1, Math.round(host.sourceHeight * Math.min(1f, 1024f / Math.max(host.sourceWidth, host.sourceHeight))));
@@ -323,9 +378,21 @@ final class ImportWorker extends HostWorker {
             host.compare.setBefore(host.beforeBitmap);
             if (host.sourceBitmap != host.beforeBitmap) host.sourceBitmap.recycle();
             host.sourceBitmap = null;
-            host.statusText.setText(tr("import.local_preview"));
+            host.statusText.setText("Local preview");
             host.setStage(1, host.getFileName(uri));
-            host.rememberFrame(uri, -1);
+            // **Before `rememberFrame`, while we still know which file it is.**
+            // The canvas only ever sees the still; if the clip is not taken now
+            // it is gone, and the export silently writes a plain JPEG over a
+            // live photo -- which is exactly what every version before this one
+            // did.
+            final MainActivity.LiveClip live = host.captureLiveClip(uri);
+            host.rememberFrame(uri, reopenIndex);
+            if (live != null && host.currentFrame >= 0 && host.currentFrame < host.frames.size()) {
+                final MainActivity.Frame f = host.frames.get(host.currentFrame);
+                f.liveClip = live.path;
+                f.liveTsUs = live.tsUs;
+                host.saveSessionState();
+            }
             host.rebuildFilmCards();
             host.setStep(1);
             
@@ -333,10 +400,28 @@ final class ImportWorker extends HostWorker {
             CrashTrail.mark(host, "import:engine");
             host.ensureEngine();
             CrashTrail.mark(host, "import:engine-ok");
-            host.closeSessionSafely();
-            host.session = host.engine.openSession(pixels, host.sourceWidth, host.sourceHeight, 3);
+            synchronized (host.renderMutex) {
+                if (host.session != null) { host.session.close(); host.session = null; }
+            }
+            host.session = host.engine.openSession(host.sourcePixels, host.sourceWidth, host.sourceHeight, 3);
             CrashTrail.mark(host, "import:session");
             host.applySessionParams();
+            // **The engine has its own copy; this one is 12 B/px of dead
+            // weight.** 432 MB at 36 MP, held for the whole life of the
+            // session, and the only reader left was the export's last-resort
+            // fallback -- which now re-decodes from the file instead. This is
+            // the largest single allocation the app makes and the only one it
+            // can give back without touching a pixel; the low-memory killer
+            // took the process at 2.7 GB with a 36 MP frame open.
+            //
+            // Small frames keep it: below 4 MP it is 48 MB, and an export that
+            // can no longer read its file still has the buffer that way.
+            if (host.session != null && host.sourcePixels != 0
+                    && (long) host.sourceWidth * host.sourceHeight > 4_000_000L) {
+                SpektraLabEngine.freePixels(host.sourcePixels);
+                host.sourcePixels = 0;
+                CrashTrail.mark(host, "import:staging freed");
+            }
             host.lastImportError = null;
             // An import is not a look. The frame lands unrendered with no film
             // chosen; the first render happens when the user picks a stock.
@@ -354,7 +439,7 @@ final class ImportWorker extends HostWorker {
                 host.showingOriginal = true;
                 host.setOriginalVisual(true);
                 host.updateFilmSelection();
-                host.statusText.setText(tr("film.original_ungraded_raw_preview_choose"));
+                host.statusText.setText("ORIGINAL · RAW 原始数据（未调色，选胶片后才成片）");
                 if (!host.batchExportRunning) host.startPrefetch();
             } else if (host.filmStock != null) {
                 // A chip came back with a look: develop it again rather than
@@ -369,15 +454,22 @@ final class ImportWorker extends HostWorker {
                 // load -> export, with nothing in between.
                 if (!host.batchExportRunning) host.renderImage();
             } else {
-                host.statusText.setText(tr("import.not_rendered_choose_a_film") + host.importSizeNote(host.sourceWidth, host.sourceHeight));
+                host.statusText.setText("未渲染 · 选择胶片开始" + host.importSizeNote(host.sourceWidth, host.sourceHeight));
+                // Nothing is going to render, so the plate leaves here.
+                host.hideBusy();
                 if (!host.batchExportRunning) host.startPrefetch();
+                // **The one lock that happened before this photo existed.** The
+                // panel was greyed at launch with no bitmap; without this the
+                // 发光 page would stay grey until something else re-ran the pass.
+                host.refreshPanelLocks();
+                // 同一个理由的第二件事：现在有画面了，开着的辉光要落到它上面。
+                host.refreshGlowForCurrentView();
             }
         } catch (Throwable t) {
-            DebugSink.text("failure", AppFailure.of(AppFailure.Stage.IMPORT, t).stage
-                    + ": " + host.describe(t));
+            host.hideBusy();
             host.lastImportError = host.describeImportFailure(t);
-            host.showErrorDialog(tr("import.import_failed"), host.lastImportError);
-            Diagnostics.log("import-failed", host.lastImportError, "max:11537");
+            host.showErrorDialog("导入失败", host.lastImportError);
+            try { DebugSink.text("import-failed", host.lastImportError); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29139", ignored); }
         }
-      }
+        }
 }

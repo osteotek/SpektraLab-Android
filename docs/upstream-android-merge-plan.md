@@ -68,11 +68,16 @@ branch were removed afterwards.
   stayed offline after repeated cold starts); the last recorded device golden
   for the same pixel paths remains `e60490499b9a94eb`. Re-run `device-golden.ps1`
   once an emulator is available.
-- **Not yet integrated:** `ImportWorker`, `RawImportWorker`, `ExportWorker` and
-  `RenderWorker`. Upstream's corresponding inline paths gained 1.7.0 features
-  (`Fotufilm`, Ultra HDR, live clip, pointer-based pixel buffers) that our
-  1.6.2m-era workers do not have, so replacing them would regress the product.
-  They need re-implementation against the 1.7.0 APIs before wiring.
+- **All four pixel workers re-extracted and wired (2026-11-22):** `ImportWorker`,
+  `RawImportWorker`, `ExportWorker` and `RenderWorker` were regenerated from the
+  *current 1.7.0 inline implementations* (458, 445, 1091 and 475 lines), so they
+  carry Fotufilm, Ultra HDR, live clip and pointer-buffer behaviour, and the four
+  Activity entry points now delegate to them.
+  Offline verification and the APK build pass; static audit found no translation
+  artifacts. **Device golden re-verification is still REQUIRED before this
+  change can be merged downstream** — the Orca AVD stopped booting and adb stays
+  offline, so `e60490499b9a94eb` has not yet been re-confirmed with the wired
+  workers. Do not fast-forward `master` until that gate passes.
 
 ### Merge readiness (2026-11-22)
 

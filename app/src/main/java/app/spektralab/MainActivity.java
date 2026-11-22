@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
      * The frame on the canvas was imported with 「按原图」: its export owes the
      * file's own size, even though the session holds the device's budget.
      */
-    private boolean exportAtNative = false;
+    boolean exportAtNative = false;
     /** A cap the last E-1001 offered, good for exactly one import. */
     int pendingCapPixels = 0;
     /** The user has already said yes to this frame's downscale. One import. */
@@ -114,7 +114,7 @@ public class MainActivity extends Activity {
     /** The chain's own last frame, before the drawn border goes on it. */
     private Bitmap lastFotuPlain;
     private boolean fotuPending;
-    private int fotuGeneration;
+    int fotuGeneration;
     /** A live frame is in flight; the newest settings wait for it. */
     private volatile boolean fotuLivePending;
     private volatile int fotuLiveGeneration;
@@ -124,9 +124,9 @@ public class MainActivity extends Activity {
     /** The value a dial prints while a finger is on it: over the whole activity. */
     private android.widget.TextView dialValue;
     /** The file the second engine reads. It takes a path, not a descriptor. */
-    private String fotuSourcePath;
+    String fotuSourcePath;
     /** The grant whose private copy came up short; see {@link #fotuSourceFile}. */
-    private String fotuSourceDead;
+    String fotuSourceDead;
     // The frame's own tone controls, as state: captureLook/applyLook move them
     // in and out of a Look exactly like every other slider's value.
     private float fotuEv, fotuHighlights, fotuShadows, fotuSaturation = 1f, fotuVibrance;
@@ -200,7 +200,7 @@ public class MainActivity extends Activity {
     Bitmap lastRenderedBitmap;
     /** A chip whose grant was revoked and is waiting for the user to re-pick
      *  the same file: the index that will be repaired, -1 for a normal import. */
-    private int repickFrame = -1;
+    int repickFrame = -1;
 
     /** The import's float32 RGB frame: a malloc'd native address, 0 = none.
      *  Not a ByteBuffer -- see `SpektraLabEngine.allocPixels`. */
@@ -280,7 +280,7 @@ public class MainActivity extends Activity {
      * committed frame replaces it on release. Clearing the stand-in is only
      * legal when no gesture owns it, which is what this says.
      */
-    private boolean rotating = false;
+    boolean rotating = false;
     /**
      * **The geometry as it was when the user committed it.**
      *
@@ -604,6 +604,10 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         markFile("onCreate enter");
         super.onCreate(savedInstanceState);
+        // Load the editor's locale catalogs before anything calls tr(): the
+        // extracted workers and error/report helpers use them, and the APK
+        // carries assets/locales/{en,zh-CN}.json.
+        AppLanguage.load(this);
         markFile("after super");
         installBackHandler();
         markFile("back handler");
@@ -2724,13 +2728,13 @@ public class MainActivity extends Activity {
      * 1440 is a phone clip's own size and the fast path; 2160 is "as much as
      * the camera recorded", which is what a 画质-first export wants.
      */
-    private int liveClipEdge;
+    int liveClipEdge;
     /** path -> the clip's own long edge. Read once per clip; the sheet asks on
      *  the UI thread and `MediaExtractor.setDataSource` on a local file is a
      *  couple of milliseconds, but not twice. */
     private final java.util.HashMap<String, Integer> liveClipDims = new java.util.HashMap<>();
     /** True while the export's clip loop owns the engine; see {@link #renderImage}. */
-    private volatile boolean liveClipRendering;
+    volatile boolean liveClipRendering;
     /** The LIVE pill on the canvas: the frame has a clip, and it is the play control. */
     private TextView liveBadge;
     /** The same pill for the HDR screen preview: it changes what the canvas
@@ -2759,7 +2763,7 @@ public class MainActivity extends Activity {
     /** How wide a preview frame is developed. See `livePreviewFrames`. */
     private static final int LIVE_PREVIEW_EDGE = 400;
     /** A render asked for during that loop, run when it ends. */
-    private volatile boolean pendingRenderAfterLive;
+    volatile boolean pendingRenderAfterLive;
     /**
      * The presentation timestamp the exported motion photo should declare: the
      * **last** frame of the clip, which is the print itself.
@@ -3344,7 +3348,7 @@ public class MainActivity extends Activity {
      * 按着；向前跳则相反，拖动中途就发「停手」帧。墙钟只留给**要落盘或要发给
      * 服务器**的时间戳（记录号、报告 `at`、文件名、更新检查的 24 小时间隔）。
      */
-    private static long nowMs() { return android.os.SystemClock.elapsedRealtime(); }
+    static long nowMs() { return android.os.SystemClock.elapsedRealtime(); }
 
     int dp(float v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
@@ -3368,13 +3372,13 @@ public class MainActivity extends Activity {
      */
     private static final long BUSY_PLATE_DELAY_MS = 350;
 
-    private void showBusyIfSlow() {
+    void showBusyIfSlow() {
         uiHandler.postDelayed(() -> {
             if (rendering) showBusy("RENDERING");
         }, BUSY_PLATE_DELAY_MS);
     }
 
-    private void showBusy(String word) {
+    void showBusy(String word) {
         if (busyLabel == null) return;
         // **No word.** The plate carries the wave and nothing else: 「READING」
         // printed over the old 'RAW LOADED' read as two labels disagreeing, and
@@ -3481,7 +3485,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void hideBusy() {
+    void hideBusy() {
         if (busyLabel == null) return;
         busyLabel.setVisibility(android.view.View.GONE);
         busyLabel.setText("RENDERING");
@@ -12536,7 +12540,7 @@ public class MainActivity extends Activity {
                 }).start();
     }
 
-    private void loadAlbum() {
+    void loadAlbum() {
         if (lightTable == null) return;
         final int gen = ++albumGen;
         new Thread(() -> {
@@ -13996,7 +14000,7 @@ public class MainActivity extends Activity {
      *
      * @return the correlation, or -1 when it cannot be measured.
      */
-    private static double exportMatchesCanvas(String path, Bitmap canvas) {
+    static double exportMatchesCanvas(String path, Bitmap canvas) {
         if (canvas == null || canvas.getWidth() <= 0) return -1;
         try {
             final android.graphics.BitmapFactory.Options probeOpt =
@@ -14048,7 +14052,7 @@ public class MainActivity extends Activity {
      * answer it: every row equal to its neighbours is a row-constant render, a
      * ramp is a stride mismatch, and a real photograph is neither.
      */
-    private static String rowSignature(String path) {
+    static String rowSignature(String path) {
         try {
             final android.graphics.BitmapFactory.Options o =
                     new android.graphics.BitmapFactory.Options();
@@ -14102,7 +14106,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private static String inspectExportedFile(String path) {
+    static String inspectExportedFile(String path) {
         try {
             final android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
             o.inSampleSize = 2;
@@ -14171,7 +14175,7 @@ public class MainActivity extends Activity {
      * pixels the header claims (16 bits × 3 channels for TIFF; a DNG carries
      * its own layout and is trusted on the magic and the size alone).
      */
-    private static String inspectContainer(String path, int w, int h) {
+    static String inspectContainer(String path, int w, int h) {
         try {
             final java.io.File f = new java.io.File(path);
             final long len = f.length();
@@ -15953,7 +15957,7 @@ public class MainActivity extends Activity {
      * A new photograph: every card's picture and every card's verdict about
      * itself belong to the old one.
      */
-    private void clearShelfCache() {
+    void clearShelfCache() {
         filmThumbs.clear();
         prefetchFails.clear();
         prefetchFailWhy.clear();
@@ -21369,7 +21373,7 @@ public class MainActivity extends Activity {
         return BitmapFactory.decodeFile(path, opts);
     }
 
-    private void glowInPlace(Bitmap bmp) {
+    void glowInPlace(Bitmap bmp) {
         if (!glowOn || glowAmount <= 0f || bmp == null) return;
         if (!bmp.isMutable()) {
             // **Never silent.** A no-op here looks exactly like a broken pass:
@@ -21442,7 +21446,7 @@ public class MainActivity extends Activity {
      * skipped the one view where a before/after is actually readable: turning
      * the pass on there flipped the toggle and nothing else.
      */
-    private void refreshGlowForCurrentView() {
+    void refreshGlowForCurrentView() {
         // **No film is the same state as 原图, reached without pressing it.**
         if (showingOriginal || filmStock == null) { refreshOriginalGlow(); return; }
         if (filmStock != null && session != null) requestGlowRefresh();
@@ -24644,7 +24648,7 @@ public class MainActivity extends Activity {
      * <p>Idempotent: with the rebate already off this returns false, so a
      * second failure from another cause is reported rather than re-healed.
      */
-    private boolean healCanvasFromError(String raw) {
+    boolean healCanvasFromError(String raw) {
         if (raw == null || !raw.contains("film canvas would be")) return false;
         if (!overscanOn) return false;
         overscanOn = false;
@@ -24655,7 +24659,7 @@ public class MainActivity extends Activity {
         return true;
     }
 
-    private boolean healGateFromError(String raw) {
+    boolean healGateFromError(String raw) {
         if (raw == null || !raw.contains("gate's shape")) return false;
         final java.util.regex.Matcher m =
                 java.util.regex.Pattern.compile("a (\\d+) x (\\d+) frame").matcher(raw);
@@ -25454,7 +25458,7 @@ public class MainActivity extends Activity {
      * <p>被拒绝（`fit.valid == false`，例如回拉超过 `max_lift`）时什么都不发，
      * 沿用滑块的经验曲线 —— 一个被拒绝的解绝不能被提交。
      */
-    private void refreshSceneLatitudeFit(SpektraLabEngine.Session s) {
+    void refreshSceneLatitudeFit(SpektraLabEngine.Session s) {
         if (s == null || !sceneLatitudeActive()) {
             slFitValid = false;
             slFitKey = Long.MIN_VALUE;
@@ -25926,7 +25930,7 @@ public class MainActivity extends Activity {
      * be tens of milliseconds on a 20 MP canvas and would need a buffer the
      * size of the frame.
      */
-    private static int[] sampleGrid(Bitmap b) {
+    static int[] sampleGrid(Bitmap b) {
         final int w = b.getWidth(), h = b.getHeight();
         final int n = PictureCheck.GRID;
         final int[] out = new int[n * n];
@@ -28709,7 +28713,7 @@ public class MainActivity extends Activity {
      * <p>64 rows keeps the scratch at 3 MB for a 12,288-wide frame; larger
      * bands buy nothing because the cost is `getPixels` itself.
      */
-    private static void liftRows(Bitmap from, long dst, int w, int h) {
+    static void liftRows(Bitmap from, long dst, int w, int h) {
         if (from == null || dst == 0 || w <= 0 || h <= 0) return;
         final int band = Math.max(1, Math.min(h, 64));
         final int[] scratch = new int[w * band];
@@ -28737,462 +28741,7 @@ public class MainActivity extends Activity {
      * decoding the same RAF).
      */
     private void loadImage(Uri uri, int reopenIndex) {
-        CrashTrail.mark(this, "import:load " + uri);
-        // **The plate waits for the decode, not for the picker.** It used to go
-        // up here, before the two questions this method can ask -- the size
-        // sheet and "this file will not open" -- and both of those `return`.
-        // Nothing took the plate down, so the wave sat over a canvas with no
-        // photograph and the 选择照片 card underneath it: "导入选项不显示",
-        // reported with a 59 MP re-import of one of our own exports
-        // (SL-261118-F773). A RAW raises its own, in `loadRawImage`.
-        // A render of the previous photograph must not land on this one, and
-        // the file path of the previous photograph is not this one's.
-        fotuSourcePath = null;
-        fotuSourceDead = null;
-        fotuGeneration++;
-        // Whatever is rendering belongs to the photograph being replaced.
-        renderEpoch++;
-        // **The previous photograph's dimensions are not this one's.**
-        // `originalAspect()` prefers `importedWidth` when it is set, and only
-        // the RAW path ever set it. So a RAW followed by a JPEG kept the RAW's
-        // shape: on a 6912x4530 raw then a 1280x1708 jpeg, `refreshEdgeFormats`
-        // logged `aspect=1.5258` for the *portrait* frame it had just imported,
-        // picked the 135 gate, and the render then refused it with
-        // "a 1280 x 1708 frame is not the 135 gate's shape" -- E-1305.
-        importedWidth = 0;
-        importedHeight = 0;
-        // A profile belongs to one file. The RAW branch below attaches this
-        // frame's; a JPEG has none, and the canvas falls back to plain sRGB.
-        sourceToneCurve = null;
-        // **The previous frame's gate is not this frame's shape.** A 6x17 chosen
-        // for a panorama stayed selected for the next picture, and the render
-        // then refused a 1365x1024 frame with "is not the 120_6x17 gate's
-        // shape". `refreshEdgeFormats` re-picks from the new aspect a few lines
-        // later, so this only clears the stale choice.
-        overscanFormat = "135";
-        // **The one number that separates the two hypotheses.** A death inside
-        // the decode leaves nothing but `import:load` behind, and at that point
-        // "this file is corrupt" and "this file is 50 MP and the kernel
-        // reclaimed us" look identical. The header costs a few milliseconds and
-        // answers it before anything large is allocated.
-        try {
-            final int[] sz = sniffImageSize(uri);
-            final long want = sz == null ? 0L : (long) sz[0] * sz[1] * 12L;
-            CrashTrail.mark(this, "import:size "
-                    + (sz == null ? "unknown" : sz[0] + "x" + sz[1])
-                    + " need=" + (want >> 20) + "MB"
-                    + " avail=" + (availableMemoryBytes() >> 20) + "MB");
-            try { DebugSink.text("import-size", (sz == null ? "unknown" : sz[0] + "x" + sz[1])
-                    + " need=" + (want >> 20) + "MB avail=" + (availableMemoryBytes() >> 20) + "MB"
-                    + " native=" + importAtNativeSize); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28732", ignored); }
-        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28733", ignored); }
-        // A new photograph starts at the two entry cards, never on a page
-        // whose switch belonged to the frame before it.
-        CrashTrail.mark(this, "import:page");
-        if (edgePageIndex >= 0) openEdgePage(-1);
-        // A frame the strip remembers but the system will not open any more:
-        // say so in one sentence instead of letting a SecurityException be
-        // classified as [E-9000] 未归类.
-        if (!canReadUri(uri)) {
-            // **A revoked grant is permanent, so the chip goes with it.**
-            // Keeping it meant this dialog on every launch -- sixty-six of them
-            // in a week, the largest single error in the database -- and the
-            // only way out was 「关闭」, which changed nothing. Removed once,
-            // here, and the strip is honest afterwards.
-            final int dead = currentFrame;
-            final boolean ownsIt = dead >= 0 && dead < frames.size()
-                    && frames.get(dead).uri.equals(uri);
-            if (ownsIt) {
-                // **The chip stays, and the way out is one tap.** Removing it
-                // on the spot threw away the look with the grant: the file is
-                // still on the phone, it is the *permission* that expired.
-                showActionSheet("照片已不可访问",
-                        "系统收回了文件选择器给的临时授权，这张照片现在读不到了。\n\n"
-                        + "「重新选择这个文件」会把它复制到应用自己的目录——胶片、构图、片边和日期都会保留；"
-                        + "「从照片栏移除」只去掉这一条，文件本身不动。",
-                        new String[]{"重新选择这个文件", "从照片栏移除", "取消"}, which -> {
-                            if (which == 0) { repickFrame = dead; pickRawFile(); }
-                            else if (which == 1) removeFrame(dead);
-                        });
-            } else {
-                showErrorDialog("照片已不可访问",
-                        "这张照片的读取权限已经失效——系统收回了文件选择器给的临时授权。\n\n"
-                        + "点「导入」重新选择这张照片；新版本会把文件复制到应用自己的目录，"
-                        + "之后切到别的软件回来也不会丢。");
-            }
-            return;
-        }
-        CrashTrail.mark(this, "import:canread");
-        sourceUri = uri;
-        // A different file means a different sensor balance; the previous
-        // frame's gains must not be handed to it.
-        wbUserMul = null;
-        // The frame's own look, stated before any session is built: a chip
-        // returns to a photograph *and* to what was done to it; a pick from ＋
-        // starts with no film at all.
-        if (reopenIndex >= 0 && reopenIndex < frames.size()) {
-            applyLook(frames.get(reopenIndex).look);
-        } else {
-            // **A reopen with no frame to reopen is a new photograph.** This
-            // used to leave the global fields untouched when the index was
-            // gone (every chip deleted, then ＋), so the new frame inherited
-            // the previous one's print exposure and meter switch -- reported
-            // as "重新导入一张还是黑灰", gone after a restart for the obvious
-            // reason.
-            applyLook(defaultLook());
-        }
-        CrashTrail.mark(this, "import:look");
-        try {
-            // Check if this is a RAW file by extension
-            String fileName = getFileName(uri);
-            CrashTrail.markNow(this, "import:name " + fileName);
-            final String lower = fileName == null ? "" : fileName.toLowerCase();
-            isRawFile = lower.endsWith(".rw2") || lower.endsWith(".raw")
-                    || lower.endsWith(".dng") || lower.endsWith(".arw")
-                    || lower.endsWith(".nef") || lower.endsWith(".cr2")
-                    || lower.endsWith(".cr3") || lower.endsWith(".orf")
-                    || lower.endsWith(".raf") || lower.endsWith(".pef")
-                    || lower.endsWith(".srw") || lower.endsWith(".x3f")
-                    || lower.endsWith(".rwl") || lower.endsWith(".3fr")
-                    || lower.endsWith(".mrw") || lower.endsWith(".erf");
-            // A RAW container we know of but cannot open still beats decoding
-            // its bytes as a JPEG and reporting a mystery.
-            final String[] knownButUnsupported = {".heic.raw", ".iiq", ".mos"};
-            for (String ext : knownButUnsupported) {
-                if (lower.endsWith(ext)) {
-                    hideBusy();
-                    showInAppToast("[E-1107] 暂不支持 " + ext + " 格式");
-                    return;
-                }
-            }
-            
-            if (isRawFile) {
-                loadRawImage(uri, reopenIndex);
-                return;
-            }
-
-            // **Ask before shrinking.** Importing at the negative's own size is
-            // the point of a 45 MP camera; a silent downscale is the app making
-            // that decision on the user's behalf, and it shows up later as an
-            // export that is smaller than the file. The header gives the size
-            // without decoding anything, so the question is free.
-            // **Ask before shrinking.** The header gives the size without
-            // decoding anything, so the question is free -- and the answer
-            // belongs to the user, not to a memory estimate.
-            if (!importAtNativeSize && !importBudgetAccepted && !suppressBudgetDialog) {
-                final int[] full = sniffImageSize(uri);
-                if (full != null) {
-                    final long area = (long) full[0] * (long) full[1];
-                    final int cap = maxImportPixels();
-                    if (area > cap || Math.max(full[0], full[1]) > IMPORT_LONG_EDGE) {
-                        // A question is not an import: whatever was on the canvas
-                        // stays, and no plate is left behind.
-                        hideBusy();
-                        showImportBudgetDialog(uri, full[0], full[1], cap, reopenIndex);
-                        return;
-                    }
-                }
-            }
-            importBudgetAccepted = false;
-
-            // Retire the shelf queue *before* the session it is holding goes
-            // away. Its generation is the only thing that makes a card which
-            // is already rendering drop its bitmap instead of filing the old
-            // photograph's picture under this photograph's films: without this
-            // bump the queue wrote last frame's thumbnails into `filmThumbs`,
-            // every card then looked right in the map (`containsKey`), and the
-            // new queue skipped them forever -- cards showing the previous
-            // photo until each one was tapped.
-            stopPrefetch();
-            // Free the previous frame before decoding: a 20 MP pick wants a
-            // ~200 MB direct buffer and the old session still holds its planes
-            // (this OOM was 241 MB with 201 MB left in the heap).
-            //
-            // **Under the render lock.** `stopPrefetch` only bumps a generation
-            // -- it does not wait for the thread, which may be inside
-            // `renderBegin` on this very session. Closing it from under the GPU
-            // is the SIGSEGV this device logs as `vkCmdCopyBuffer` against a
-            // destroyed buffer, and it is what tapping an earlier thumbnail
-            // while the shelf was still drawing looked like.
-            synchronized (renderMutex) {
-                if (session != null) { session.close(); session = null; }
-            }
-            // **The old frame's planes go before the new one asks for its own.**
-            // `spk_open` allocates the decoded source while the previous
-            // session's pool is still resident. On a 16 GB phone a 32 MP pool
-            // plus a 50 MP frame is more than the app's cgroup will hand out,
-            // and it surfaces as `cannot allocate Vulkan result pixels` ->
-            // E-1003 even though the frame alone would have fit. The export
-            // path already trims for exactly this reason.
-            try { if (engine != null) engine.trimPool(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28872", ignored); }
-            lastRenderedBitmap = null;
-            refreshPanelLocks();
-            // The plate on the canvas belongs to the frame we just left.
-            clearBusyPlate();
-            dateText = null;
-            setStage(0, null);
-            // The white-balance half is RAW-only; tell it which file this is.
-            refreshViewPanel();
-            sourceBitmap = null;
-            // `allocDirect` has no cleaner: dropping the field frees nothing.
-            if (sourcePixels != 0) { SpektraLabEngine.freePixels(sourcePixels); sourcePixels = 0; }
-            // The previous file's unpacked plane is not this frame's problem.
-            try { SpektraLabEngine.clearRawCache(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28885", ignored); }
-            clearShelfCache();
-            // The canvas is not a control. `setOriginalVisual` only paints the
-            // 原图 button; what CompareView holds is `after` (the last render)
-            // and it survives a new session. That was the whole "I changed the
-            // photo and the canvas still shows the old one" report: the frame
-            // was never dropped, so the next render was the first thing to
-            // replace it.
-            if (compare != null) compare.clear();
-            System.gc();
-
-            // Cap by area, the way the RAW path does. inSampleSize only halves,
-            // so one exact scale follows if the sample still overshoots.
-            final boolean nativeSize = importAtNativeSize;
-            importAtNativeSize = false;                       // one import only
-            // **「按原图」 is about the export, not about what the engine
-            // holds.** It used to lift every ceiling here, so a 200 MP file
-            // opened a 200 MP session: 12 B/px of float is 2.4 GB, beside an
-            // 800 MB ARGB bitmap, for a canvas that renders at 2048 and a
-            // negative cache that holds the frame again. That is the 4.9-6.5 GB
-            // low-memory kills in 1.7.0's first four hours, and a five-second
-            // main-thread stall on the way in.
-            //
-            // The session now takes the device's own budget, and
-            // `exportAtNative` sends the export back to the file for its real
-            // size -- `exportImage` already re-decodes and opens a fresh
-            // session for exactly that (the `bigger` branch). Same promise,
-            // a tenth of the frame.
-            exportAtNative = nativeSize;
-            // A cap the last render failure handed us (see offerSmallerImport):
-            // one import's worth, then back to the device's own answer.
-            final int forcedCap = pendingCapPixels;
-            pendingCapPixels = 0;
-            e1001Offered = false;
-            // An explicit "render smaller" from the failure sheet outranks the
-            // native default: the user asked for that one.
-            final int capPixels = forcedCap > 0 ? forcedCap : maxImportPixels();
-            final int edgeCap = IMPORT_LONG_EDGE;
-            // The cleanup above (shelf queue, session close, gc) is its own
-            // stretch; without this mark a death there would still be reported
-            // as `import:look` and blamed on the decoder.
-            showBusy("READING");
-            CrashTrail.mark(this, "import:decoding");
-            sourceBitmap = decodeImport(uri, capPixels, edgeCap);
-            if (sourceBitmap == null) {
-                // The old message here was "无法解码图片", which gave the user
-                // nothing to act on. A HEIC/HEIF this phone's decoder refuses is
-                // the common case, so the dialog carries the way out instead of
-                // describing it.
-                showActionSheet("[E-1107] 这张图本机解不开",
-                        "多半是 HEIC/HEIF 或 10-bit 的图（三星、iPhone 默认存这种）。\n"
-                                + "换「从文件选择」再试一次，读不到的话请先另存为 JPEG。",
-                        new String[]{"从文件选择", "取消"}, which -> {
-                            if (which == 0) pickRawFile();
-                        });
-                // The decode ran and gave nothing back; the plate does not owe
-                // the user a reason to stare at it.
-                hideBusy();
-                return;
-            }
-            sourceBitmap = applyExifRotation(uri, sourceBitmap);
-            // **Where the import actually is.** `import:load` covers everything
-            // from the pick to the session, which is a fifty-line stretch with
-            // a 200 MB bitmap and a 600 MB direct buffer in it; when the system
-            // reclaims the process mid-way the trail cannot tell a bad file
-            // from a decoder that handed back 50 MP it could not then convert.
-            CrashTrail.mark(this, "import:decoded " + sourceBitmap.getWidth() + "x"
-                    + sourceBitmap.getHeight());
-            final long area = (long) sourceBitmap.getWidth() * sourceBitmap.getHeight();
-            final int longEdge = Math.max(sourceBitmap.getWidth(), sourceBitmap.getHeight());
-            // Three ceilings in three units, and the strictest wins: area is
-            // quadratic in the scale, the long edge is linear, and the third is
-            // what this phone can actually hold -- the import's float buffer is
-            // 12 B/px, which is 240 MB at 20 MP and the largest single
-            // allocation the app makes. Asking before taking it is what turns
-            // an OutOfMemoryError (an Error, so the old `catch (Exception)`
-            // never saw it and the process died) into a smaller import.
-            double k = 1.0;
-            // **Nothing is scaled when the user asked for the original.** The
-            // memory test below used to run even with `nativeSize`, so "force
-            // original" still came back smaller -- the one place where the
-            // suggestion was a ceiling in disguise.
-            final long availBytes = availableMemoryBytes();
-            if (!nativeSize) {
-                if (area > capPixels) k = Math.min(k, Math.sqrt((double) capPixels / (double) area));
-                if (longEdge > edgeCap) k = Math.min(k, (double) edgeCap / longEdge);
-                // **No third ceiling from free RAM.** `capPixels` already came
-                // from the pixel budget, and that budget is now derived from
-                // total RAM rather than whatever happened to be free. Applying
-                // `availMem - 128 MB` *again*, here, is what made two imports of
-                // one file land on different sizes. The float buffer is malloc'd
-                // and its failure has an honest message (`导入这张图需要 N MB`),
-                // so the guess is not needed.
-            }
-            if (k < 1.0) {
-                final int nw = Math.max(1, (int) Math.round(sourceBitmap.getWidth() * k));
-                final int nh = Math.max(1, (int) Math.round(sourceBitmap.getHeight() * k));
-                Bitmap scaled = Bitmap.createScaledBitmap(sourceBitmap, nw, nh, true);
-                if (scaled != sourceBitmap) sourceBitmap.recycle();
-                sourceBitmap = scaled;
-                try { DebugSink.text("import-scale", "k=" + k + " -> " + nw + "x" + nh
-                        + " avail=" + availBytes); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:28986", ignored); }
-            }
-            sourceWidth = sourceBitmap.getWidth();
-            sourceHeight = sourceBitmap.getHeight();
-            // The JPEG path sets these too, so nothing has to infer a shape from
-            // whatever the last raw happened to be.
-            importedWidth = sourceWidth;
-            importedHeight = sourceHeight;
-            refreshEdgeFormats();
-
-            // Convert a row at a time: a full int[] of 20 MP would be another
-            // 80 MB on the Java heap next to the direct buffer.
-            rawFilePath = null;
-            // 12 bytes a pixel, outside the Java heap, and the largest single
-            // allocation this app makes: 240 MB at 20 MP, 600 MB at 50. The
-            // engine takes float32 only (the Metal zero-copy door is refused by
-            // the Vulkan backend), so it cannot be made smaller -- but it can be
-            // made *legible*: an OutOfMemoryError here is caught and explained,
-            // and only a kernel reclaim leaves the trail without this mark.
-            final long pixelBytes = (long) sourceWidth * sourceHeight * 3L * 4L;
-            CrashTrail.mark(this, "import:pixels " + (pixelBytes >> 20) + "MB avail="
-                    + (availableMemoryBytes() >> 20) + "MB");
-            try { DebugSink.text("import-pixels", sourceWidth + "x" + sourceHeight
-                    + " need=" + (pixelBytes >> 20) + "MB avail="
-                    + (availableMemoryBytes() >> 20) + "MB"); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29010", ignored); }
-            // **malloc, not allocateDirect.** The runtime caps direct-buffer
-            // memory at the heap growth limit (512 MB on the phone that
-            // reported this), and a 50 MP frame is 576 MB of float32, so the
-            // old call was refused with 4.3 GB free -- and the message blamed
-            // the device. This one asks for memory that exists.
-            try {
-                sourcePixels = SpektraLabEngine.allocPixels(pixelBytes);
-            } catch (Throwable oom) {
-                throw new IllegalStateException("导入这张图需要 " + (pixelBytes >> 20)
-                        + " MB 内存，本机现在给不出来（可用 "
-                        + (availableMemoryBytes() >> 20) + " MB）。"
-                        + "\n\n点「导入」再选一次，这次选「缩到建议尺寸」。", oom);
-            }
-            // **A band a call, not a row a call.** One row per `getPixels` and
-            // per JNI call was 16,320 of each on a 200 MP import, on the UI
-            // thread: the five-second freeze behind SL-261121-C907.
-            liftRows(sourceBitmap, sourcePixels, sourceWidth, sourceHeight);
-            
-            final int pw = Math.max(1, Math.round(sourceWidth * Math.min(1f, 1024f / Math.max(sourceWidth, sourceHeight))));
-            final int ph = Math.max(1, Math.round(sourceHeight * Math.min(1f, 1024f / Math.max(sourceWidth, sourceHeight))));
-            // **`createScaledBitmap` hands back the source itself when the
-            // target size already matches**, and a bitmap straight out of
-            // `BitmapFactory` is immutable, so that is the branch every picture
-            // whose long edge is at most 1024 takes. The recycle below then left
-            // `compare` holding a dead bitmap: the next draw threw
-            // "Canvas: trying to use a recycled bitmap", and because the same
-            // picture is re-imported by `restoreSessionState` the app died on
-            // every launch until its data was cleared.
-            Bitmap preview = Bitmap.createScaledBitmap(sourceBitmap, pw, ph, true);
-            if (preview == sourceBitmap) {
-                preview = sourceBitmap.copy(Bitmap.Config.ARGB_8888, false);
-                if (preview == null) preview = sourceBitmap;
-            }
-            beforeBitmap = preview;
-            compare.setBefore(beforeBitmap);
-            if (sourceBitmap != beforeBitmap) sourceBitmap.recycle();
-            sourceBitmap = null;
-            statusText.setText("Local preview");
-            setStage(1, getFileName(uri));
-            // **Before `rememberFrame`, while we still know which file it is.**
-            // The canvas only ever sees the still; if the clip is not taken now
-            // it is gone, and the export silently writes a plain JPEG over a
-            // live photo -- which is exactly what every version before this one
-            // did.
-            final LiveClip live = captureLiveClip(uri);
-            rememberFrame(uri, reopenIndex);
-            if (live != null && currentFrame >= 0 && currentFrame < frames.size()) {
-                final Frame f = frames.get(currentFrame);
-                f.liveClip = live.path;
-                f.liveTsUs = live.tsUs;
-                saveSessionState();
-            }
-            rebuildFilmCards();
-            setStep(1);
-            
-            // Create engine and session
-            CrashTrail.mark(this, "import:engine");
-            ensureEngine();
-            CrashTrail.mark(this, "import:engine-ok");
-            synchronized (renderMutex) {
-                if (session != null) { session.close(); session = null; }
-            }
-            session = engine.openSession(sourcePixels, sourceWidth, sourceHeight, 3);
-            CrashTrail.mark(this, "import:session");
-            applySessionParams();
-            // **The engine has its own copy; this one is 12 B/px of dead
-            // weight.** 432 MB at 36 MP, held for the whole life of the
-            // session, and the only reader left was the export's last-resort
-            // fallback -- which now re-decodes from the file instead. This is
-            // the largest single allocation the app makes and the only one it
-            // can give back without touching a pixel; the low-memory killer
-            // took the process at 2.7 GB with a 36 MP frame open.
-            //
-            // Small frames keep it: below 4 MP it is 48 MB, and an export that
-            // can no longer read its file still has the buffer that way.
-            if (session != null && sourcePixels != 0
-                    && (long) sourceWidth * sourceHeight > 4_000_000L) {
-                SpektraLabEngine.freePixels(sourcePixels);
-                sourcePixels = 0;
-                CrashTrail.mark(this, "import:staging freed");
-            }
-            lastImportError = null;
-            // An import is not a look. The frame lands unrendered with no film
-            // chosen; the first render happens when the user picks a stock.
-            showingOriginal = true;
-            lastRenderedBitmap = null;
-            setOriginalVisual(true);
-            rebuildFilmCards();
-            final boolean stayOnOriginal = reopenToOriginal;
-            reopenToOriginal = false;
-            if (filmStock != null && stayOnOriginal) {
-                // **Left on 原图, opens on 原图.** The look is still there -- the
-                // film card is what the next tap develops -- but re-rendering
-                // here is what made a chip jump back onto a film the user had
-                // deliberately stepped off.
-                showingOriginal = true;
-                setOriginalVisual(true);
-                updateFilmSelection();
-                statusText.setText("ORIGINAL · RAW 原始数据（未调色，选胶片后才成片）");
-                if (!batchExportRunning) startPrefetch();
-            } else if (filmStock != null) {
-                // A chip came back with a look: develop it again rather than
-                // making the user re-pick a film that was never unpicked.
-                showingOriginal = false;
-                updateFilmSelection();
-                // **Not while a batch is exporting.** Each frame is opened only
-                // to hand it to `exportImage`, which builds its own full-size
-                // session; a preview pass here is a second render of the same
-                // frame, and it holds `rendering` up long enough that the next
-                // parameter touch answers "渲染中". The batch's order is
-                // load -> export, with nothing in between.
-                if (!batchExportRunning) renderImage();
-            } else {
-                statusText.setText("未渲染 · 选择胶片开始" + importSizeNote(sourceWidth, sourceHeight));
-                // Nothing is going to render, so the plate leaves here.
-                hideBusy();
-                if (!batchExportRunning) startPrefetch();
-                // **The one lock that happened before this photo existed.** The
-                // panel was greyed at launch with no bitmap; without this the
-                // 发光 page would stay grey until something else re-ran the pass.
-                refreshPanelLocks();
-                // 同一个理由的第二件事：现在有画面了，开着的辉光要落到它上面。
-                refreshGlowForCurrentView();
-            }
-        } catch (Throwable t) {
-            hideBusy();
-            lastImportError = describeImportFailure(t);
-            showErrorDialog("导入失败", lastImportError);
-            try { DebugSink.text("import-failed", lastImportError); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29139", ignored); }
-        }
+        new ImportWorker(this).run(uri, reopenIndex);
     }
 
     /**
@@ -29377,7 +28926,7 @@ public class MainActivity extends Activity {
      * @return true when a reload was started; false when the engine could not
      *         be rebuilt, in which case the caller shows the frame it has.
      */
-    private boolean rebuildEngineAndReload(String why) {
+    boolean rebuildEngineAndReload(String why) {
         final int idx = currentFrame;
         try {
             synchronized (renderMutex) {
@@ -29589,449 +29138,7 @@ public class MainActivity extends Activity {
     }
 
     void loadRawImage(Uri uri, int reopenIndex) {
-        fotuSourcePath = null;
-        fotuSourceDead = null;
-        fotuGeneration++;
-        // **This decode has a serial number.** A RAW takes three to five seconds, and the strip
-        // is right there: tap chip A, tap chip B before A finishes, and A's worker woke up last
-        // -- closed B's session, installed A's pixels and drew A under B's chip. That is the
-        // "quick taps give the wrong picture / half-drawn canvas" report. `loadImage` bumps the
-        // epoch; this worker is the one place that has to honour it.
-        final int importEpoch = renderEpoch;
-        // Read once, on the UI thread, before the decode starts: the worker
-        // below cannot be allowed to see a flag that a later tap already moved.
-        final boolean stayOnOriginal = reopenToOriginal;
-        reopenToOriginal = false;
-        // **A different import is a different frame.** The cache keys on path +
-        // mtime, and every import is copied to `files/import/<same name>`; two
-        // copies inside one second share an mtime, so the second import could
-        // be handed the first one's decoded pixels. Clearing here costs one
-        // unpack and buys the guarantee that the pixels belong to this file.
-        try { SpektraLabEngine.clearRawCache(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29554", ignored); }
-        CrashTrail.mark(this, "import:raw " + uri);
-        try {
-            String filePath = getFilePathFromUri(uri);
-            rawFilePath = filePath;
-            // **The phone's own idea of how this raw should look.** OnePlus and
-            // OPPO ship a 128/140-point `ProfileToneCurve` plus a
-            // `BaselineExposure`; LibRaw parses neither, which is the whole of
-            // "our canvas is flat and Lightroom's is not". Read once here, a
-            // 6 KB seek, and handed to the canvas only.
-            sourceToneCurve = SpektraLabEngine.sourceDisplayProfile(filePath);
-            final int curvePts = sourceToneCurve == null ? 0 : (sourceToneCurve.length - 1) / 2;
-            DebugSink.text("raw-view", "display profile: "
-                    + (sourceToneCurve == null ? "none"
-                       : curvePts + " points, baseline "
-                         + String.format(java.util.Locale.US, "%.2f", sourceToneCurve[0]) + " EV"));
-            // **Which half of the import we got to.** Until now the RAW path
-            // filed one mark (`import:raw`) and then nothing until the decode
-            // had already finished, so a report of the form "crashed importing
-            // a RAW" could not be narrowed past "somewhere in the next four
-            // seconds" -- the file copy, `open_file`, the decode, `spk_open`,
-            // the meter or the source view. The JPEG path has had these marks
-            // for a while; this one had not.
-            CrashTrail.markNow(this, "import:path " + (filePath == null ? "(null)" : "ok"));
-            if (filePath == null) {
-                showInAppToast("无法获取RAW文件路径");
-                return;
-            }
-
-            // **Ask before the decode.** `open_file` reads the container header
-            // in milliseconds; the decode that follows commits 12 bytes per
-            // pixel before anyone is consulted, and at 50 MP that is 600 MB. A
-            // sheet that appears after that memory is spent is a post-mortem,
-            // not a choice.
-            if (!suppressBudgetDialog && !importAtNativeSize && pendingCapPixels <= 0) {
-                final int[] dims = SpektraLabEngine.rawDimensions(filePath);
-                if (dims != null && dims[0] > 0 && dims[1] > 0) {
-                    final long area = (long) dims[0] * (long) dims[1];
-                    final int cap = maxImportPixels();
-                    if (area > cap || Math.max(dims[0], dims[1]) > IMPORT_LONG_EDGE) {
-                        statusText.setText("选择导入尺寸");
-                        showRawBudgetDialog(uri, dims[0], dims[1], cap, reopenIndex);
-                        return;
-                    }
-                }
-            }
-
-            statusText.setText("Decoding RAW…");
-            // **The same three things the JPEG path does, for the same three
-            // reasons** — and this path had none of them, which is why a RAW
-            // import kept the previous photograph everywhere except the little
-            // source thumbnail:
-            //   · stopPrefetch() retires the shelf queue, whose generation is
-            //     what stops last frame's cards being filed under this frame;
-            //   · compare.clear() drops `CompareView.after`, the previous
-            //     render, which nothing else ever clears;
-            //   · filmThumbs.clear() is the shelf's own cache, keyed by film
-            //     id with no frame identity in the key.
-            stopPrefetch();
-            if (compare != null) compare.clear();
-            clearShelfCache();
-            lastRenderedBitmap = null;
-            refreshPanelLocks();
-            // **Not `clearBusyPlate()`.** That emptied the canvas for the
-            // decode and left "RAW LOADED" standing there while it worked --
-            // the old behaviour the import was asked to stop having.
-            dateText = null;
-            // **This method raises its own plate.** `loadImage` no longer does:
-            // it can return on a size question, and a plate with nothing under
-            // it is what "导入选项不显示" was. The decode sets the stage itself
-            // as soon as it has a preview; the plate sits on top of that.
-            showBusy("READING");
-            new Thread(() -> {
-                try {
-                    // Someone tapped another chip while this file was decoding. The newer import
-                    // owns the canvas, the session and the strip: this one must not touch any of
-                    // them, or the picture and the selected chip disagree.
-                    if (importEpoch != renderEpoch) {
-                        CrashTrail.mark(this, "import:superseded " + importEpoch + "/" + renderEpoch);
-                        return;
-                    }
-                    String resourcesDir = getResourcesDir();
-                    if (engine == null) {
-                        vkLogFile().delete();
-                        engine = SpektraLabEngine.create(resourcesDir, vkLogFile().getAbsolutePath());
-                        uploadCapabilities();
-                    }
-                    // Under the render lock: the shelf queue can still be
-                    // inside `renderBegin` when this thread gets here, and
-                    // closing a session out from under it is a native crash,
-                    // not an exception.
-                    synchronized (renderMutex) {
-                        if (session != null) { session.close(); session = null; }
-                    }
-                    Probe.log("import", "pre avail=" + Probe.mb(availableMemoryBytes())
-                            + " cap=" + maxImportPixels() + " native=" + importAtNativeSize
-                            + " pool=" + Probe.pool(engine));
-                    Probe.step(this, "import:pre");
-                    // **Same trim as the JPEG path.** A 50 MP frame needs
-                    // ~76 B/px of planes (3.8 GB); the previous session's pool
-                    // is freed here rather than left for the allocator to run
-                    // out against.
-                    try { if (engine != null) engine.trimPool(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29656", ignored); }
-                    Probe.log("import", "trimmed pool=" + Probe.pool(engine));
-                    
-                    // `film_stock` names a profile file: "" and "null" both make
-                    // `load_profile` fail ("bad stock name"), so an unchosen film
-                    // omits the key and the engine keeps its own default. The UI
-                    // still shows 原图 and renders nothing until a card is tapped.
-                    // **Two engines, two id spaces.** A frame developed by the
-                    // second engine keeps `fotu:c200` in `filmStock` and a
-                    // fotufilm medium in `printStock`. To `spk_open` both read
-                    // as profile file names, and neither exists -- so restoring
-                    // such a frame died with "bad stock name 'fotu:c200'" before
-                    // one pixel was shown, on every launch. This session still
-                    // has work to do (it decodes the raw and paints 原图), so it
-                    // opens with no film and the default paper; the picture
-                    // itself is developed by `renderFotu` through `renderImage`.
-                    final boolean fotuFrame = isFotuStock(filmStock);
-                    final String spkFilm = fotuFrame ? null : filmStock;
-                    // **Never the sentinel.** 无相纸 is a UI idea; `spk_open`
-                    // reads this as a file name (SL-261119-938F).
-                    final String spkPaper = fotuFrame ? "kodak_portra_endura"
-                            : spkPaperForEngine(printStock);
-                    final String filmField = spkFilm == null ? ""
-                            : String.format(java.util.Locale.US, "\"film_stock\":\"%s\",", spkFilm);
-                    // **`Locale.US`, always, for anything that becomes JSON.**
-                    // Without it `%.2f` follows the phone's locale: a device set
-                    // to German (or any comma-decimal locale) sent
-                    // `"print_exposure":1,00`, the engine's parser read `1` and
-                    // then wanted a key where the `,` stood, and answered
-                    // `params_delta: expected a string at byte 147` -- byte 147
-                    // is the first `0` of `00`. Every raw import on such a phone
-                    // died with E-1106 (SL-261121-130E).
-                    String params = String.format(java.util.Locale.US,
-                        "{%s\"print_stock\":\"%s\",\"input_color_space\":\"ProPhoto RGB\",\"input_cctf_decoding\":false,\"output_color_space\":\"sRGB\",\"print_exposure\":%.2f,\"preview_long_edge\":2048}",
-                        filmField, spkPaper, printExposure
-                    );
-                    
-                    try { DebugSink.text("open-params", "path=" + filePath + "\n" + params); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29693", ignored); }
-                    // The cap comes from the device, not from a constant: a
-                    // plane is 12 B/px and a binding may not exceed the GPU's
-                    // maxStorageBufferRange. Two limits apply, whichever is
-                    // lower -- that range, and the 65 535-workgroup dispatch
-                    // limit (16,776,960 px) this driver still loses blocks over.
-                    final boolean nativeSize = importAtNativeSize;
-                    importAtNativeSize = false;                   // one import only
-                    // The raw path re-opens at the file's own size for its
-                    // export already (`openRawSession(..., 0, 0)`), so a flag
-                    // left over from a JPEG import must not reach it.
-                    exportAtNative = false;
-                    if (nativeSize) {
-                        try { DebugSink.text("import-mode", "native size, no cap"); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29706", ignored); }
-                    }
-                    rawFilePath = filePath;
-                    importCapPixels = nativeSize ? 0 : maxImportPixels();
-                    // **The frame's own balance, if it had one.** A frame
-                    // reopened from the strip restores `wbUserMul` through
-                    // `applyLook`; without passing it here the reopen decodes
-                    // as-shot while the sliders still show the saved Kelvin.
-                    final float[] wbMul = wbUserMul;
-                    CrashTrail.markNow(this, "import:opening cap=" + importCapPixels);
-                    session = wbMul != null
-                            ? engine.openRawSessionTuned(filePath, params,
-                                    importCapPixels, nativeSize ? 0 : IMPORT_LONG_EDGE, wbMul)
-                            : engine.openRawSession(filePath, params,
-                                    importCapPixels, nativeSize ? 0 : IMPORT_LONG_EDGE);
-                    Probe.log("import", "opened=" + (session != null)
-                            + " cap=" + importCapPixels
-                            + " edge=" + (nativeSize ? 0 : IMPORT_LONG_EDGE)
-                            + " mul=" + Probe.mul(wbMul)
-                            + " pool=" + Probe.pool(engine));
-                    lastImportError = null;
-                    {
-                        // The size the engine actually opened, which is not
-                        // always the one `rawDimensions` promised: `half_size`
-                        // and the budget can both change it.
-                        final int[] sd = session == null ? null : session.getDimensions();
-                        CrashTrail.markNow(this, "import:opened "
-                                + (sd == null || sd.length < 2 ? "none" : sd[0] + "x" + sd[1]));
-                    }
-                    // **The session's own parameters, which this path never sent.**
-                    // `openRawSession` carries the film, the paper and the decode
-                    // colour space; it does not carry grain, halation, glare, the
-                    // format or the rebate, and those live in `applyParams()`. The
-                    // bitmap path has always called this pair; the raw path did
-                    // not, so a raw kept the engine's defaults for every optical
-                    // control until the user moved a slider -- and a rebate or a
-                    // date back chosen before the import never reached the render
-                    // at all.
-                    applySessionParams();
-
-                    // **Meter before the source view.** `spk_export_source`
-                    // materialises the live tier, and a meter taken after it
-                    // has come back -11 EV on a frame whose own export read a
-                    // perfectly normal mean -- the second RAW opened from a
-                    // batch metered black, rendered black, and ignored every
-                    // metering mode. Measuring first makes the `solve` below a
-                    // cache hit (`meter_key` does not change in between).
-                    // **Under the same lock `close()` takes.** These two solves
-                    // ran outside `renderMutex`, so a close from another path
-                    // could release the session between the null check and the
-                    // call -- which is exactly the dangling handle that killed
-                    // the process in the meter (SL-261110-F858). The session
-                    // field is also re-read inside the lock, so a swap that
-                    // lands in between simply skips the solve.
-                    try {
-                        synchronized (renderMutex) {
-                            if (session != null) session.solve("exposure");
-                        }
-                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29764", ignored); }
-                    // **The raw itself**, which is the "before" side of every
-                    // comparison and the only honest thing to show on import:
-                    // the decoded frame in working space, packed with no
-                    // transfer function, so a display reads it the way it reads
-                    // a raw -- flat, and dark. The camera's own JPEG is **not**
-                    // a stand-in for it: a preview is the camera's rendering,
-                    // not this frame, and showing it as "原图" is the same lie
-                    // as importing it would be. No frame, no picture.
-                    Bitmap rawView = exportSourceBitmap(session, 0.0);
-                    final Bitmap preview = rawView;
-                    CrashTrail.markNow(this, "import:source " + (preview == null ? "none"
-                            : preview.getWidth() + "x" + preview.getHeight()));
-                    final boolean hasPreview = preview != null;
-                    if (!hasPreview) {
-                        // The canvas is not allowed to be blank for no reason.
-                        // A session that opened but produced no source frame is
-                        // a bug, and it has to say so rather than look like a
-                        // photo that failed to load.
-                        try { DebugSink.text("raw-view", "no source frame for the canvas"); }
-                        catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29784", ignored); }
-                        runOnUiThread(() -> statusText.setText("RAW 已载入，原图预览未生成"));
-                    }
-                    if (hasPreview) {
-                        runOnUiThread(() -> {
-                            beforeBitmap = preview;
-                            compare.setBefore(preview);
-                            setStage(1, getFileName(uri));
-                            rememberFrame(uri, reopenIndex);
-                            rebuildFilmCards();
-                            setStep(1);
-                            statusText.setText("Raw preview");
-                        });
-                    }
-
-                    // "Process" (配光): without a solved print exposure and
-                    // filter pack the print runs on defaults and blows the
-                    // highlights. The mac app makes the user press Process;
-                    // this build does it once on open.
-                    String solvedJson = null;
-                    try {
-                        synchronized (renderMutex) {
-                            solvedJson = session == null ? null : session.solve("both");
-                        }
-                        DebugSink.text("solve", solvedJson == null ? "(null)" : solvedJson);
-                        CrashTrail.markNow(this, "import:print " + (solvedJson == null ? "none" : "ok"));
-                    } catch (Throwable se) {
-                        DebugSink.text("solve-failed", String.valueOf(se));
-                    }
-                    // **The meter's EV, applied to what the screen shows.** The
-                    // developed side gets it; leaving the decoded side at 0 EV
-                    // is what made a night frame look like a black rectangle
-                    // next to a correctly exposed print.
-                    if (solvedJson != null) {
-                        // The applied value, for the export. See `meteredEv`.
-                        try {
-                            final org.json.JSONObject root = new org.json.JSONObject(solvedJson);
-                            final org.json.JSONObject sp = root.optJSONObject("solved_params");
-                            meteredEv = sp == null ? 0.0 : sp.optDouble("exposure_compensation_ev", 0.0);
-                            Probe.log("meter", "applied ev=" + meteredEv);
-                        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29824", ignored); }
-                    }
-                    if (hasPreview && solvedJson != null) {
-                        double solvedEv = 0.0;
-                        try {
-                            solvedEv = new org.json.JSONObject(solvedJson)
-                                    .getJSONObject("exposure_ev_by_method")
-                                    .optDouble("balanced", 0.0);
-                        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29832", ignored); }
-                        // **Shown a little under the meter, on purpose.** At the
-                        // full metered EV the decoded side reads brighter than
-                        // the developed one, and the film's own contrast stops
-                        // showing. 85 % is the same exposure a "before" frame is
-                        // expected to have.
-                        solvedEv *= SOURCE_VIEW_EV_SCALE;
-                        if (Math.abs(solvedEv) > 0.02) {
-                            final Bitmap lifted = exportSourceBitmap(session, solvedEv);
-                            if (lifted != null) {
-                                final double shownEv = solvedEv;
-                                runOnUiThread(() -> {
-                                    beforeBitmap = lifted;
-                                    if (compare != null) compare.setBefore(lifted);
-                                    if (currentFrame >= 0 && currentFrame < frames.size()) {
-                                        final Frame frame = frames.get(currentFrame);
-                                        try {
-                                            final int tw = Math.max(1, dp(42));
-                                            final int th = Math.max(1, Math.round(
-                                                    tw * lifted.getHeight() / (float) lifted.getWidth()));
-                                            frame.thumb = Bitmap.createScaledBitmap(lifted, tw, th, true);
-                                            persistThumb(frame);
-                                        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29854", ignored); }
-                                        rebuildFrameChips();
-                                    }
-                                    try {
-                                        DebugSink.text("raw-view", "display ev=" + shownEv);
-                                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29859", ignored); }
-                                });
-                            }
-                        }
-                    }
-                    runOnUiThread(() -> {
-                        if (session == null) return;
-                        showingOriginal = true;
-                        lastRenderedBitmap = null;
-                        setOriginalVisual(true);
-                        rebuildFilmCards();
-                        if (filmStock == null) statusText.setText("未渲染 · 选择胶片开始");
-                        // See the JPEG import: a photo now exists, so the lock
-                        // has to be recomputed even when no render follows.
-                        refreshPanelLocks();
-                        refreshGlowForCurrentView();
-                        // **No render from here.** `sourceWidth/Height` are
-                        // still the previous frame's and `refreshEdgeFormats`
-                        // has not run, so a render now used the old shape and
-                        // the old gate: that is E-1305 the moment the user
-                        // switches between a landscape and a portrait frame.
-                        // The block after `dims` renders once this frame's own
-                        // numbers are in.
-                    });
-
-                    // Get dimensions from session
-                    int[] dims = session == null ? null : session.getDimensions();
-                    if (dims == null || dims.length < 2 || dims[0] <= 0 || dims[1] <= 0) {
-                        // **A session that will not say how big it is failed
-                        // quietly.** Seen while switching back and forth between
-                        // two photographs: the previous import's close raced
-                        // this one's open, and the handle that came back had no
-                        // size. One clean reopen is worth trying before asking
-                        // the user to start again -- and if it fails the same
-                        // way, that is a decode problem and the message below is
-                        // the honest one.
-                        try { if (session != null) session.close(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29895", ignored); }
-                        session = wbMul != null
-                                ? engine.openRawSessionTuned(filePath, params,
-                                        importCapPixels, nativeSize ? 0 : IMPORT_LONG_EDGE, wbMul)
-                                : engine.openRawSession(filePath, params,
-                                        importCapPixels, nativeSize ? 0 : IMPORT_LONG_EDGE);
-                        dims = session == null ? null : session.getDimensions();
-                    }
-                    if (dims == null || dims.length < 2 || dims[0] <= 0 || dims[1] <= 0) {
-                        // A zero here used to travel silently: the canvas laid
-                        // itself out for nothing, every later size was wrong,
-                        // and the reason was never on screen.
-                        throw new IllegalStateException(
-                                "session reported no size: " + java.util.Arrays.toString(dims));
-                    }
-                    importedWidth = dims[0];
-                    importedHeight = dims[1];
-                    int w = dims[0];
-                    int h = dims[1];
-                    sourceWidth = w;
-                    sourceHeight = h;
-                    try { DebugSink.text("raw-dims", "w=" + w + " h=" + h); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29916", ignored); }
-
-                    // **The session's own size, not `rawSourceSize()`.** That
-                    // legacy query answers {0,0} on purpose -- its comment says
-                    // callers must ask the session -- and reading it put
-                    // "RAW 0×0 · 0.0 MP" on the status bar.
-                    final boolean capped = importCapPixels > 0;
-                    try {
-                        DebugSink.text("raw-cap", (capped ? "capped at " + importCapPixels : "native")
-                                + " -> session " + w + "x" + h);
-                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:29926", ignored); }
-
-                    runOnUiThread(() -> {
-                        refreshEdgeFormats();
-                        setStep(1);
-                        // **No sheet.** The raw arrives at the size it was
-                        // imported at; the suggestion is a line in the status
-                        // bar, not a gate.
-                        hideBusy();
-                        statusText.setText("RAW " + w + "×" + h
-                                + " · " + megapixels(w, h) + " MP"
-                                + importSizeNote(w, h));
-                        refreshViewPanel();
-                        // **Render only now.** The frame's real size and the
-                        // gates that fit it are both known, so the render the
-                        // chip's Look asks for uses this picture's shape.
-                        if (filmStock != null && stayOnOriginal) {
-                            showingOriginal = true;
-                            setOriginalVisual(true);
-                            updateFilmSelection();
-                            statusText.setText("ORIGINAL · RAW 原始数据（未调色，选胶片后才成片）");
-                            if (!batchExportRunning) startPrefetch();
-                        } else if (filmStock != null) {
-                            showingOriginal = false;
-                            updateFilmSelection();
-                            if (!batchExportRunning) renderImage();
-                        } else if (!batchExportRunning) {
-                            startPrefetch();
-                        }
-                    });
-                } catch (Throwable t) {
-                    final String said = describeImportFailure(t);
-                    lastImportError = said;
-                    // A High-Efficiency NEF is not a preview job. Say what it
-                    // is (E-1108, a compression this build has no decoder for)
-                    // and what to change, and leave the file alone.
-                    runOnUiThread(() -> {
-                        statusText.setText("RAW加载失败 " + SpkError.shortForm(said));
-                        showErrorDialog("RAW 加载失败", said);
-                        // **The plate belongs to whoever raised it.** This path
-                        // returned with `showBusy("READING")` still up, so a
-                        // failed import left the canvas saying 「加载中」 for
-                        // ever -- and deleting the frame did not clear it,
-                        // because nothing owned it.
-                        hideBusy();
-                    });
-                }
-            }).start();
-        } catch (Throwable t) {
-            lastImportError = describeImportFailure(t);
-            hideBusy();
-            showErrorDialog("RAW 加载失败", lastImportError);
-        }
+        new RawImportWorker(this).run(uri, reopenIndex);
     }
     
     /**
@@ -30854,7 +29961,7 @@ public class MainActivity extends Activity {
         return o.append('"').toString();
     }
 
-    private static String b(boolean v) { return v ? "true" : "false"; }
+    static String b(boolean v) { return v ? "true" : "false"; }
 
     static String f(String fmt, double v) {
         return String.format(java.util.Locale.US, fmt, v);
@@ -30978,7 +30085,7 @@ public class MainActivity extends Activity {
      * **reopening any RAW frame** die on import (SL-261119-938F). One function,
      * four callers, so a fifth cannot be born without it.
      */
-    private String spkPaperForEngine(String paper) {
+    String spkPaperForEngine(String paper) {
         if (paper != null && !PAPER_SCAN.equals(paper)
                 && (printIds == null || printIds.isEmpty() || printIds.contains(paper)))
             return paper;
@@ -31804,7 +30911,7 @@ public class MainActivity extends Activity {
      * throw. The prefix is a compile-time constant and the test is a
      * `startsWith`.
      */
-    private static boolean isFotuStock(String stock) {
+    static boolean isFotuStock(String stock) {
         return stock != null && stock.startsWith("fotu:");
     }
 
@@ -32578,7 +31685,7 @@ public class MainActivity extends Activity {
      * fact that a cancel cannot stop the kernel mid-tile, so the button is not
      * offered here.
      */
-    private void renderFotu() {
+    void renderFotu() {
         if (!isFotuStock(filmStock)) return;
         if (fotuRendering) {
             fotuPending = true;
@@ -33044,7 +32151,7 @@ public class MainActivity extends Activity {
         return Math.round(frameNumber);
     }
 
-    private void exportFotu(String format, String tier, final Runnable onDone,
+    void exportFotu(String format, String tier, final Runnable onDone,
                             final int liveEdgeIn) {
         final boolean tiff = "tifflin".equals(format) || "tiff".equals(format);
         final String ext = tiff ? ".tif" : ".jpg";
@@ -34036,479 +33143,7 @@ public class MainActivity extends Activity {
     void renderImage() { renderImage(PREVIEW_LONG_EDGE); }
 
     void renderImage(int longEdge) {
-        // **The engine is busy re-developing a live clip.** That loop owns 12
-        // seconds of it, and a second render landing inside it would share the
-        // one native result buffer with the clip. Say so, and render once when
-        // it is done -- returning silently would leave the canvas on the
-        // previous look for ever, which reads as a dead control.
-        if (liveClipRendering) { pendingRenderAfterLive = true; return; }
-        // The full-size pass owns the canvas from here. A live frame still in
-        // flight would otherwise land a moment later and put 800 px on top of
-        // the result the user waited for.
-        cancelLivePreview();
-        // A clip playing over a canvas that is about to change is the previous
-        // look, on top of the new one.
-        stopLivePreview();
-        fullGeneration.incrementAndGet();
-        CrashTrail.mark(this, "render:begin");
-        // **A decode in flight owns the session.** It is closed for a few
-        // seconds while LibRaw re-demosaics; a render that walked in then would
-        // either complain about a null session or queue behind the decode for
-        // the whole of it, which is what "白平衡卡死" was.
-        if (wbDecoding) { pendingRender = true; return; }
-        // Every branch says something. The foot is one thin line, too quiet to
-        // carry "nothing happened"; failures need to be readable.
-        if (session == null) {
-            try { DebugSink.text("render", "no session, lastImportError=" + lastImportError); }
-            catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34008", ignored); }
-            // **A frame in the strip means an import is on its way.** Coming
-            // back from the background walks through here while `loadImage` is
-            // still decoding -- there is a picture loading, so "还没有可渲染的
-            // 图像" is the wrong sentence and the dialog is pure noise. Ask for
-            // the render again once the import finishes; if the import really
-            // failed, its own message is the one to show.
-            if (!frames.isEmpty() && lastImportError == null) {
-                pendingRender = true;
-                return;
-            }
-            showErrorDialog("还没有可渲染的图像", lastImportError == null
-                    ? "先导入一张照片。点画布中央的「选择照片」，或点下方「换图」；RAW / HEIC 请选「从文件管理器选择」。"
-                    : "上次导入没有完成：\n\n" + lastImportError);
-            return;
-        }
-        if (filmStock == null) {
-            showInAppToast("先在下方选一张胶片");
-            return;
-        }
-        // **The second engine has no session, no tiers and no live path.**
-        // One call takes the file, the skeleton and the numbers and writes a
-        // JPEG; the canvas decodes it back. Everything that asks for a picture
-        // funnels through here, so this is the only branch it needs.
-        if (isFotuStock(filmStock)) {
-            renderFotu();
-            return;
-        }
-        // **The gate follows the crop.** `refreshEdgeFormats` re-picks from the
-        // current shape, and it used to run only at import and on the compose
-        // page -- so cropping to 3:2 left the 6x8 the file had matched, and the
-        // render was refused with E-1305 for a picture the user had just made
-        // 3:2. Cheap (ten ratios), and it never touches the picture itself.
-        if (overscanOn) refreshEdgeFormats();
-        stopPrefetch();
-        if (rendering) {
-            // One native result buffer for the whole process: two renders would
-            // interleave on it and hand back another frame's dimensions.
-            try { DebugSink.text("render", "already rendering"); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34046", ignored); }
-            Probe.log("render", "queued film=" + filmStock + " pending=" + pendingRender);
-            statusText.setText("Rendering…");
-            // Not dropped: a tap that lands mid-render is the *last* choice the
-            // user made, so it becomes the next render instead of a toast.
-            pendingRender = true;
-            showInAppToast("正在渲染，完成后按新选择再画一次…");
-            return;
-        }
-        scheduleUndo();          // one entry per settled edit
-        final String renderedStock = filmStock;
-        // **The frame this render belongs to.** Deleting the chips (or opening
-        // another photo) while a render is in flight used to let its callback
-        // call setStage(1) on a canvas that no longer had a frame: the empty
-        // state -- and with it the 选择照片 button -- vanished, which is the
-        // "删掉全部缩略图后导入按钮有时候会消失" report.
-        final int renderedFrame = currentFrame;
-        final int renderedEpoch = renderEpoch;
-        // **Which geometry this render is allowed to speak for.** A render the
-        // commit did not wait for carries the angle from before it, and letting
-        // it take the preview turn off is exactly the frame that jumps back.
-        final int renderedGeometrySeq = geometrySeq;
-        rendering = true;
-        // **No stock spinner.** The plate underneath carries the wave, and a
-        // horizontal indeterminate bar across the canvas was the one piece of
-        // this screen that looked like the platform rather than the app.
-        progressBar.setVisibility(View.GONE);
-        showBusyIfSlow();
-        statusText.setText("Rendering…");
-        try { DebugSink.text("render", "begin " + sourceWidth + "x" + sourceHeight); }
-        catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34076", ignored); }
-
-        new Thread(() -> {
-            try {
-                synchronized (renderMutex) {
-                if (session == null) {
-                    // **A frame change can land between the check the UI thread
-                    // made and this lock.** Throwing here turned that race into
-                    // a dialog on top of a batch export that had already
-                    // finished ("加片边批量导出后弹错 / 会话状态异常"). The frame
-                    // is genuinely gone, so there is nothing to draw: hand the
-                    // UI back the state this method claimed, and let the next
-                    // import render. A rebate export makes every render 2-3 s
-                    // slower, which is exactly why that window got wide enough
-                    // to hit in the field and not on the bench.
-                    CrashTrail.mark(this, "render:session-gone");
-                    runOnUiThread(() -> {
-                        rendering = false;
-                        if (progressBar != null) progressBar.setVisibility(View.GONE);
-                        if (busyLabel != null) hideBusy();
-                    });
-                    return;
-                }
-                // The queue stops here, but a card it started before still
-                // finishes and can put a stock back onto this session. Take the
-                // film the user picked, under the same lock the render runs
-                // under, so the picture and the edge text cannot disagree.
-                CrashTrail.markNow(MainActivity.this, "render:lock");
-                // **Geometry first, and not through the delta ledger.** A crop
-                // or a rotation is the one edit the canvas cannot show while it
-                // is being made: the preview turns the *view* and the picture
-                // itself stays where it was until the render comes back. So it
-                // is the one edit that must not depend on `deltaSent` deciding
-                // the value looks unchanged -- and it is sent with the stock,
-                // which is what forces the rebuild a SHOOT-layer field needs.
-                // **Geometry goes last, not first.** It used to be sent before
-                // the full delta, on the theory that the delta would restate
-                // the same value. A device report (`SL-261111-A06E`) shows a
-                // render that came back with the *cover zoom* of a 12 degree
-                // turn and no turn at all: the tree had the angle, the picture
-                // did not. Whatever the full delta does to that field, the
-                // geometry is now written after it, so the last word before
-                // `renderBegin` is this one.
-                final boolean geoOwed = pendingGeometry;
-                pendingGeometry = false;
-                applyParams(renderedStock, longEdge);
-                // **相纸的宽容度，每次换图/换纸只解一次。** 引擎拿这张纸真正跑
-                // 一条斜坡量出黑白边界，再按画面的 P0.1/P99.9 解 knee/room；
-                // 解出来和上次不同就补一条 delta，然后才 renderBegin。
-                refreshSceneLatitudeFit(session);
-                if (geoOwed) {
-                    sendGeometry();
-                    try {
-                        final String gp = session.getParams();
-                        final int at = gp.indexOf("\"geometry_rotation_deg\"");
-                        DebugSink.text("geo-check", "after delta " + (at >= 0
-                                ? gp.substring(at, Math.min(gp.length(), at + 30)) : "absent"));
-                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34133", ignored); }
-                }
-                Probe.log("render", "apply film=" + renderedStock + " long=" + longEdge
-                        + " src=" + sourceWidth + "x" + sourceHeight);
-                CrashTrail.markNow(MainActivity.this, "render:params");
-                // **The black box is `renderBegin`.** Everything before it is
-                // Java and leaves a stack; everything after it is arithmetic on
-                // a frame that already exists. So the ticker wraps exactly that
-                // call, and `render:returned` is the first proof it came back.
-                Thread ticker = startTick("render", session);
-                CrashTrail.markNow(MainActivity.this, "render:call");
-                int[] dims;
-                try {
-                    dims = session.renderBegin("live");
-                } finally {
-                    stopTick(ticker);
-                }
-                int w = dims[0], h = dims[1];
-                CrashTrail.markNow(MainActivity.this, "render:returned " + w + "x" + h);
-                if (w <= 0 || h <= 0) throw new RuntimeException("engine returned empty frame");
-
-                CrashTrail.markNow(MainActivity.this, "render:alloc " + w + "x" + h);
-                Bitmap bmp = newFrameBitmap(w, h);
-                int[] pixels = new int[w * h];
-                CrashTrail.markNow(MainActivity.this, "render:copy");
-                int copied = session.copyArgbRange(pixels, 0, h);
-                if (copied != w * h) {
-                    throw new RuntimeException("pixel copy incomplete " + copied + "/" + (w * h));
-                }
-                bmp.setPixels(pixels, 0, w, 0, 0, w, h);
-                // **The glow pass runs here, on the render thread.** After the
-                // engine's pixels land and before the UI thread is handed the
-                // frame, so the canvas, the histogram and the film thumbnail all
-                // see the same glowed picture.
-                glowInPlace(bmp);
-                CrashTrail.markNow(MainActivity.this, "render:setPixels");
-                // **The canvas, not just the export.** The reports say the ruler
-                // is already visible while editing, and `log_edge_profile` only
-                // ever ran on an export -- three rounds of "send me the export"
-                // is three rounds of making the user do the measuring. This is
-                // the same read-only scan on the frame that is about to be
-                // shown; it costs ~2 ms on a 2048 tier and is skipped on the
-                // 800 px live path, where it would run ten times a second.
-                if (longEdge >= 1024) {
-                    try {
-                        final String edgeLine = SpektraLabEngine.edgeReport();
-                        final String verdict = edgeVerdictOfLine(edgeLine);
-                        if (verdict != null) {
-                            DebugSink.textNow("edge-canvas", verdict);
-                        } else if (edgeLine != null && edgeCanvasSends < 4) {
-                            // Below the threshold, but say what it measured:
-                            // knowing that preview reads 40 and full reads 8 on
-                            // the same picture is the whole answer.
-                            ++edgeCanvasSends;
-                            DebugSink.textNow("edge-weak", edgeLine);
-                        }
-                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34189", ignored); }
-                }
-                session.renderEnd();
-                CrashTrail.markNow(MainActivity.this, "render:end");
-                // What the meter did to *this* frame. A render that looks dark
-                // is either the film's curve or an exposure the engine decided
-                // on, and the two are indistinguishable by eye -- one line of
-                // numbers settles it.
-                try {
-                    rememberAppliedEv(session.progressJson(), "full");
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34199", ignored); }
-                // The rebate's own numbers, next to the buffer they belong to.
-                // "the edge is wrong in the export but right in the preview" is
-                // a question only these two lines can answer.
-                try {
-                    DebugSink.text("overscan-geom", "tier=live " + w + "x" + h + " "
-                            + session.overscanGeometry());
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34206", ignored); }
-                // The engine's log for this render. When a frame comes back as
-                // one flat colour there is nothing else to read: it says which
-                // tier was built, how big, and what each dispatch covered.
-                uploadVkLog();
-
-                final int fw = w, fh = h;
-                try {
-                    long hsh = 1469598103934665603L;
-                    for (int i = 0; i < pixels.length; i += 7) { hsh ^= pixels[i]; hsh *= 1099511628211L; }
-                    long t0 = nowMs();
-                    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 85, bo);
-                    DebugSink.text("preview", "w=" + w + " h=" + h + " hash=" + Long.toHexString(hsh)
-                            + " copy=" + copied + " first=" + Integer.toHexString(pixels[0])
-                            + " mid=" + Integer.toHexString(pixels[(h / 2) * w + w / 2])
-                            + " jpegBytes=" + bo.size());
-                    // logcat hook for scripts/device-golden.ps1 (no network needed).
-                    android.util.Log.i("SpektraLabHash", "w=" + w + " h=" + h + " hash="
-                            + Long.toHexString(hsh) + " band=" + testBandRows + " copy=" + copied
-                            + " first=" + Integer.toHexString(pixels[0])
-                            + " mid=" + Integer.toHexString(pixels[(h / 2) * w + w / 2]));
-                    DebugSink.bytes("preview", "p.jpg", bo.toByteArray(), "image/jpeg");
-                    DebugSink.text("preview-timing", "jpeg_ms=" + (nowMs() - t0));
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34225", ignored); }
-                runOnUiThread(() -> {
-                    if (renderedEpoch != renderEpoch
-                            || currentFrame != renderedFrame || session == null) {
-                        try { DebugSink.text("render", "frame changed mid-render; dropped"); }
-                        catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34230", ignored); }
-                        // **The overlay belongs to this generation too.**
-                        //
-                        // Returning here is what left the canvas saying
-                        // RENDERING for ever: the strip had already switched to
-                        // another photo, so this callback dropped its bitmap --
-                        // and took the only `rendering = false` with it. Every
-                        // later tap then answered "正在渲染", and a render that
-                        // had queued up (`pendingRender`) never ran either,
-                        // because `renderImage` bailed at the same flag.
-                        rendering = false;
-                        clearBusyPlate();
-                        if (pendingRender) {
-                            pendingRender = false;
-                            if (filmStock != null && session != null) renderImage();
-                        }
-                        return;
-                    }
-                    // **A render that succeeded is not the same as a picture.**
-                    // The engine's other failure mode: no exception, plausible
-                    // dimensions, one value in every pixel. It reached the
-                    // canvas, the film card and the export as if it were the
-                    // photograph. Three responses, cheapest first:
-                    //   1. redraw on the same session -- most are a transient
-                    //      of the frame that was just decoded;
-                    //   2. rebuild the device and reload -- the state itself is
-                    //      wrong, and re-sending numbers cannot reach it;
-                    //   3. show it and say so, because a wrong picture that
-                    //      reports itself is better than a retry loop.
-                    // The budgets cap how often 1 and 2 may run in a process;
-                    // a picture resets the streak.
-                    final PictureCheck.Result look = PictureCheck.of(sampleGrid(bmp));
-                    if (!look.ok()) {
-                        ++flatStreak;
-                        SelfHeal.repaired("render-flat", look.describe()
-                                + " at " + fw + "x" + fh + " (attempt " + flatStreak + ")");
-                        if (flatStreak == 1 && SelfHeal.budget("render-redraw", 2)) {
-                            rendering = false;
-                            hideBusy();
-                            renderImage(longEdge);
-                            return;
-                        }
-                        if (flatStreak == 2 && SelfHeal.budget("engine-rebuild", 2)) {
-                            rendering = false;
-                            hideBusy();
-                            if (rebuildEngineAndReload(look.describe() + " twice at " + fw + "x" + fh)) {
-                                return;
-                            }
-                        }
-                        statusText.setText("画面异常 · " + look.verdict);
-                    } else if (flatStreak != 0) {
-                        SelfHeal.repaired("render-recovered",
-                                "a picture after " + flatStreak + " constant frame(s)");
-                        flatStreak = 0;
-                    }
-                    showingOriginal = false;
-                    compare.setAfter(bmp);
-                    // **The pill follows the canvas, not the frame list.** Every
-                    // successful render passes through here, and this is the
-                    // line that actually turns `showingOriginal` off -- the
-                    // twenty assignments elsewhere do not all call
-                    // `setOriginalVisual`, so refreshing there would leave the
-                    // pill behind on some paths.
-                    refreshLiveBadge();
-                    // **The stand-in goes on *every* frame that is current.** The
-                    // old test also required `rotationPending`, a flag only two
-                    // call sites set -- so a commit path that missed it left the
-                    // preview rotation sitting on top of a frame that already
-                    // carried the angle, and the picture came out turned twice.
-                    // The only thing that may keep a stand-in alive is a finger
-                    // still on the glass.
-                    if (!rotating && renderedGeometrySeq >= geometrySeq) {
-                        final boolean was = rotationPending;
-                        rotationPending = false;
-                        compare.setPreviewRotation(0f);
-                        if (was) {
-                            try {
-                                DebugSink.send("rotate", "frame seq=" + renderedGeometrySeq
-                                        + "/" + geometrySeq + " stand-in cleared");
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34309", ignored); }
-                        }
-                    }
-                    setStage(1, null);
-                    // Give the pool back if this render left it far larger than
-                    // the frame -- ten shoot-layer edits in a row is what parks
-                    // gigabytes and gets the launcher killed. Off the UI thread:
-                    // trimming destroys buffers and waits on the device.
-                    new Thread(MainActivity.this::trimPoolIfBloated, "pool-trim").start();
-                    setStep(2);
-                    lastRenderedBitmap = bmp;
-                    // The histogram describes what the canvas shows, so it moves
-                    // with the render, not with the tab that displays it.
-                    if (histogram != null) histogram.setBitmap(bmp);
-                    refreshComparePill();
-                    cacheFilmThumb(renderedStock, bmp);
-                    updateCardThumb(renderedStock);
-                    updateFilmSelection();
-                    // A user render stops the queue so it can own the GPU. Put
-                    // it back afterwards, or the rest of the shelf never fills.
-                    startPrefetch();
-                    // A finished render is exactly what makes both pages live
-                    // -- and it is the only place that does.
-                    refreshPanelLocks();
-                    setOriginalVisual(false);
-                    updateFilmSelection();
-                    final int[] bands = blackBands(bmp);
-                    statusText.setText("Preview ready " + fw + "×" + fh);
-                    try {
-                        DebugSink.text("bands", "render " + fw + "x" + fh
-                                + " black rows top=" + bands[0] + " bottom=" + bands[1]
-                                + " source=" + sourceWidth + "x" + sourceHeight);
-                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34341", ignored); }
-                    progressBar.setVisibility(View.GONE);
-                    hideBusy();
-                    rendering = false;
-                    // The canvas now shows this look; it is also the version
-                    // that has to survive a kill from recents.
-                    schedulePersist();
-                    if (pendingRender) { pendingRender = false; renderImage(); }
-                });
-            }
-            } catch (Throwable e) {
-                try { session.renderEnd(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34352", ignored); }
-                final String msg = describe(e);
-                if (healCanvasFromError(msg)) {
-                    runOnUiThread(() -> {
-                        rendering = false;
-                        progressBar.setVisibility(View.GONE);
-                        hideBusy();
-                        pendingRender = false;
-                        statusText.setText("Rendering…");
-                        renderImage(longEdge);
-                    });
-                    return;
-                }
-                if (healGateFromError(msg)) {
-                    runOnUiThread(() -> {
-                        rendering = false;
-                        progressBar.setVisibility(View.GONE);
-                        hideBusy();
-                        pendingRender = false;
-                        statusText.setText("Rendering…");
-                        renderImage(longEdge);
-                    });
-                    return;
-                }
-                // **A lost device is rebuilt, not reported.** The frame and the
-                // parameters are fine; the driver timed out. Rebuilding costs
-                // three seconds, and the alternative is a user on a 128 MiB
-                // phone whose 44 MP import works two times out of three. The
-                // budget keeps it from becoming a loop on a device that is
-                // genuinely broken -- after two rebuilds the error is shown.
-                if (isDeviceLost(msg) && SelfHeal.budget("device-lost", 2)) {
-                    // **The device just told us it cannot hold this frame's
-                    // plane.** The fast path (no checkpoint) asks for four or
-                    // five whole planes; that is what lost the queue. The
-                    // checkpointed path keeps two or three and has never lost
-                    // one -- at six times the time, which is a price worth
-                    // paying only after the cheap route has failed.
-                    //
-                    // The engine reads this variable on every node, so setting
-                    // it here changes the rebuild below without a restart. It
-                    // is process-wide on purpose: the frame that just failed is
-                    // evidence about the device, not about that one picture.
-                    try { SpektraLabEngine.setEnv("SPK_FORCE_CHECKPOINT", "1"); }
-                    catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34395", ignored); }
-                    SelfHeal.repaired("device-lost",
-                            msg.substring(0, Math.min(90, msg.length())));
-                    runOnUiThread(() -> {
-                        rendering = false;
-                        progressBar.setVisibility(View.GONE);
-                        hideBusy();
-                        pendingRender = false;
-                        statusText.setText("显卡掉线，正在重建…");
-                        if (!rebuildEngineAndReload("device lost at " + longEdge + "px")) {
-                            statusText.setText("渲染失败 " + SpkError.shortForm(msg));
-                            showErrorDialog("渲染失败", SpkError.format(msg));
-                        }
-                    });
-                    return;
-                }
-                runOnUiThread(() -> {
-                    // **A rotation that failed must not stay half applied.** The
-                    // numbers were committed before the render and the canvas
-                    // still shows the view-space turn; leaving both is a picture
-                    // that looks turned and exports straight. Put the angle back
-                    // and take the preview rotation off in the same frame.
-                    if (rotationPending) {
-                        rotationPending = false;
-                        geometryRotation = rotationBeforeDrag;
-                        if (compare != null) compare.setPreviewRotation(0f);
-                        if (rotateArc != null) rotateArc.setAngle(geometryRotation);
-                    }
-                    // **A failed render is not an edit.** `scheduleUndo` runs
-                    // before the render does, so a failure would still push the
-                    // state that caused it -- and undo then replayed the error
-                    // instead of the picture before it.
-                    cancelUndo();
-                    statusText.setText("渲染失败 " + SpkError.shortForm(msg));
-                    progressBar.setVisibility(View.GONE);
-                    hideBusy();
-                    rendering = false;
-                    // The foot is one 7 sp line: a failure has to be readable,
-                    // and it has to arrive with enough context to be reported.
-                    showErrorDialog("渲染失败", SpkError.format(msg)
-                            + "\n\n" + sourceWidth + "×" + sourceHeight
-                            + "\n" + probe.describe());
-                    if (pendingRender) { pendingRender = false; renderImage(); }
-                });
-                // E-1001 is "a plane is bigger than one binding may name", and
-                // the only cure is a smaller session. The import cap already
-                // answers for a normal import, so reaching here means the frame
-                // came in past it -- a native-size import, or a build that had
-                // no cap. Offering the retry beats printing a code and leaving
-                // the user to find the long-press menu.
-                // 1001 is the binding range by name; 1009 is a Vulkan call that
-                // failed without naming one, which on a frame this size is the
-                // same ceiling. Both have the same cure.
-                final int code = SpkError.codeOf(msg);
-                if (code == 1001 || code == 1009) offerSmallerImport();
-            }
-        }).start();
+        new RenderWorker(this).run(longEdge);
     }
 
     /**
@@ -34567,7 +33202,7 @@ public class MainActivity extends Activity {
     private static final int LIVE_CLIP_FULL_EDGE = 2160;
 
     /** A carved-out clip waiting to be attached to the frame being imported. */
-    private static final class LiveClip {
+    static final class LiveClip {
         final String path;
         final long tsUs;
         LiveClip(String path, long tsUs) { this.path = path; this.tsUs = tsUs; }
@@ -34583,7 +33218,7 @@ public class MainActivity extends Activity {
      * really starts where the item list says. A JPEG that merely looks like a
      * motion photo is left alone.
      */
-    private LiveClip captureLiveClip(Uri uri) {
+    LiveClip captureLiveClip(Uri uri) {
         try {
             // **Ask before copying.** `getFilePathFromUri` makes a private copy
             // of anything that is not already on disk, and doing that for every
@@ -34645,7 +33280,7 @@ public class MainActivity extends Activity {
         return edge;
     }
 
-    private String liveClipForCurrentFrame() {
+    String liveClipForCurrentFrame() {
         try {
             if (currentFrame < 0 || currentFrame >= frames.size()) return null;
             final Frame f = frames.get(currentFrame);
@@ -34666,7 +33301,7 @@ public class MainActivity extends Activity {
      * iteration over a digit-string that changes its own width.
      */
     /** The pill says a clip exists; it is also the play control. */
-    private void refreshLiveBadge() {
+    void refreshLiveBadge() {
         refreshHdrBadge();
         if (liveBadge == null) return;
         final boolean has = !showingOriginal && liveClipForCurrentFrame() != null;
@@ -34943,7 +33578,7 @@ public class MainActivity extends Activity {
         catch (Throwable ignored) { Diagnostics.ignored("MainActivity:34884", ignored); }
     }
 
-    private void stopLivePreview() {
+    void stopLivePreview() {
         livePreviewPlaying = false;
         if (livePreviewTick != null) {
             livePreviewHandler.removeCallbacks(livePreviewTick);
@@ -34973,7 +33608,7 @@ public class MainActivity extends Activity {
         java.io.File render(java.io.File clip, java.io.File still) throws Exception;
     }
 
-    private java.io.File attachLiveClip(java.io.File still, String clipPath, long tsUs,
+    java.io.File attachLiveClip(java.io.File still, String clipPath, long tsUs,
                                         int clipEdge) {
         return attachLiveClip(still, clipPath, tsUs,
                 (clip, st) -> renderLiveClip(clip, clipEdge, st));
@@ -35918,7 +34553,7 @@ public class MainActivity extends Activity {
 
     private static int clamp8(int v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
 
-    private Uri writeExportFile(java.io.File tmp, String baseName, String ext, String mime)
+    Uri writeExportFile(java.io.File tmp, String baseName, String ext, String mime)
             throws java.io.IOException {
         // **The file, before the album.** Every "相册写入失败" that turned out to
         // be something else started here: `copyInto` opened a path that no
@@ -36545,7 +35180,7 @@ public class MainActivity extends Activity {
     volatile boolean exportCorruptNow = false;
     /** The MediaStore row the current export wrote, so a rejected file can be
      *  deleted from the `finally` block, where `outUri` is out of scope. */
-    private volatile Uri lastExportOutUri = null;
+    volatile Uri lastExportOutUri = null;
     /** One automatic retry per user-initiated export. */
     volatile boolean exportRetried = false;
     /**
@@ -36561,7 +35196,7 @@ public class MainActivity extends Activity {
      * rebuild before it is shown as-is, and the budgets (`render-redraw`,
      * `engine-rebuild`) cap the total across frames.
      */
-    private int flatStreak;
+    int flatStreak;
     /**
      * The export that is running, if one is. **A thread, not a flag**: a flag
      * has to be cleared on every path out of a 900-line method (and was not),
@@ -36569,7 +35204,7 @@ public class MainActivity extends Activity {
      * renders of the same frame and two files in the album -- the second half
      * of "一口气导出了两张".
      */
-    private volatile Thread exportThread;
+    volatile Thread exportThread;
     /**
      * Retry in the canvas' own session, once.
      *
@@ -36580,7 +35215,7 @@ public class MainActivity extends Activity {
      * against a canvas that has structure), so the second attempt is given that
      * session instead of opening another one.
      */
-    private volatile boolean exportReuseCanvas;
+    volatile boolean exportReuseCanvas;
 
     void exportImage(String format, String tier) {
         exportRetried = false;
@@ -36588,7 +35223,7 @@ public class MainActivity extends Activity {
     }
 
     /** Gate heal attempts spent on this export; see `healGateFromError`. */
-    private int exportHeals = 0;
+    int exportHeals = 0;
 
     /**
      * The re-decode an export does at the file's own size -- but only as far as
@@ -36613,11 +35248,11 @@ public class MainActivity extends Activity {
      * hold it, the export says which allocation failed instead of quietly
      * writing the working size.
      */
-    private long exportPixelCap() {
+    long exportPixelCap() {
         return exportAtNative ? Long.MAX_VALUE / 4L : Math.max(4_000_000L, maxImportPixels());
     }
 
-    private Bitmap decodeForExport(String path, long capPixels) {
+    Bitmap decodeForExport(String path, long capPixels) {
         final android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
         o.inJustDecodeBounds = true;
         try { android.graphics.BitmapFactory.decodeFile(path, o); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:36735", ignored); }
@@ -36671,7 +35306,7 @@ public class MainActivity extends Activity {
      * would be eight real bits padded out, and a DNG would be a claim about
      * sensor data that was never there.
      */
-    private void exportOriginal(final String format, final Runnable onDone) {
+    void exportOriginal(final String format, final Runnable onDone) {
         if (!"jpeg".equals(format)) {
             showErrorDialog("原图只能导出 JPEG",
                     "原图是已经解码好的 8 位画面：写 16 位 TIFF 只是把 8 位填成 16 位，DNG 更不是传感器数据。\n\n"
@@ -36800,1095 +35435,7 @@ public class MainActivity extends Activity {
     }
 
     void exportImage(String format, String tier, final Runnable onDone) {
-        CrashTrail.mark(this, "export:begin");
-        // **Read once, at the door.** Every early return below -- an export
-        // already running, no session, no film -- would otherwise leave the live
-        // request armed, and the *next* export, whatever it is, would attach a
-        // clip to it.
-        final int liveEdge = ("jpeg".equals(format) && !batchExportRunning) ? liveClipEdge : 0;
-        liveClipEdge = 0;
-        // **A second engine, a second writer.** fotufilm hands back a JPEG and
-        // has no TIF/DNG encoder at all; saying so is better than writing a
-        // .dng that is really a JPEG with the wrong extension.
-        if (isFotuStock(filmStock)) {
-            if ("dng".equals(format)) {
-                showErrorDialog("fotufilm 没有 DNG 写出路径",
-                        "这一支胶片由 fotufilm 引擎渲染，它只能写 JPEG 和 16 位 TIFF。\n\n"
-                                + "要 DNG 请换一支 SpektraLab 引擎的胶片。");
-                if (onDone != null) onDone.run();
-                return;
-            }
-            exportFotu(format, tier, onDone, liveEdge);
-            return;
-        }
-        // **One export at a time.** Two of these at once is two full renders of
-        // the same frame competing for the same two gigabytes, and two files at
-        // the end -- the sheet closes the instant a row is hit, so a tap that
-        // looked like it did nothing gets repeated and both went through.
-        final Thread running = exportThread;
-        if (running != null && running.isAlive()) {
-            showInAppToast("正在导出，等这一张写完");
-            if (onDone != null) onDone.run();
-            return;
-        }
-        // **Which clip, decided on the caller's thread.** `currentFrame` is a
-        // field the UI thread moves; reading it inside the export thread would
-        // pair this still with the next frame's clip.
-        final String liveClipPath = liveEdge > 0 ? liveClipForCurrentFrame() : null;
-        final long liveTsUs = (liveClipPath != null
-                && currentFrame >= 0 && currentFrame < frames.size())
-                ? frames.get(currentFrame).liveTsUs : 0L;
-        final boolean[] liveDone = {false};
-        // **What the canvas is showing is the source, not a print.** Exporting
-        // it has to write that same picture: a session would develop the film,
-        // which is exactly the side the user is not looking at -- and with no
-        // film picked there was no session to open, so the button answered
-        // "先选一张胶片，再导出" over a photograph that was already finished.
-        if ((showingOriginal || filmStock == null) && !batchExportRunning) {
-            exportOriginal(format, onDone);
-            return;
-        }
-        // **The export's exposure, decided once, before any branch.** The open
-        // params, the forced delta and the pin all have to agree: the canvas'
-        // meter flag, the canvas' EV, and only the *user's* offset in
-        // `exposure_compensation_ev` (see `applyParamsTo`).
-        final String exportMeter = sanitizeMeter(meterMethod);
-        final boolean exportAutoExposure = !exportMeter.isEmpty();
-        // Only the frame the canvas last measured may hand its EV over; a batch
-        // walks the strip without rendering, so the previous frame's EV would
-        // otherwise be pinned onto this one.
-        final boolean pinEv = exportAutoExposure && appliedEvBelongsToCurrentFrame();
-        // A live frame is 800 px and this is about to build a 4175 px one;
-        // letting the two queue behind the same lock buys nothing.
-        cancelLivePreview();
-        final boolean tiff = "tiff".equals(format);
-        // **The same picture, un-encoded.** A linear TIFF is what a scanner would hand over: the
-        // render's own light, tagged linear sRGB, so Lightroom's highlight recovery works on the
-        // shoulder itself instead of on a transfer curve that already shaped it once.
-        final boolean tiffLinear = "tifflin".equals(format);
-        final boolean dng = "dng".equals(format);
-        // **Ultra HDR is a JPEG**, not a fifth container: the same file every
-        // gallery already opens, plus a gain map beside it. So it shares the
-        // JPEG's extension, MIME type and self-check -- only the writer differs.
-        final boolean uhdr = "uhdr".equals(format);
-        final String ext = dng ? ".dng" : (tiff || tiffLinear) ? ".tif" : ".jpg";
-        final String mime = dng ? "image/x-adobe-dng" : (tiff || tiffLinear) ? "image/tiff" : "image/jpeg";
-        if (sharePill != null) sharePill.setVisibility(View.GONE);
-        if (engine == null || session == null) {
-            showInAppToast("请先导入照片");
-            if (onDone != null) onDone.run();
-            return;
-        }
-        if (filmStock == null) {
-            showInAppToast("先选一张胶片，再导出");
-            if (onDone != null) onDone.run();
-            return;
-        }
-        // The shelf queue prints 800 px cards through this same session, and a
-        // card that lands between "start export" and the first strip swaps
-        // film_stock under the full-size render. That -- not the params delta --
-        // is what used to come back as a flat grey.
-        stopPrefetch();
-        new Thread(() -> {
-            exportThread = Thread.currentThread();
-            java.io.File tmp = new java.io.File(getCacheDir(), "export_" + System.currentTimeMillis() + ext);
-            try {
-                runOnUiThread(() -> {
-                    statusText.setText("导出中：准备全尺寸渲染（分条）...");
-                    showBusy("EXPORTING");
-                    setStep(3);
-                });
-                // A stock delta before an export is fine -- measured, not
-                // assumed (`full_after_delta`: mean 104.2 std 11945 before,
-                // 102.4 std 12481 after, and the two hashes differ). It is the
-                // same delta the preview renders with, which is the point.
-                try {
-                    DebugSink.text("export-params", "film=" + filmStock + " print=" + printStock
-                            + " pex=" + printExposure + " (no delta sent)");
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37020", ignored); }
-
-                // **The numbers the export is about to spend, before it spends
-                // them.** Which frame, which cap, whether the rebate is on, and
-                // what the phone says is free -- the four things that decide
-                // whether the next two minutes fit.
-                try {
-                    // The crop travels with the plan: a "garbled once" report is
-                    // almost always geometry, and the one number that explains it
-                    // is the window the render was asked for.
-                    DebugSink.textNow("export-crop", String.format(java.util.Locale.US,
-                            "x=%.4f y=%.4f w=%.4f h=%.4f turns=%d rot=%.2f",
-                            geometryCropX, geometryCropY, geometryCropW, geometryCropH,
-                            geometryTurns, geometryRotation));
-                    DebugSink.textNow("export-plan", "src=" + sourceWidth + "x" + sourceHeight
-                            + " importCap=" + importCapPixels + " frameCap=" + maxImportPixels()
-                            + " overscan=" + overscanOn + " tier=" + tier
-                            + " avail=" + (availableMemoryBytes() >> 20) + "MiB");
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37038", ignored); }
-                final long t0 = nowMs();
-                final java.util.concurrent.atomic.AtomicBoolean spinning =
-                        new java.util.concurrent.atomic.AtomicBoolean(true);
-                final java.util.concurrent.atomic.AtomicLong lastMem =
-                        new java.util.concurrent.atomic.AtomicLong(-5);
-                final android.os.Handler ticker = new android.os.Handler(android.os.Looper.getMainLooper());
-                Runnable tick = new Runnable() {
-                    @Override public void run() {
-                        if (!spinning.get()) return;
-                        long el = (nowMs() - t0) / 1000;
-                        statusText.setText("导出中（" + tier + "）：渲染中 " + el + " 秒...");
-                        // **What the export is holding, every five seconds.**
-                        // A black screen leaves no stack and no exception -- the
-                        // last line before the process dies is the only evidence
-                        // there is. `textNow` posts synchronously because the
-                        // queue does not survive the crash this exists to
-                        // explain, and the line carries the pool's peak together
-                        // with the system's own free-memory figure so "the
-                        // engine asked for too much" and "the phone had too
-                        // little" stay distinguishable.
-                        if (el % 5 == 0 && lastMem.getAndSet(el) != el) {
-                            try {
-                                final long avail = availableMemoryBytes();
-                                DebugSink.textNow("export-mem", el + "s avail=" + (avail >> 20)
-                                        + "MiB " + (engine == null ? "no engine" : engine.memoryReport()));
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37064", ignored); }
-                        }
-                        ticker.postDelayed(this, 1000);
-                    }
-                };
-                // The memory probe must not live on the UI thread: the export
-                // blocks it, which is why the 12-second crash left no samples.
-                Thread memTicker = new Thread(() -> {
-                    while (spinning.get()) {
-                        try {
-                            final long el = (nowMs() - t0) / 1000;
-                            final String line = el + "s avail="
-                                    + (availableMemoryBytes() >> 20) + "MiB "
-                                    + (engine == null ? "no engine" : engine.memoryReport());
-                            // **On disk first.** `textNow` needs the network; a
-                            // phone in flight mode -- or a process killed at the
-                            // moment it mattered -- loses the sample entirely,
-                            // which is why the 18-second export crash came back
-                            // with none. The ring is a SharedPreferences write
-                            // and survives the kill; the report picks it up.
-                            CrashTrail.markNow(MainActivity.this, "export-mem " + line);
-                            DebugSink.textNow("export-mem", line);
-                        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37086", ignored); }
-                        try { Thread.sleep(5000); } catch (InterruptedException ie) { break; }
-                    }
-                }, "SpektraLab-export-memory");
-                memTicker.setDaemon(true);
-                memTicker.start();
-                runOnUiThread(tick);
-                // **Which session the retry may borrow.** Read once here, on the
-                // export thread, and consumed: a stale `true` must not silently
-                // make every later export render on the preview's session.
-                final boolean reuseCanvas = exportReuseCanvas;
-                exportReuseCanvas = false;
-                try {
-                    DebugSink.textNow("export", "session: " + (reuseCanvas
-                            ? "the canvas' own (second attempt)" : "a fresh one")
-                            + " tier=" + tier + " " + format);
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37102", ignored); }
-                // A full-size export does not need the preview bitmaps resident.
-                // Keep the frame and its Look; these two are only the display.
-                final Bitmap savedBefore = beforeBitmap;
-                final Bitmap savedAfter = lastRenderedBitmap;
-                runOnUiThread(() -> {
-                    beforeBitmap = null;
-                    lastRenderedBitmap = null;
-                    if (compare != null) compare.clear();
-                });
-                int[] info;
-                try {
-                    synchronized (renderMutex) {
-                        CrashTrail.markNow(MainActivity.this, "export:lock");
-                        // **Give the pool back before the export asks for more.**
-                        // The preview that has just been rendered leaves its
-                        // working set pooled, and a 40 MP export then wants the
-                        // whole thing again. Measured on the owner's phone: the
-                        // export dies at 153 s with the launcher behind it.
-                        try {
-                            final long freed = engine.trimPool();
-                            DebugSink.text("export", "pre-export trim freed " + (freed >> 20)
-                                    + " MiB; report " + engine.memoryReport());
-                        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37125", ignored); }
-                        // **A session of its own for the export.** The preview
-                        // session has already rasterised the rebate's masks at
-                        // the preview's millimetres per pixel. Rendering that
-                        // same session at "full" rebuilds the *layout* -- the
-                        // geometry it reports is right -- but the rasterised
-                        // edge-print masks are still the preview's, so the film
-                        // edge lands at the wrong scale: the top band prints
-                        // twice and the second copy sits on the picture. That
-                        // is "the preview is fine and the export is flying".
-                        // A fresh session's first render *is* the export tier,
-                        // so its masks can only be the export's size.
-                        // **Give the preview's planes back for the duration.**
-                        // At 41 MP the preview session holds 373 MiB of source
-                        // that the export session is about to want, and closing
-                        // it would lose the look being exported. Suspending
-                        // writes those planes to the cache directory and drops
-                        // the device copies; `resume` puts them back. Refused
-                        // when there is no scratch directory, which is a no-op
-                        // rather than a failure.
-                        final SpektraLabEngine.Session keep = session;
-                        boolean keepSuspended = false;
-                        boolean keepClosed = false;
-                        // **A batch closes this session a moment later anyway.**
-                        // Suspending writes a frame's worth of planes to the
-                        // cache directory and resuming allocates them again --
-                        // once per frame, for a session that is about to die.
-                        if (keep != null && !batchExportRunning) {
-                            try {
-                                keepSuspended = keep.suspend();
-                                DebugSink.text("export", "preview suspended=" + keepSuspended
-                                        + (keepSuspended ? "" : " why=" + SpektraLabEngine.Session.lastError())
-                                        + "; report " + engine.memoryReport());
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37158", ignored); }
-                        }
-                        CrashTrail.markNow(MainActivity.this, "export:suspend " + keepSuspended);
-                        // **Free the preview before the export asks for its own
-                        // frame.** The close further down runs *after* `fresh`
-                        // exists, so the peak held two source planes at once --
-                        // 234 MB each on the 19.5 MP Mali-G76 report that died
-                        // inside the driver (SL-261111-204F: `suspend=false`,
-                        // then `raw-session fresh`, then the driver faulted).
-                        // Same decision, same threshold, taken one step earlier.
-                        // **The export's own size, not the session's.** With
-                        // 「按原图」 the session is the working size and the
-                        // export re-decodes at the file's, which can be ten
-                        // times what this heuristic was weighing.
-                        long needPixels = (long) sourceWidth * sourceHeight;
-                        final int[] fileSize = exportAtNative && sourceUri != null
-                                ? sniffImageSize(sourceUri) : null;
-                        if (fileSize != null && fileSize[0] > 0 && fileSize[1] > 0)
-                            needPixels = (long) fileSize[0] * fileSize[1];
-                        final long exportNeed = needPixels * 12L * 51L / 10L + (160L << 20);
-                        final long exportAvail = availableMemoryBytes();
-                        if (!reuseCanvas && keep != null && (!keepSuspended
-                                || (exportAvail > 0 && exportNeed > exportAvail * 55L / 100L))) {
-                            try { keep.close(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37181", ignored); }
-                            if (session == keep) session = null;
-                            keepSuspended = false;
-                            keepClosed = true;
-                            try {
-                                DebugSink.text("export", "preview closed before the export"
-                                        + " need=" + (exportNeed >> 20)
-                                        + " avail=" + (exportAvail >> 20) + " MiB");
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37189", ignored); }
-                        }
-                        SpektraLabEngine.Session fresh = null;
-                        // **No area cap here.** This read `<= 30 MP`, a leftover
-                        // from when `sourcePixels` was a `ByteBuffer.allocateDirect`
-                        // capped by the heap growth limit. A 44 MP JPEG fell through
-                        // it, had no `rawFilePath` either, and so exported on the
-                        // *preview* session: `full` on a 2048 px source, which is
-                        // both the wrong size and the shape that failed on the
-                        // Mali report. The buffer is malloc'd now and the cap is
-                        // thirty times smaller than what the phones can hold.
-                        if (!reuseCanvas && keep != null
-                                && sourceWidth > 0 && sourceHeight > 0) {
-                            // **The export goes back to the file for its size.**
-                            // `sourcePixels` carries whatever the import's
-                            // memory estimate allowed, and that estimate moves
-                            // with free RAM: the same JPEG landed at 42 MP one
-                            // minute and 36 MP the next, so two exports of one
-                            // photograph came out 7523x5642 and 6990x5242.
-                            // Re-decoding at the file's own size is the only
-                            // answer that does not depend on what the phone was
-                            // doing at import time. If it does not fit, the
-                            // engine says which plane it wanted -- an honest
-                            // refusal beats a silently smaller file.
-                            Bitmap fullBmp = null;
-                            long fullBuf = 0;
-                            try {
-                                final String path = sourceUri != null ? getFilePathFromUri(sourceUri) : null;
-                                // **Not `inSampleSize = 1`.** See `decodeForExport`: the
-                                // release frame is the largest this phone can develop, not
-                                // the largest the file happens to be.
-                                if (path != null) {
-                                    fullBmp = decodeForExport(path, exportPixelCap());
-                                }
-                            } catch (Throwable ignored) { fullBmp = null; }
-                            final boolean bigger = fullBmp != null
-                                    && (long) fullBmp.getWidth() * fullBmp.getHeight()
-                                       > (long) sourceWidth * sourceHeight;
-                            // **A frame with no staging copy comes back from the
-                            // file.** Since 1.7.0i the import lets
-                            // `sourcePixels` go once the engine has its own;
-                            // the export is the only thing that ever wanted it,
-                            // and re-decoding at the same size is the same
-                            // frame.
-                            final boolean fromFile = bigger || (sourcePixels == 0 && fullBmp != null);
-                            if (fromFile) {
-                                final int fw = fullBmp.getWidth(), fh = fullBmp.getHeight();
-                                try {
-                                    fullBuf = SpektraLabEngine.allocPixels((long) fw * fh * 12L);
-                                    liftRows(fullBmp, fullBuf, fw, fh);
-                                    // **Give the memory back as soon as it is
-                                    // copied.** A 200 MP re-decode is 800 MB of
-                                    // bitmap, 2.4 GB of float and then the
-                                    // engine's own 2.4 GB; releasing each one
-                                    // when its successor exists keeps the peak
-                                    // at two of the three instead of three.
-                                    if (fullBmp != null) { fullBmp.recycle(); fullBmp = null; }
-                                    fresh = engine.openSession(fullBuf, fw, fh, 3);
-                                    SpektraLabEngine.freePixels(fullBuf);
-                                    fullBuf = 0;
-                                    CrashTrail.markNow(MainActivity.this,
-                                            "export:full-size " + fw + "x" + fh
-                                                    + " (import was " + sourceWidth + "x" + sourceHeight + ")");
-                                } catch (Throwable e) {
-                                    fresh = null;
-                                    try { DebugSink.textNow("export-full",
-                                            "could not re-decode at " + fw + "x" + fh + ": " + e); }
-                                    catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37256", ignored); }
-                                } finally {
-                                    if (fullBmp != null) fullBmp.recycle();
-                                    if (fullBuf != 0) SpektraLabEngine.freePixels(fullBuf);
-                                }
-                            }
-                            // Only when the file really is bigger than the
-                            // session: for a frame the working size already
-                            // holds whole, the fallback *is* the file's size.
-                            if (fresh == null && exportAtNative && fileSize != null
-                                    && fileSize[0] > 0 && fileSize[1] > 0
-                                    && (long) fileSize[0] * fileSize[1]
-                                       > (long) sourceWidth * sourceHeight) {
-                                // **Never the working size.** 「按原图」 means the
-                                // file's size; falling back to the session here
-                                // is "the export came out smaller than the
-                                // import" with a new cause. Say what did not fit.
-                                throw new IllegalStateException(
-                                        "按原图导出要重新读一遍这张图（"
-                                                + (fileSize == null ? "文件自身尺寸"
-                                                   : fileSize[0] + "×" + fileSize[1])
-                                                + "，约 " + (exportNeed >> 20) + " MB），"
-                                                + "本机现在给不出来。关掉其它应用再试，"
-                                                + "或重新导入时选「缩到…」。");
-                            }
-                            if (fresh == null && sourcePixels != 0) {
-                                try { fresh = engine.openSession(sourcePixels, sourceWidth, sourceHeight, 3); }
-                                catch (Throwable ignored) { fresh = null; }
-                            }
-                            CrashTrail.markNow(MainActivity.this,
-                                    "export:session " + (fresh != null ? "fresh" : "none"));
-                        } else if (!reuseCanvas && keep != null && rawFilePath != null) {
-                            // **No budget gate here.** One was added in 1.4.1t and it
-                            // refused frames the engine goes on to render: it compared
-                            // the canvas against `maxPixelsByMemory(available)` before
-                            // the export had trimmed the preview's pool, and 100 B/px
-                            // is the whole-frame figure, not the banded one. Refusing
-                            // is not the fix for a large frame -- rendering it is.
-                            // A frame that genuinely does not fit fails in the engine
-                            // and says which plane it wanted; that message is true,
-                            // this one was a guess.
-                            final int budgetPixels = importedWidth > 0 && importedHeight > 0
-                                    ? importedWidth * importedHeight
-                                    : (importCapPixels > 0 ? importCapPixels
-                                       : sourceWidth * sourceHeight);
-                            try {
-                                // **The export renders the frame that was imported,
-                                // never the file's own size.** This passed 0, 0 --
-                                // "no cap" -- so a 51 MP negative was decoded a second
-                                // time at native size even when the import had landed
-                                // at 7 MP, and a rebate canvas is 1.51x that: 77 MP,
-                                // 924 MB per plane, several planes. Measured on the
-                                // owner's phone, 2026-11-03: a full export after a
-                                // preview export of the same frame took the screen
-                                // black and the launcher with it.
-                                // **The budget the import actually used**, not the
-                                // session's dimensions: `getDimensions()` answers the
-                                // *source* size for a raw, so the export re-decoded at
-                                // 51 MP what the import had settled at 12.8 MP -- and a
-                                // rebate canvas is 1.51x that. Measured twice: black
-                                // screen, launcher restart, on a 12 GB phone.
-                                // The budget is checked above, before the `try`, so a
-                                // refusal reaches the user instead of becoming a null
-                                // session. Here we only size the decode by it.
-                                // **0, 0 -- the file's own size, not the import's.**
-                                // This used to pass the budget the import settled
-                                // on, which is derived from free RAM and therefore
-                                // moves: the same frame exported 42 MP and then
-                                // 36 MP without anything changing. An export that
-                                // changes size between two presses of the same
-                                // button is not a memory strategy, it is a bug.
-                                // If the frame genuinely does not fit, the engine
-                                // refuses and names the plane -- that message is
-                                // true, and it is the one to show.
-                                final int exportPixels = 0;
-                                final int exportEdge = 0;
-                                final float[] wbMul = wbUserMul;
-                                Probe.log("wb", "export tier=" + tier + " mul=" + Probe.mul(wbMul)
-                                        + " px=" + exportPixels + " edge=" + exportEdge);
-                                // **What the fresh session is opened with.** The
-                                // enlarger exposure has now been sent three ways
-                                // (delta, forced delta, open params) and the owner
-                                // still sees no change in the file, so the next
-                                // report has to say which value actually left the
-                                // app. `export-params` reads the session's copy;
-                                // this line is the string the engine parsed.
-                                try {
-                                    DebugSink.text("export-open", "pex=" + f("%.6f", printExposure)
-                                            + " auto=" + exportAutoExposure
-                                            + " pin=" + (pinEv ? f("%.6f", lastAppliedEv) : "none")
-                                            + " offset=" + f("%.4f", cameraEv)
-                                            + " paper=" + printStock + " raw=" + rawFilePath);
-                                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37348", ignored); }
-                                fresh = wbMul != null
-                                        ? engine.openRawSessionTuned(rawFilePath,
-                                                "{\"print_stock\":\"" + spkPaperForEngine(printStock)
-                                                        + "\",\"input_color_space\":\"ProPhoto RGB\","
-                                                        + "\"input_cctf_decoding\":false,\"output_color_space\":\"sRGB\","
-                                                        // **The meter travels with the export.** This
-                                                        // string used to name five fields, so the
-                                                        // fresh session fell back to the engine's
-                                                        // own defaults: `auto_exposure` true. On a
-                                                        // frame whose meter clamps (it read +12 EV
-                                                        // here) that put the whole picture at white
-                                                        // -- and the rebate, painted afterwards,
-                                                        // survived it. The export is the picture on
-                                                        // screen, so it has to be told the same
-                                                        // thing the preview was told.
-                                                        // **Never meter again on export.** The
-                                                        // preview's own value, measured once at
-                                                        // import; letting the fresh session run
-                                                        // the meter a second time is what turned
-                                                        // 0.0756 into a clamped +12 and pushed
-                                                        // the picture to white.
-                                                        + "\"auto_exposure\":" + b(exportAutoExposure) + ","
-                                                        + "\"exposure_compensation_ev\":" + f("%.6f", cameraEv) + ","
-                                                        // **Open with the enlarger exposure too.** It is
-                                                        // a live PRINT field: sent as a delta the engine
-                                                        // updates the session's copy while the render
-                                                        // keeps the pipeline's, so the file came back as
-                                                        // if the slider had never moved (6/6 exports at
-                                                        // 0.41, `export-params` in D1). Opening with it
-                                                        // puts it on the pipeline from the first frame.
-                                                        + "\"print_exposure\":" + f("%.6f", printExposure) + ","
-                                                        + "\"preview_long_edge\":2048}",
-                                                exportPixels, exportEdge, wbMul)
-                                        : engine.openRawSession(rawFilePath,
-                                                "{\"print_stock\":\"" + spkPaperForEngine(printStock)
-                                                        + "\",\"input_color_space\":\"ProPhoto RGB\","
-                                                        + "\"input_cctf_decoding\":false,\"output_color_space\":\"sRGB\","
-                                                        // **The meter travels with the export.** This
-                                                        // string used to name five fields, so the
-                                                        // fresh session fell back to the engine's
-                                                        // own defaults: `auto_exposure` true. On a
-                                                        // frame whose meter clamps (it read +12 EV
-                                                        // here) that put the whole picture at white
-                                                        // -- and the rebate, painted afterwards,
-                                                        // survived it. The export is the picture on
-                                                        // screen, so it has to be told the same
-                                                        // thing the preview was told.
-                                                        // **Never meter again on export.** The
-                                                        // preview's own value, measured once at
-                                                        // import; letting the fresh session run
-                                                        // the meter a second time is what turned
-                                                        // 0.0756 into a clamped +12 and pushed
-                                                        // the picture to white.
-                                                        + "\"auto_exposure\":" + b(exportAutoExposure) + ","
-                                                        + "\"exposure_compensation_ev\":" + f("%.6f", cameraEv) + ","
-                                                        // **Open with the enlarger exposure too.** It is
-                                                        // a live PRINT field: sent as a delta the engine
-                                                        // updates the session's copy while the render
-                                                        // keeps the pipeline's, so the file came back as
-                                                        // if the slider had never moved (6/6 exports at
-                                                        // 0.41, `export-params` in D1). Opening with it
-                                                        // puts it on the pipeline from the first frame.
-                                                        + "\"print_exposure\":" + f("%.6f", printExposure) + ","
-                                                        + "\"preview_long_edge\":2048}",
-                                                exportPixels, exportEdge);
-                            } catch (Throwable ignored) { fresh = null; }
-                            CrashTrail.markNow(MainActivity.this,
-                                    "export:raw-session " + (fresh != null ? "fresh" : "none"));
-                        }
-                        // **Never swap the global session for an export.**
-                        // The export runs on its own local object; assigning it
-                        // to `session` let a concurrent UI call write the next
-                        // preview's parameters into the export's frame.
-                        final SpektraLabEngine.Session exportSession =
-                                fresh != null ? fresh : (keepClosed ? null : keep);
-                        // **Two working sets do not fit on the phones that fail.**
-                        //
-                        // `suspend` snapshots the preview's planes to the cache
-                        // directory and drops the device copies -- but it can
-                        // fail, and when it does this code used to carry on and
-                        // open the export session anyway: one whole frame
-                        // resident plus another being allocated. Measured on a
-                        // 26 MP export (Adreno 650): `preview suspended=false`,
-                        // then VkResult -2.
-                        //
-                        // So: if the suspend did not happen, or the room it left
-                        // is still not enough for the export's own working set,
-                        // close the preview outright. The frame comes back in the
-                        // `finally` below -- a few seconds of re-import traded for
-                        // an export that exists.
-                        // **A batch used to keep the preview session alive on the
-                        // theory that it is closed a frame later.** It is not:
-                        // the batch loop reopens the *next* frame, which closes
-                        // this one only after the export has already needed the
-                        // room. Two frames resident through the whole render is
-                        // what the LOW_MEMORY reports show (`s963` and `s964`,
-                        // 288 MB of source each) -- so close it here for a batch
-                        // too, and let the loop's reopen re-import it.
-                        if (fresh != null && keep != null && !keepClosed) {
-                            final boolean wasSuspended = keepSuspended;
-                            // 5.1 planes of 12 B/px plus the encoder's tables,
-                            // measured on the host at 20.9 MP (`mem_export`).
-                            final long needBytes = (long) sourceWidth * sourceHeight * 12L * 51L / 10L
-                                    + (160L << 20);
-                            // **More than half of what is left is more than the
-                            // two of them can share.** `avail` is MemAvailable,
-                            // so it already excludes the preview's own arena;
-                            // this asks whether one export working set still
-                            // fits in what remains after it.
-                            final long avail = availableMemoryBytes();
-                            final boolean tight = avail > 0 && needBytes > avail * 55L / 100L;
-                            if (!wasSuspended || tight) {
-                                try { keep.close(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37461", ignored); }
-                                if (session == keep) session = null;
-                                keepSuspended = false;
-                                keepClosed = true;
-                                try {
-                                    DebugSink.text("export", "preview closed for the export"
-                                            + " suspended=" + wasSuspended
-                                            + " need=" + (needBytes >> 20)
-                                            + " avail=" + (avail >> 20) + " MiB");
-                                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37470", ignored); }
-                            }
-                        }
-                        if (exportSession == null) {
-                            // The frame's session went away between `export:lock`
-                            // and here. Saying so is the honest end of this
-                            // frame; dereferencing it was a null pointer.
-                            try {
-                                DebugSink.text("export-error", "tier=" + tier + " no session for the export");
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37479", ignored); }
-                            runOnUiThread(() -> {
-                                showInAppToast("这张照片还没准备好，跳过");
-                                if (onDone != null) onDone.run();
-                            });
-                            return;
-                        }
-                        if (fresh != null) {
-                            try { DebugSink.text("export", "fresh session for tier=" + tier); }
-                            catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37488", ignored); }
-                        } else if (keepSuspended && keep != null) {
-                            // **The export is about to run on the session we just
-                            // suspended.** Every branch that builds a fresh session is
-                            // wrapped in `catch (Throwable) { fresh = null; }`, so a
-                            // refused budget, a raw path the picker never gave us, or a
-                            // decode failure all land here -- and `suspend()` has already
-                            // dropped the preview's `source` plane while leaving its
-                            // dimensions. `tier_image` then hands the pipeline an Image
-                            // with a shape and no buffer: `affine: input plane has no
-                            // buffer (7387x4952x3)`, on a frame that previews perfectly.
-                            // Give the planes back before the export asks for them.
-                            try { keep.resume(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37500", ignored); }
-                            keepSuspended = false;
-                            try { DebugSink.text("export", "no fresh session; preview resumed"); }
-                            catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37503", ignored); }
-                        }
-                        try {
-                            // Everything the preview drew with, re-stated: a
-                            // stock, a paper, a gate, an edge text or a date
-                            // that moved since the last render would otherwise
-                            // be exported as the *preview* had it, or not at all.
-                            // Re-state the complete Look on the export object,
-                            // without routing it through the global `session`.
-                            // **Exports are sRGB, whatever the canvas is set to.**
-                            // The JPEG and TIFF writers carry an sRGB ICC; a P3
-                            // image with an sRGB profile would be read as the
-                            // wrong colours by everything that believes it.
-                            // **Force.** Diffed against the canvas session this
-                            // was a no-op, so every export kept the parameters
-                            // its session was opened with -- the enlarger
-                            // exposure among them.
-                            applyParamsTo(exportSession, filmStock,
-                                    printStock == null ? "kodak_portra_endura" : printStock,
-                                    PREVIEW_LONG_EDGE, "sRGB", true);
-                            // **Same frame, same EV, same node.** Pinning puts
-                            // the meter's gain back in `film_prefix`, where the
-                            // canvas applied it -- not after the highlight
-                            // rolloff, where an export used to put it. When the
-                            // EV belongs to another frame (a batch walking the
-                            // strip) clearing is the honest state: the meter is
-                            // on and its own whole-frame measurement is exactly
-                            // what the canvas would have got.
-                            try {
-                                if (pinEv) {
-                                    exportSession.pinAutoExposureEv(lastAppliedEv);
-                                } else if (exportAutoExposure) {
-                                    // **A batch walks the strip without rendering**,
-                                    // so the canvas' measured EV belongs to the
-                                    // frame before this one and cannot be pinned
-                                    // here. Letting the fresh session meter on its
-                                    // own was the other half of "导出只有片边、内容
-                                    // 一片白": the same meter that occasionally
-                                    // clamps on a full-size decode. Measure once,
-                                    // explicitly, and pin that answer -- then
-                                    // clamp the pathological tail, because a meter
-                                    // that cannot see the frame returns the end of
-                                    // its range and paints the whole negative
-                                    // white.
-                                    double ev = Double.NaN;
-                                    try {
-                                        final org.json.JSONObject solved =
-                                                new org.json.JSONObject(exportSession.solve("both"));
-                                        final org.json.JSONObject by =
-                                                solved.optJSONObject("exposure_ev_by_method");
-                                        final String m = exportMeter.isEmpty() ? "balanced" : exportMeter;
-                                        if (by != null && by.has(m)) ev = by.optDouble(m, Double.NaN);
-                                    } catch (Throwable ignored2) { ev = Double.NaN; }
-                                    final boolean sane = !Double.isNaN(ev) && Math.abs(ev) <= 8.0;
-                                    if (!sane) ev = lastAppliedEvValid ? lastAppliedEv : 0.0;
-                                    exportSession.pinAutoExposureEv(ev);
-                                    try {
-                                        DebugSink.text("export-meter", "method=" + exportMeter
-                                                + " solved=" + f("%.4f", ev)
-                                                + (sane ? "" : " (clamped)")
-                                                + " sameFrame=" + lastAppliedEvValid);
-                                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37564", ignored); }
-                                } else {
-                                    exportSession.clearPinAutoExposureEv();
-                                }
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37568", ignored); }
-                            // **Which object got the parameters.** The owner's
-                            // files come out at print_exposure 1.0 while this app
-                            // sends 0.41 -- on the same frame the host answers
-                            // 21410 vs 11996, so the engine is fine and the
-                            // parameter is fine. Either this session is not the
-                            // one that renders, or something replaces its value
-                            // between here and the write. These two lines answer
-                            // that with identity, not inference.
-                            try {
-                                final String gp = exportSession.getParams();
-                                int j = gp.indexOf("\"print_exposure\"");
-                                DebugSink.text("export-ident", "sent hash=" + System.identityHashCode(exportSession)
-                                        + " fresh=" + (fresh != null) + " keep=" + (keep != null)
-                                        + " " + (j >= 0 ? gp.substring(j, Math.min(gp.length(), j + 34)) : "no-pex"));
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37583", ignored); }
-                            try {
-                                DebugSink.text("export-exposure", "tier=" + tier
-                                        + " auto=" + exportAutoExposure
-                                        + " method=" + (exportMeter.isEmpty() ? "balanced" : exportMeter)
-                                        + " pin=" + (pinEv ? f("%.4f", lastAppliedEv) + " same-frame" : "none")
-                                        + " seenEv=" + f("%.4f", lastAppliedEv)
-                                        + (lastAppliedEvValid ? "" : " (none)")
-                                        + " solveEv=" + f("%.4f", meteredEv)
-                                        + " offset=" + f("%.2f", cameraEv));
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37593", ignored); }
-                            try {
-                                DebugSink.text("overscan-geom", "tier=" + tier + " before "
-                                        + exportSession.overscanGeometry());
-                                DebugSink.text("export-params", "tier=" + tier + " " + exportSession.getParams());
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37598", ignored); }
-                            // **Metadata goes in with the pixels.** The writer
-                            // appends one APP1 segment and then the ICC profile;
-                            // nothing reopens the finished file afterwards.
-                            try {
-                                if (rawFilePath != null && session != null) {
-                                    final String[] meta = sourceExifForExport();
-                                    SpektraLabEngine.setExportExif(meta[0], meta[1], meta[2],
-                                            meta[3], meta[4], meta[5], meta[6]);
-                                    DebugSink.text("exif", "raw source metadata: "
-                                            + meta[0] + " / " + meta[1] + " / " + meta[2]
-                                            + " / " + meta[3] + "s / f" + meta[4]
-                                            + " / ISO" + meta[5] + " / " + meta[6] + "mm");
-                                } else if (sourceUri != null) {
-                                    final String[] meta = jpegSourceExif();
-                                    SpektraLabEngine.setExportExif(meta[0], meta[1], meta[2],
-                                            meta[3], meta[4], meta[5], meta[6]);
-                                }
-                            } catch (Throwable metaError) {
-                                DebugSink.text("exif", "export metadata skipped: " + metaError);
-                            }
-                            // **The export's own black box.** This call runs the
-                            // whole film and print chain at `full` and then
-                            // encodes it; on a 51 MP frame it is a minute and a
-                            // half of native code with no Java frame anywhere in
-                            // it. The ticker makes "it died somewhere" into "it
-                            // died after 74 seconds".
-                            try {
-                                final String gp = exportSession.getParams();
-                                int j = gp.indexOf("\"print_exposure\"");
-                                DebugSink.text("export-ident", "call hash=" + System.identityHashCode(exportSession)
-                                        + " " + (j >= 0 ? gp.substring(j, Math.min(gp.length(), j + 34)) : "no-pex"));
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37630", ignored); }
-                            CrashTrail.markNow(this, "export:write " + tier + " " + format);
-                            Thread wtick = startTick("export", exportSession);
-                            try {
-                                info = dng
-                                        ? exportSession.exportDng(tmp.getAbsolutePath(), tier)
-                                        : tiffLinear
-                                        ? exportSession.exportTiffLinear(tmp.getAbsolutePath(), tier)
-                                        : tiff
-                                        ? exportSession.exportTiff(tmp.getAbsolutePath(), tier)
-                                        : uhdr
-                                        ? exportSession.exportUltraHdr(tmp.getAbsolutePath(), 95, 512, tier)
-                                        : exportSession.exportJpeg(tmp.getAbsolutePath(), 95, 512, tier);
-                            } finally {
-                                stopTick(wtick);
-                            }
-                            CrashTrail.markNow(this, "export:written " + info[0] + "x" + info[1]);
-                            try {
-                                DebugSink.text("overscan-geom", "tier=" + tier + " " + info[0] + "x" + info[1]
-                                        + " " + exportSession.overscanGeometry());
-                            } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37650", ignored); }
-                        } finally {
-                            if (fresh != null) {
-                                try { fresh.close(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37653", ignored); }
-                                // **The export's pool goes back before the
-                                // preview's planes come back.** `resume`
-                                // allocates persistent buffers, and they cannot
-                                // come out of an arena the export is still
-                                // sitting in -- the whole reason the preview was
-                                // suspended is that the two do not fit at once.
-                                try { engine.trimPool(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37660", ignored); }
-                            }
-                            if (keepSuspended && keep != null) {
-                                try { keep.resume(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37663", ignored); }
-                            }
-                            final boolean closedForExport = keepClosed && !batchExportRunning;
-                            if (closedForExport) {
-                                // The preview session was closed to make room for
-                                // the export, so the canvas has nothing behind it.
-                                // Re-open the same frame the way a chip does.
-                                runOnUiThread(() -> {
-                                    if (!uiReady) return;
-                                    if (currentFrame < 0 || currentFrame >= frames.size()) return;
-                                    CrashTrail.mark(MainActivity.this, "export:reopen after close");
-                                    reopenFrameForced(currentFrame);
-                                });
-                            }
-                        }
-                        // **Hand the pool back before anything else runs.** A
-                        // 51 MP full render leaves its whole working set
-                        // pooled, and the pool only returns it when the *last*
-                        // session closes or a different frame is opened --
-                        // neither of which a reused preview session ever does.
-                        // Measured: without this the launcher and SystemUI were
-                        // evicted and the phone froze for about a minute after
-                        // an export that had itself succeeded.
-                        try {
-                            final long freed = engine.trimPool();
-                            DebugSink.text("export", "pool trim freed "
-                                    + (freed >> 20) + " MiB; report " + engine.memoryReport());
-                        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37690", ignored); }
-                    }
-                } finally {
-                    spinning.set(false);
-                    try { memTicker.interrupt(); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37694", ignored); }
-                    runOnUiThread(() -> {
-                        if (beforeBitmap == null) beforeBitmap = savedBefore;
-                        if (lastRenderedBitmap == null) lastRenderedBitmap = savedAfter;
-                        if (compare != null) {
-                            compare.setBefore(beforeBitmap);
-                            compare.setAfter(lastRenderedBitmap);
-                        }
-                    });
-                }
-                // **The still is finished; now the clip that plays behind it.**
-                // One file goes to the album, so this happens before the write,
-                // not after.
-                if (liveClipPath != null) {
-                    runOnUiThread(() -> statusText.setText("导出中：动图逐帧冲洗..."));
-                    final java.io.File withClip = attachLiveClip(tmp, liveClipPath, liveTsUs, liveEdge);
-                    if (withClip != null) {
-                        final java.io.File stillOnly = tmp;
-                        tmp = withClip;
-                        stillOnly.delete();
-                        liveDone[0] = true;
-                    }
-                }
-                uploadExportProgress(tmp);
-                uploadVkLog();
-                int w = info[0], h = info[1];
-                long renderMs = info[2];
-                if (w <= 0 || h <= 0 || !tmp.exists() || tmp.length() == 0) {
-                    throw new RuntimeException("引擎没有输出图像");
-                }
-
-                // (The capture fields are written by the JPEG encoder itself,
-                // handed over just above. This used to reopen the finished file
-                // and save attributes through the platform class; its guard read
-                // `"jpg".equals(ext)` against an `ext` of ".jpg", so for a whole
-                // release no export carried any of it -- silently.)
-                final int fw = w, fh = h;
-                runOnUiThread(() -> statusText.setText("导出中：写入相册 " + fw + "x" + fh + "..."));
-                // **A negative says so in its name.** The engine already exports
-                // one (`negative` / `cineon-log`), and once it is a file in the
-                // album the only thing that separates it from the positives is
-                // what we call it -- 观片台 lists the folder, not the medium.
-                final boolean negMedium = "negative".equals(printStock)
-                        || "cineon-log".equals(printStock);
-                String fileName = "SpektraLab_" + (negMedium ? "NEG_" : "")
-                        + System.currentTimeMillis() + ext;
-                final Uri outUri = writeExportFile(tmp, fileName, ext, mime);
-                lastExportOutUri = outUri;
-                // **Does the file look like the picture we think we wrote?**
-                // Two measurements of the smoothed result: the mean difference
-                // between neighbouring rows and between neighbouring columns.
-                // A photograph has both (their ratio sits near 1); a frame
-                // stretched along one axis does not. Cheap enough for every
-                // export, and the only evidence a "garbled, once, never again"
-                // report can leave behind.
-                exportCorruptNow = false;
-                // **Neither a TIFF nor a DNG can be decoded here** (see
-                // `inspectContainer`): both checks below take a different route
-                // for them, and both blocks need to know which one this is.
-                final boolean noPixels = tiff || tiffLinear || dng;
-                {
-                    // The canvas is only *this* frame's while a batch is not
-                    // walking the strip behind our back.
-                    // **`BitmapFactory` cannot read a 16-bit TIFF.** Every TIFF
-                    // export therefore ended in `export-selfcheck | decode
-                    // failed` -- a checker that never checked, for years. Those
-                    // two formats are asked a different question below: is the
-                    // container intact and does it carry the pixels the header
-                    // promises. A truncated write is the failure they actually
-                    // suffer from.
-                    final double ncc = (batchExportRunning || noPixels) ? -1
-                            : exportMatchesCanvas(tmp.getAbsolutePath(), lastRenderedBitmap);
-                    // **The measurement that actually catches this.** A frame
-                    // replaced by row-to-row noise survives every check that
-                    // averages: at 48 columns the noise is flat grey, so a
-                    // corrupt export and a clean one correlate just as well on
-                    // structure. The first difference does not average -- a
-                    // photograph measures about 0.9 (vertical/horizontal), the
-                    // reports measure 6 to 999 -- so it is asked separately and
-                    // either one failing condemns the file.
-                    final int stripes = info.length > 7 ? info[7] : -1;
-                    if ((ncc >= 0 && ncc < 0.55) || stripes >= 3500) {
-                        exportCorruptNow = true;
-                        try {
-                            DebugSink.textNow("export-corrupt",
-                                    String.format(java.util.Locale.US,
-                                        "canvas NCC %.3f rows %d at %dx%d tier=%s overscan=%s — retrying",
-                                        ncc, stripes, w, h, tier, overscanOn)
-                                        + "\n" + rowSignature(tmp.getAbsolutePath())
-                                        + "\n" + reportHead());
-                        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37784", ignored); }
-                    } else if (ncc >= 0) {
-                        try { DebugSink.text("export-selfcheck", String.format(
-                                java.util.Locale.US, "canvas NCC %.3f rows %d", ncc, stripes)); }
-                        catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37788", ignored); }
-                    }
-                }
-                {
-                    final String verdict = exportCorruptNow ? null
-                            : (noPixels ? inspectContainer(tmp.getAbsolutePath(), w, h)
-                                        : inspectExportedFile(tmp.getAbsolutePath()));
-                    if (verdict != null) {
-                        try { DebugSink.textNow("export-selfcheck", verdict); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37796", ignored); }
-                        // **Say it out loud.** This measurement has existed since
-                        // the "garbled, once, never again" report, but it only
-                        // ever reached the status bar -- and the field reports
-                        // that followed all say the same thing: the user found
-                        // out from the gallery. The 26.7 MP export behind
-                        // SL-261110-F51B was 616 KB (0.023 B/px against a
-                        // normal 0.5-1) and the app called it a success.
-                        // The file stays -- the render cost minutes -- but it
-                        // is named as suspect and the user is told to try again.
-                        runOnUiThread(() -> {
-                            if (statusText != null) statusText.setText("导出结构异常：" + verdict);
-                            showInAppToast("这张导出结构异常（可能花屏），请再导一次");
-                        });
-                    }
-                }
-                // **And the one measurement the edge probe already made.**
-                // It only ever reached a file nobody reads, which is why a
-                // "column of bars on the left edge" report could not be tied to
-                // a side, a spacing or a canvas size. One upload, only when the
-                // answer is not null: a clean export stays silent.
-                {
-                    final String ruler = edgeRulerVerdict(tmp.getAbsolutePath() + ".prog");
-                    if (ruler != null) {
-                        // **Synchronous.** This runs on the export worker, not
-                        // the UI thread, and the whole point is that the report
-                        // survives the user switching away mid-export -- the
-                        // queued path is exactly what lost the last three.
-                        try {
-                            DebugSink.textNow("edge-ruler", ruler + "\n" + reportHead());
-                        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37826", ignored); }
-                        runOnUiThread(() -> {
-                            if (statusText != null) statusText.setText("边缘检测：" + ruler);
-                        });
-                    }
-                }
-                try {
-                    long len = tmp.length();
-                    DebugSink.text("export", "format=" + format + " tier=" + tier + " w=" + w + " h=" + h + " renderMs=" + renderMs
-                            + (info.length > 4 ? " mean16=" + info[4] : "")
-                            + (info.length > 6 ? " pipelinePe=" + (info[5] / 1000.0)
-                                    + " pipelineGain=" + (info[6] / 1000.0) : "")
-                            + (info.length > 8 ? " uhdrMap=" + info[8] : "")
-                            + " bytes=" + len);
-                    if (len > 0 && len < 30L * 1024 * 1024) {
-                        byte[] buf = new byte[(int) len];
-                        try (java.io.InputStream in = new java.io.FileInputStream(tmp)) {
-                            int off = 0, n;
-                            while (off < buf.length && (n = in.read(buf, off, buf.length - off)) > 0) off += n;
-                        }
-                        DebugSink.bytes("export", "out-" + tier + ext, buf, mime);
-                    }
-                } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37848", ignored); }
-                final long secs = Math.max(1, (nowMs() - t0) / 1000);
-                final long fRender = renderMs;
-                // **Did the file get its map?** A paper with no shoulder inside
-                // the ramp has nothing to give back, and the writer says so
-                // rather than inventing a gain.
-                final boolean uhdrMap = info.length > 8 && info[8] != 0;
-                final String uhdrNote = !uhdr ? ""
-                        : (uhdrMap ? " · Ultra HDR" : " · 这张相纸没有可还原的高光肩部，存的是普通 JPEG");
-                final long bytes = tmp.exists() ? tmp.length() : 0;
-                final String sizeLabel = bytes > 0
-                        ? String.format("%.1f MB", bytes / 1048576.0) : "?";
-                runOnUiThread(() -> {
-                    lastExportUri = outUri;
-                    lastExportMime = mime;
-                    // A separate control, and only when it has something to do:
-                    // every other format opens where it lands, and a permanent
-                    // share button on a photograph app reads as "post to
-                    // social", which is not what this is.
-                    if (sharePill != null) sharePill.setVisibility((tiff || dng) ? View.VISIBLE : View.GONE);
-                    // Dimensions and file size together: "3.3 MB" alone reads as
-                    // a bug when the frame is 16 MP, and the reason is worth
-                    // saying out loud rather than guessing at later.
-                    final String canvas = overscanCanvasLabel();
-                    final String canvasNote = canvas.isEmpty() ? "" : " · 画布 " + canvas;
-                    final String tiffHint = tiff
-                            ? "（TIFF：点导出旁边的「分享」发给手机版 Lightroom 即可使用）"
-                            : dng ? "（DNG：线性 16 位，给电脑上的 Lightroom / ACR；手机版打不开，已知问题，不必反馈）" : "";
-                    final String liveNote = liveDone[0] ? " · 实况（含动图）"
-                            : (liveClipPath != null ? " · 动图未写入" : "");
-                    if (!exportCorruptNow)
-                        showInAppToast("已保存 " + fw + "x" + fh + canvasNote + " · " + sizeLabel
-                                + liveNote + uhdrNote + tiffHint);
-                    else
-                        showInAppToast("导出内容异常，正在自动重导一次…");
-                    statusText.setText("已导出 " + fw + "x" + fh + canvasNote + " · " + sizeLabel
-                        + "（" + secs + " 秒，其中渲染 " + (fRender / 1000.0) + " 秒）" + tiffHint);
-                    hideBusy();
-                    setStep(2);
-                });
-            } catch (Throwable e) {
-                final String msg = describe(e);
-                try { DebugSink.text("export-error", "tier=" + tier + " " + msg); } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37890", ignored); }
-                // **The gate is the one failure worth retrying blind.** The
-                // engine names the frame it was handed, so re-picking from that
-                // number is a real answer rather than a guess; everything else
-                // (a plane that does not fit, a lost device) fails the same way
-                // a second time and should just be reported.
-                if (exportHeals < 2 && healCanvasFromError(msg)) {
-                    ++exportHeals;
-                    final String f2 = format, t2 = tier;
-                    runOnUiThread(() -> {
-                        if (exportProgressBar != null) hideBusy();
-                        statusText.setText("片边太大，已关闭，重试导出…");
-                        exportImage(f2, t2, onDone);
-                    });
-                    return;
-                }
-                if (exportHeals < 2 && healGateFromError(msg)) {
-                    ++exportHeals;
-                    final String f2 = format, t2 = tier;
-                    runOnUiThread(() -> {
-                        if (exportProgressBar != null) hideBusy();
-                        statusText.setText("按片门比例重试导出…");
-                        exportImage(f2, t2, onDone);
-                    });
-                    return;
-                }
-                uploadExportProgress(tmp);
-                uploadVkLog();
-                runOnUiThread(() -> {
-                    statusText.setText("导出失败 " + SpkError.shortForm(msg));
-                    showErrorDialog("导出失败", SpkError.format(msg)
-                            + "\n\n" + sourceWidth + "×" + sourceHeight
-                            + "\n" + probe.describe());
-                    hideBusy();
-                    setStep(2);
-                });
-                final int code = SpkError.codeOf(msg);
-                if (code == 1001 || code == 1009) offerSmallerImport();
-            } finally {
-                if (tmp.exists()) tmp.delete();
-                // **An export that came back as noise is not an export.**
-                // The render cost fifteen seconds; a silent bad file costs the
-                // user a trip to the gallery and a bug report. Retry once, on
-                // the UI thread, and let the second attempt report.
-                if (exportCorruptNow && !exportRetried && !batchExportRunning) {
-                    exportRetried = true;
-                    // **The bad file goes before the second attempt.** It is
-                    // already committed to the album by `writeExportFile`, and
-                    // this retry used to leave it there -- so one export ended
-                    // as two files, one of them corrupt. That is the whole of
-                    // "一口气导出了两张重复文件".
-                    try {
-                        final Uri bad = lastExportOutUri;
-                        lastExportOutUri = null;
-                        if (bad != null) getContentResolver().delete(bad, null, null);
-                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37945", ignored); }
-                    // **A deterministic failure is not retried the same way.**
-                    // SL-261118-C2FF rendered the same 26 MP frame four times
-                    // and got byte-identical output each time (`bytes=4194721`,
-                    // `mean16=14040`, `canvas NCC 0.025`), so repeating the
-                    // identical call cannot succeed. The canvas on screen was
-                    // drawn by a *different* session and was fine -- it is the
-                    // one thing in the process holding a correct render of this
-                    // frame -- so the second attempt borrows it. With the rebate
-                    // on, that session's edge masks are rasterised at the
-                    // preview's millimetres per pixel, so the borrow is refused
-                    // there and the old behaviour stands.
-                    // Only when there is still a preview session to borrow: if
-                    // the first attempt had to close it for room, the borrow
-                    // would find nothing and the retry would refuse itself.
-                    exportReuseCanvas = !overscanOn && session != null;
-                    // **A retry nobody can see is indistinguishable from a slow
-                    // render.** This one changes which session draws the file,
-                    // and that is the whole difference between the two attempts
-                    // -- so it goes in the ledger, named.
-                    SelfHeal.repaired("export-corrupt", exportReuseCanvas
-                            ? "second attempt on the canvas' own session"
-                            : "second attempt on a fresh session (nothing to borrow)");
-                    runOnUiThread(() -> {
-                        if (statusText != null) statusText.setText(exportReuseCanvas
-                                ? "导出内容异常，换一条路重导一次…"
-                                : "导出内容异常，自动重导一次…");
-                        loadAlbum();
-                        exportImage(format, tier, onDone);
-                    });
-                    return;
-                }
-                if (exportCorruptNow) {
-                    // **A file we know is wrong does not stay in the gallery.**
-                    // Telling the user was not enough: the bad file is already
-                    // in 相册 by the time this runs, and the next thing they see
-                    // is a striped picture they paid two minutes of rendering
-                    // for. Delete this attempt and say what happened.
-                    try {
-                        final Uri bad = lastExportOutUri;
-                        if (bad != null) getContentResolver().delete(bad, null, null);
-                    } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:37986", ignored); }
-                    // **The wall must forget it too.** The file is gone, but
-                    // `album` still holds the entry and its bitmap, so the cell
-                    // stayed on 观片台 as a black rectangle with no way to
-                    // remove it -- the whole of SL-261118-7167's first
-                    // complaint. A rescan is what drops it.
-                    runOnUiThread(MainActivity.this::loadAlbum);
-                    final String ref = DebugSink.REF;
-                    runOnUiThread(() -> showErrorDialog("这次导出没有成功",
-                            "写出来的画面是坏的：整幅几乎同一个颜色，或整幅逐行噪声。"
-                            + "不是你的图的问题。\n\n"
-                            + "已经换了一条渲染路径重试，还是这样，所以这次没有把文件留在相册里。"
-                            + "换一张、或者换一支胶片再回来，通常就正常了；"
-                            + "如果每次都是同一张出问题，把记录号 " + ref + " 发我。"));
-                }
-                if (onDone != null) runOnUiThread(onDone);
-            }
-        }).start();
+        new ExportWorker(this).run(format, tier, onDone);
     }
 
 
@@ -37913,7 +35460,7 @@ public class MainActivity extends Activity {
      * 256 MiB returns successfully every time (79 s). An occasional timeout is
      * a thing to survive, not a thing to report.
      */
-    private static boolean isDeviceLost(String message) {
+    static boolean isDeviceLost(String message) {
         if (message == null) return false;
         return message.contains("DEVICE_LOST") || message.contains("device lost")
                 || message.contains("VkResult -4");
