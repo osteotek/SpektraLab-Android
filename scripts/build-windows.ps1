@@ -129,13 +129,56 @@ try {
         if (Test-Path "$localAssets\resources") {
             Get-ChildItem $localAssets -Exclude locales | Copy-Item -Destination "$stage\assets" -Recurse -Force
         } else {
-            # Offline by design: never download just to get assets.
-            try {
-                $cached = & "$root\scripts\cache-release.ps1" -BuildHome $BuildHome -Offline
-            } catch {
-                throw 'No engine assets: put them in app/src/main/assets/resources or cache the release APK with scripts/cache-release.ps1.'
+            # Offline by design: never download just to get assets. Prefer the
+            # patched engine checkout that setup-windows.ps1 / Build-Native
+            # create; only fall back to a cached release APK when there is no
+            # engine tree. This keeps -UsePrebuiltNative usable in a fresh
+            # clone that has run setup but never built the native library.
+            $patchHash = (Get-FileHash "$root\patches\engine-android.patch" -Algorithm SHA256).Hash.Substring(0, 12)
+            $engineTree = if ($EngineCheckout) { (Resolve-Path $EngineCheckout).Path } else { "$BuildHome\engine-$patchHash" }
+            if (Test-Path "$engineTree\engine\resources") {
+                $resources = "$stage\assets\resources"
+                Get-ChildItem "$engineTree\engine\resources" -Exclude DI | Copy-Item -Destination $resources -Recurse -Force
+                # The product profiles / LUTs live beside the engine sources. The
+                # CMake build copies them too; without them the device budget and
+                # paper catalogue are wrong even though the .so is fine.
+                $product = "$engineTree\engine\resources_product"
+                if (Test-Path "$product\profiles") {
+                    # Merge into the existing profiles dir; copying the folder
+                    # itself would produce a nested profiles\profiles tree.
+                    Copy-Item "$product\profiles\*" -Destination "$resources\profiles" -Recurse -Force
+                }
+                if (Test-Path "$engineTree\engine\third_party\stb\LICENSE") {
+                    Copy-Item "$engineTree\engine\third_party\stb\LICENSE" -Destination "$resources\stb-LICENSE.txt" -Force
+                }
+                # The compiled shaders are produced by the CMake build, so they
+                # live in the native build tree, not the engine source checkout.
+                $shaderDir = if (Test-Path "$native\engine\resources\vulkan") {
+                    "$native\engine\resources\vulkan"
+                } elseif (Test-Path "$engineTree\engine\resources\vulkan") {
+                    "$engineTree\engine\resources\vulkan"
+                } else { $null }
+                if ($shaderDir) {
+                    New-Item -ItemType Directory "$resources\vulkan" -Force | Out-Null
+                    Copy-Item "$shaderDir\*.spv" -Destination "$resources\vulkan" -Force
+                }
+                & $python "$root\app\build\gen-stock-catalog.py" $resources
+                foreach ($pair in @(
+                        @("$product\NOTICE.md", "Product-profiles-NOTICE.md"),
+                        @("$product\paper_grades.json", "paper_grades.json"),
+                        @("$product\neutral_print_filters.json", "product-neutral-print-filters.json"),
+                        @("$product\fonts\LICENSE", "Imprint-fonts-LICENSE.txt"),
+                        @("$product\fonts\DejaVu-LICENSE", "Imprint-mono-font-DejaVu-LICENSE.txt"))) {
+                    if (Test-Path $pair[0]) { Copy-Item $pair[0] -Destination "$resources\$($pair[1])" -Force }
+                }
+            } else {
+                try {
+                    $cached = & "$root\scripts\cache-release.ps1" -BuildHome $BuildHome -Offline
+                } catch {
+                    throw 'No engine assets: run scripts/setup-windows.ps1 (creates the patched engine checkout), put them in app/src/main/assets/resources, or cache the release APK.'
+                }
+                & $python $apkContents assets $stage $cached
             }
-            & $python $apkContents assets $stage $cached
         }
     } else {
         $resources = "$stage\assets\resources"
