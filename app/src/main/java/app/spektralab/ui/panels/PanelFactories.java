@@ -12,7 +12,6 @@ import app.spektralab.DebugSink;
 import app.spektralab.Diagnostics;
 import app.spektralab.MainActivity.Frame;
 import app.spektralab.Look;
-import app.spektralab.ui.CappedScroll;
 import app.spektralab.MainActivity.Knob;
 import app.spektralab.MainActivity.LiveClip;
 import app.spektralab.ui.*;

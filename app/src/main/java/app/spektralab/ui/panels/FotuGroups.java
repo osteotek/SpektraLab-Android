@@ -7,7 +7,6 @@ import android.view.View;
 import android.widget.*;
 import app.spektralab.DebugSink;
 import app.spektralab.Diagnostics;
-import app.spektralab.ui.CappedScroll;
 
 /** FotuGroups builders extracted from MainActivity (architecture Phase C). */
 public final class FotuGroups {

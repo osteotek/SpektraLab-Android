@@ -8,7 +8,6 @@ import android.widget.*;
 import app.spektralab.DebugSink;
 import app.spektralab.Diagnostics;
 import app.spektralab.Probe;
-import app.spektralab.ui.CappedScroll;
 
 /** PrintEdge builders extracted from MainActivity (architecture Phase C). */
 public final class PrintEdge {
