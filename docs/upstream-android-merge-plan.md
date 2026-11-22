@@ -61,7 +61,32 @@ branch were removed afterwards.
   worker re-port; smoke test passes.
 - **Not yet wired:** upstream's Activity still uses its own inline
   implementations, so the workers compile but are not called. Replacing those
-  inline paths is the next Stage 2 slice and must preserve the golden baseline.
+  inline paths is a follow-up and must preserve the golden baseline.
+
+### Merge readiness (2026-11-22)
+
+All Gate 5 checks pass on `feat/adopt-upstream-170`:
+
+- `scripts/verify.ps1` (with and without `-EngineRoot`) — all PASS;
+  `check-patch` PASS (JNI shim compile remains a documented WARN, the real JNI
+  is verified by the NDK build).
+- NDK/CMake source build and `-UsePrebuiltNative` build both produce signed
+  side-by-side APKs (19.8 MB / 12.1 MB); both give golden bands 0/128/512 =
+  `e60490499b9a94eb`.
+- Device smoke passes; UI export produces a JPEG
+  (`已导出 600x600 · 0.3 MB（4 秒，其中渲染 1.096 秒）`).
+- No conflict markers; version identity `1.7.0i / 752` consistent across all
+  four files; size numbers recorded in `docs/modernization-plan.md` §5.
+
+Known follow-ups, not merge blockers:
+
+- The workers are compiled but not called by the Activity.
+- `version.json` names the locally built 1.7.0i APK; a fresh clone must use the
+  source build (or cache a matching APK) because engine assets are gitignored
+  upstream policy.
+- Upstream's `AGENTS.md` / `AI-NOTICE.md` and all licence notices are preserved
+  unchanged; the GPL source-publication obligation is satisfied by pushing this
+  public fork.
 
 ## 1. Verified starting state (2026-11-22)
 

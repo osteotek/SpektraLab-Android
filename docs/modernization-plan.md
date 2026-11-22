@@ -132,8 +132,10 @@ larger. Add the following budget before any source migration.
 
 | Build mode | Cached APK | Note |
 |---|---|---|
-| `-UsePrebuiltNative -SideBySide` | 15.21 MB | Seven libraries (~15 MB raw) deflated by `apk-contents.py`. |
-| `-UseReleaseNative -SideBySide` | 25.72 MB | 20 stored ZIP entries (15.84 MB raw) from the staged asset tree; already above `build-windows.ps1`'s 20 MB guard. |
+| `-UsePrebuiltNative -SideBySide` (1.6.2m, historical) | 15.21 MB | Seven libraries (~15 MB raw) deflated by `apk-contents.py`. |
+| `-UseReleaseNative -SideBySide` (1.6.2m, historical) | 25.72 MB | 20 stored ZIP entries (15.84 MB raw) from the staged asset tree; already above `build-windows.ps1`'s 20 MB guard. |
+| Source build, `-SideBySide` (1.7.0i) | 19.8 MB | Upstream 1.7.0 engine + Fotufilm; single statically-linked `libspektrafilm_engine.so`. |
+| `-UsePrebuiltNative -SideBySide` (1.7.0i) | 12.1 MB | One stripped 5.8 MB `.so`; identical golden hash to the source build. |
 
 A single ≤20 MB threshold is therefore not a trustworthy baseline. Record entry
 sizes and compression per mode before Phase 0, then report a delta after every
