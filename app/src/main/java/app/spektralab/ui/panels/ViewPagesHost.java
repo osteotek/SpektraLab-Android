@@ -1,4 +1,6 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.CurveView;
+import app.spektralab.ui.ColorWheel;
 import app.spektralab.ui.CappedScroll;
 import app.spektralab.ui.Square;
 
@@ -23,12 +25,12 @@ public interface ViewPagesHost {
     void setCbReadout(android.widget.TextView value);
     int getCbZone();
     void setCbZone(int value);
-    app.spektralab.MainActivity.ColorWheel getColorWheel();
-    void setColorWheel(app.spektralab.MainActivity.ColorWheel value);
+    ColorWheel getColorWheel();
+    void setColorWheel(ColorWheel value);
     int getCurveChannel();
     void setCurveChannel(int value);
-    app.spektralab.MainActivity.CurveView getCurveView();
-    void setCurveView(app.spektralab.MainActivity.CurveView value);
+    CurveView getCurveView();
+    void setCurveView(CurveView value);
     android.widget.TextView[] getEffectChips();
     void setEffectChips(android.widget.TextView[] value);
     android.widget.LinearLayout[] getEffectPages();
@@ -134,7 +136,7 @@ public interface ViewPagesHost {
     void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5);
     void toolHeaderHostCall(android.widget.LinearLayout a0, java.lang.String a1);
     int uiToggleOffViaHost();
-    app.spektralab.MainActivity.ColorWheel newColorWheel();
-    app.spektralab.MainActivity.CurveView newCurveView();
+    ColorWheel newColorWheel();
+    CurveView newCurveView();
     android.content.Context context();
 }

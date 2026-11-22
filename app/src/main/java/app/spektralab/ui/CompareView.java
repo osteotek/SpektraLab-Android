@@ -1,10 +1,15 @@
 package app.spektralab.ui;
 
+import static app.spektralab.AppLanguage.tr;
+import app.spektralab.ui.UiPalette;
 import app.spektralab.DebugSink;
 import app.spektralab.Diagnostics;
-import app.spektralab.ui.UiPalette;
-import android.graphics.Bitmap;
+import android.graphics.*;
+import android.view.*;
+import android.os.*;
+import java.util.function.Consumer;
 
+/** 1.7.0 comparison view ported from MainActivity. */
 public final class CompareView extends android.view.View {
         private final android.graphics.Paint paint =
                 new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
@@ -15,7 +20,46 @@ public final class CompareView extends android.view.View {
         private final float slop;
         private final float density;
         private Bitmap before, after;
+        /**
+         * The frame exactly as the engine handed it over. `after` is the same
+         * object unless the activity has replaced it with the HDR copy -- and
+         * every "is this still the same frame" question has to be asked of
+         * *this*, not of `after`.
+         */
+        private Bitmap sdrAfter;
+        /** Every new `after`, for the HDR copy. Null when nothing wants one. */
+        private java.util.function.Consumer<Bitmap> afterWatcher;
+
+        public void setAfterWatcher(java.util.function.Consumer<Bitmap> w) { afterWatcher = w; }
+
+        /** The SDR frame (what an export or a histogram would want). */
+        public Bitmap afterBitmap() { return sdrAfter; }
+
+        /** Adopt an HDR copy -- only while it is still the frame it came from. */
+        public void setHdrAfter(Bitmap hdr, Bitmap source) {
+            if (hdr == null) return;
+            if (after != source || sdrAfter != source) { hdr.recycle(); return; }
+            after = hdr;
+            invalidate();
+        }
+
+        /** Back to the SDR frame, without a re-render. */
+        public void dropHdr() {
+            if (after != sdrAfter) { after = sdrAfter; invalidate(); }
+        }
         private boolean holding, dragging;
+        /**
+         * Fires when one finger rests on the picture without moving.
+         *
+         * <p>Press-to-compare used to live here as a 500 ms timer, and it fought
+         * every pinch (tr("ui170.337")); it moved to its pill and this
+         * timer was left doing nothing. A live photo is the one thing on this
+         * canvas a still cannot show, so it gets the gesture.
+         */
+        private Runnable longPress;
+        private final Runnable armLongPress = new Runnable() {
+            @Override public void run() { if (longPress != null) longPress.run(); }
+        };
         private float split, downX, downY;
         // **The canvas zooms.** A 20 MP frame is inspected at fit size only
         // down to the whole picture; pinch says "let me see that corner".
@@ -25,7 +69,7 @@ public final class CompareView extends android.view.View {
         private boolean panning;
         private long lastTapMs = 0;
         /** **The divider is opt-in.** Any single-finger drag used to become
-         *  a comparison split, which is what "一直在跟分割线抢手势" was: the
+         *  a comparison split, which is what tr("ui170.338") was: the
          *  canvas could not pan without dragging the line instead. Now the
          *  pill in the corner turns it on. */
         private boolean splitMode = false;
@@ -49,6 +93,9 @@ public final class CompareView extends android.view.View {
         private float previewRotation = 0f;
         private float rotLast = Float.NaN;
         private float rotTotal = 0f;
+        /** Did this gesture leave the slop? A tap commits nothing. */
+        private boolean rotMoved = false;
+        private float rotDownX, rotDownY;
         private RotateSink rotateSink;
 
         public interface RotateSink {
@@ -131,6 +178,7 @@ public final class CompareView extends android.view.View {
         // the picture and the leftover finger became a comparison drag.
         // `ScaleGestureDetector` owns that state and reports a factor.
 
+
         /** Retired: the long press lives on the pill now. Kept so the
          *  `removeCallbacks` calls stay valid, never posted. */
         private final Runnable press = new Runnable() {
@@ -139,7 +187,9 @@ public final class CompareView extends android.view.View {
 
         /** **The pill owns "show me the original".** A press on the picture
          *  used to arm a 500 ms timer that fired in the middle of every pinch,
-         *  which is the "一直跟长按对比功能冲突" report. */
+         *  which is the tr("ui170.337") report. */
+        public void setOnLongPress(Runnable r) { longPress = r; }
+
         public void setHolding(boolean on) {
             final boolean wanted = on && before != null && after != null;
             if (holding == wanted) return;
@@ -198,7 +248,24 @@ public final class CompareView extends android.view.View {
         }
 
         public void setBefore(Bitmap b) { before = b; invalidate(); }
-        public void setAfter(Bitmap b) { after = b; invalidate(); }
+        /** True while the canvas shows 原图 (a blend of the two: `after` may be
+         *  the glow copy of it, so "after == null" alone is not the question). */
+        private boolean standIn;
+        public void setStandIn(boolean on) {
+            if (standIn == on) return;
+            standIn = on;
+            invalidate();
+        }
+        public void setAfter(Bitmap b) {
+            sdrAfter = b;
+            after = b;
+            standIn = false;          // a developed frame just landed
+            invalidate();
+            // **One hook, every path.** Nine callers set this (render, live,
+            // fotufilm's rebate, the export's restore, ...); asking each of them
+            // for an HDR copy is how one of them ends up without it.
+            if (afterWatcher != null && b != null) afterWatcher.accept(b);
+        }
 
         public boolean isSplitMode() { return splitMode; }
 
@@ -240,9 +307,26 @@ public final class CompareView extends android.view.View {
             if (base == null) return;
             drawFit(canvas, base);
             drawGrid(canvas);
-            if (before == null || after == null) return;
+            if (before == null) {
+                if (rotateMode) drawCropFrame(canvas);
+                return;
+            }
+            if (after == null || standIn) {
+                // 原图: the untouched decode. Say which side of the darkroom
+                // this is -- the shelf card behind the panel already reads
+                // 原图, and a frame that has never been developed looks like a
+                // failed render without a word on it.
+                drawTag(canvas, tr("ui170.339"),
+                        Math.min(dst.right, getWidth()) - density * 10f,
+                        Math.max(dst.top, 0f) + density * 10f, true);
+                if (rotateMode) drawCropFrame(canvas);
+                return;
+            }
             if (holding) {
                 drawFit(canvas, before);
+                drawTag(canvas, tr("ui170.339"),
+                        Math.min(dst.right, getWidth()) - density * 10f,
+                        Math.max(dst.top, 0f) + density * 10f, true);
             } else if (split > 0f) {
                 final float x = split * getWidth();
                 canvas.save();
@@ -250,8 +334,60 @@ public final class CompareView extends android.view.View {
                 drawFit(canvas, before);
                 canvas.restore();
                 drawDivider(canvas, x);
+                // **The two halves have always been 原图 left / 成片 right**,
+                // and nothing on the picture said so. The plates sit either
+                // side of the handle, at the top of the frame, so they follow
+                // the divider instead of hiding under the corner HUDs.
+                final float ty = Math.max(dst.top, 0f) + density * 10f;
+                drawTag(canvas, tr("ui170.339"), x - density * 16f, ty, true);
+                drawTag(canvas, tr("ui170.340"), x + density * 16f, ty, false);
             }
             if (rotateMode) drawCropFrame(canvas);
+        }
+
+        /** The typeface the two tags are drawn with: the page's own CJK face,
+         *  handed in by the activity (`tfHan` is not static). */
+        private android.graphics.Typeface tagFace;
+        public void setTagFace(android.graphics.Typeface t) { tagFace = t; }
+
+        /**
+         * **Which side of the print you are looking at.**
+         *
+         * <p>The split has always drawn the source left of the hairline and
+         * the finished print right of it, and nothing said so: on a low
+         * contrast scene the two halves read as one picture with a seam. Two
+         * small plates, in the same card language as the 实况 badge, name them.
+         */
+        private void drawTag(android.graphics.Canvas canvas, String text,
+                             float anchorX, float top, boolean rightAligned) {
+            if (text == null || text.isEmpty()) return;
+            final android.graphics.Paint p = new android.graphics.Paint(
+                    android.graphics.Paint.ANTI_ALIAS_FLAG);
+            p.setTypeface(tagFace != null ? tagFace : android.graphics.Typeface.DEFAULT_BOLD);
+            p.setTextSize(density * 8.5f);
+            final float padX = density * 7f, padY = density * 3.5f;
+            final float w = p.measureText(text) + padX * 2f;
+            final float h = p.getTextSize() + padY * 2f;
+            final float want = rightAligned ? anchorX - w : anchorX;
+            // **Inside the view, always.** The divider can be dragged to within
+            // a hair of either edge, and a plate half off the glass reads as a
+            // rendering fault.
+            final float x = Math.max(density * 4f,
+                    Math.min(want, getWidth() - w - density * 4f));
+            final android.graphics.RectF box = new android.graphics.RectF(x, top, x + w, top + h);
+            final float r = density * 3f;
+            p.setStyle(android.graphics.Paint.Style.FILL);
+            p.setColor(0xCC141414);
+            canvas.drawRoundRect(box, r, r, p);
+            p.setStyle(android.graphics.Paint.Style.STROKE);
+            p.setStrokeWidth(Math.max(1f, density));
+            p.setColor(0x59F6F3EA);
+            canvas.drawRoundRect(box, r, r, p);
+            p.setStyle(android.graphics.Paint.Style.FILL);
+            p.setColor(0xFFF6F3EA);
+            p.setTextAlign(android.graphics.Paint.Align.CENTER);
+            canvas.drawText(text, box.centerX(),
+                    box.centerY() - (p.descent() + p.ascent()) / 2f, p);
         }
 
         /**
@@ -435,7 +571,7 @@ public final class CompareView extends android.view.View {
                     && e.getPointerCount() >= 2) {
                 beginPinch(e);
                 try { DebugSink.text("zoom", "pinch begin span=" + Math.round(pinchStartSpan)); }
-                catch (Throwable spkIgnored) { Diagnostics.ignored("getActionMasked:10217", spkIgnored); }
+                catch (Throwable ignored) { Diagnostics.ignored("MainActivity:27096", ignored); }
                 return true;
             }
             if (pinching) {
@@ -446,7 +582,7 @@ public final class CompareView extends android.view.View {
                 if (action == android.view.MotionEvent.ACTION_POINTER_UP) {
                     endPinch();
                     try { DebugSink.text("zoom", "pinch end at " + String.format(java.util.Locale.US, "%.2f", zoom)); }
-                    catch (Throwable spkIgnored) { Diagnostics.ignored("getActionMasked:10228", spkIgnored); }
+                    catch (Throwable ignored) { Diagnostics.ignored("MainActivity:27107", ignored); }
                     return true;
                 }
                 if (action == android.view.MotionEvent.ACTION_UP
@@ -465,7 +601,10 @@ public final class CompareView extends android.view.View {
                 switch (action) {
                     case android.view.MotionEvent.ACTION_DOWN: {
                         final long now = android.os.SystemClock.uptimeMillis();
-                        if (now - lastTapMs < 320L) {
+                        // 420 ms, not 320: a deliberate double tap on a phone lands 150-400 ms
+                        // apart, and the old window turned the slower half of them into two
+                        // separate touches (the second of which armed another double tap).
+                        if (now - lastTapMs < 420L) {
                             rotLast = Float.NaN;
                             previewRotation = 0f;
                             if (rotateSink != null) rotateSink.onRotateReset();
@@ -475,12 +614,19 @@ public final class CompareView extends android.view.View {
                         }
                         lastTapMs = now;
                         rotTotal = 0f;
+                        rotMoved = false;
+                        rotDownX = e.getX();
+                        rotDownY = e.getY();
                         rotLast = angleAboutPicture(e.getX(), e.getY());
                         if (rotateSink != null) rotateSink.onRotateStart();
                         return true;
                     }
                     case android.view.MotionEvent.ACTION_MOVE: {
                         if (Float.isNaN(rotLast)) return true;
+                        if (!rotMoved) {
+                            if (Math.hypot(e.getX() - rotDownX, e.getY() - rotDownY) <= dpC(6)) return true;
+                            rotMoved = true;
+                        }
                         final float cur = angleAboutPicture(e.getX(), e.getY());
                         float d = cur - rotLast;
                         while (d > 180f) d -= 360f;
@@ -503,15 +649,25 @@ public final class CompareView extends android.view.View {
                     }
                     case android.view.MotionEvent.ACTION_UP:
                     case android.view.MotionEvent.ACTION_CANCEL: {
-                        // **A released drag is not half a double tap.** This
-                        // flag was only ever set on DOWN and cleared inside the
-                        // pinch branch, so letting go and touching the picture
-                        // again within 320 ms -- exactly what someone does when
-                        // the first try looks wrong -- counted as a double tap
-                        // and silently zeroed the angle.
-                        lastTapMs = 0L;
-                        if (Float.isNaN(rotLast)) return true;
+                        if (Float.isNaN(rotLast)) { lastTapMs = 0L; return true; }
                         rotLast = Float.NaN;
+                        // **A tap is not a drag of zero degrees.** Committing
+                        // one ran a full render for merely touching the picture,
+                        // so the second tap of a double tap arrived seconds
+                        // later and the gesture could never be recognised --
+                        // tr("ui170.341"). Worse, the old code
+                        // cleared `lastTapMs` here to stop a released drag
+                        // counting as half a double tap, which made the 320 ms
+                        // test in ACTION_DOWN unreachable by construction.
+                        //
+                        // Now a gesture that never left the slop commits
+                        // nothing and *arms* the double tap instead.
+                        if (!rotMoved) {
+                            if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP)
+                                lastTapMs = android.os.SystemClock.uptimeMillis();
+                            return true;
+                        }
+                        lastTapMs = 0L;
                         if (rotateSink != null) rotateSink.onRotateCommit(rotTotal);
                         return true;
                     }
@@ -527,7 +683,9 @@ public final class CompareView extends android.view.View {
                     dragging = false;
                     holding = false;
                     panning = false;
-                    // no long press on the picture: the pill owns it
+                    // **A finger that rests on the picture plays the clip.**
+                    // Compare stays on its pill; this timer was free.
+                    if (longPress != null) handler.postDelayed(armLongPress, 460L);
                     return true;
                 case android.view.MotionEvent.ACTION_POINTER_DOWN:
                 case android.view.MotionEvent.ACTION_POINTER_UP:
@@ -540,6 +698,7 @@ public final class CompareView extends android.view.View {
                             if (Math.abs(e.getX() - downX) < slop && Math.abs(e.getY() - downY) < slop) return true;
                             dragging = true;
                             handler.removeCallbacks(press);
+                            handler.removeCallbacks(armLongPress);
                         }
                         split = Math.max(0.02f, Math.min(0.98f, e.getX() / Math.max(1, getWidth())));
                         invalidate();
@@ -551,6 +710,7 @@ public final class CompareView extends android.view.View {
                             if (Math.abs(e.getX() - downX) < slop && Math.abs(e.getY() - downY) < slop) return true;
                             panning = true;
                             handler.removeCallbacks(press);
+                            handler.removeCallbacks(armLongPress);
                         }
                         panX += e.getX() - downX;
                         panY += e.getY() - downY;
@@ -563,6 +723,7 @@ public final class CompareView extends android.view.View {
                     return true;
                 case android.view.MotionEvent.ACTION_UP: {
                     handler.removeCallbacks(press);
+                    handler.removeCallbacks(armLongPress);
                     final long now = android.os.SystemClock.uptimeMillis();
                     if (!splitMode && !dragging && !panning && !holding && split == 0f && now - lastTapMs < 320) {
                         resetView();
@@ -584,6 +745,7 @@ public final class CompareView extends android.view.View {
                 }
                 case android.view.MotionEvent.ACTION_CANCEL:
                     handler.removeCallbacks(press);
+                    handler.removeCallbacks(armLongPress);
                     holding = false;
                     dragging = false;
                     panning = false;

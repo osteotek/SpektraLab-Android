@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.CompareView;
 
 // Narrow Activity surface used by ExportWorker. Implemented by MainActivity.
 // Extracted in architecture Phase 2; maintained by hand from here on.
@@ -11,8 +12,8 @@ interface ExportWorkerHost {
     void setBeforeBitmap(android.graphics.Bitmap value);
     float getCameraEv();
     void setCameraEv(float value);
-    app.spektralab.MainActivity.CompareView getCompare();
-    void setCompare(app.spektralab.MainActivity.CompareView value);
+    CompareView getCompare();
+    void setCompare(CompareView value);
     int getCurrentFrame();
     void setCurrentFrame(int value);
     app.spektralab.engine.SpektraLabEngine getEngine();

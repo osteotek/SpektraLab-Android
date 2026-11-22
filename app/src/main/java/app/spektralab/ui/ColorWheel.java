@@ -1,4 +1,5 @@
 package app.spektralab.ui;
+import app.spektralab.ui.ColorWheel;
 
 import app.spektralab.ui.UiPalette;
 import android.graphics.Bitmap;

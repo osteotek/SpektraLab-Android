@@ -10,12 +10,15 @@ public final class CropOverlay extends android.view.View {
         private float downX, downY, sx, sy, sw, sh;
         /** True while the last drag actually held the card's ratio. */
         private boolean ratioHeld;
+        private long lastTapMs = 0L;
 
         /** The Activity owns crop state; the View owns the gesture maths. */
         public interface Delegate {
             android.graphics.RectF imageRect();
             boolean onTouchCompare(android.view.MotionEvent e);
             void onCommit(float x, float y, float w, float h, boolean ratioHeld, int drag);
+            /** Double tap on a corner clears the crop back to the full frame. */
+            void onReset();
         }
 
         private final Delegate delegate;
@@ -106,6 +109,13 @@ public final class CropOverlay extends android.view.View {
                 case android.view.MotionEvent.ACTION_DOWN: {
                     final int hit = cornerAt(e.getX(), e.getY());
                     if (hit == 0) return false;
+                    final long now = android.os.SystemClock.uptimeMillis();
+                    if (now - lastTapMs < 320L) {
+                        lastTapMs = 0L;
+                        delegate.onReset();
+                        return true;
+                    }
+                    lastTapMs = now;
                     drag = hit;
                     downX = e.getX(); downY = e.getY();
                     sx = nx; sy = ny; sw = nw; sh = nh;

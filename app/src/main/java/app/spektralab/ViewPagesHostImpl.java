@@ -1,4 +1,6 @@
 package app.spektralab;
+import app.spektralab.ui.CurveView;
+import app.spektralab.ui.ColorWheel;
 import app.spektralab.ui.CappedScroll;
 import app.spektralab.ui.Square;
 
@@ -26,12 +28,12 @@ final class ViewPagesHostImpl implements app.spektralab.ui.panels.ViewPagesHost 
     @Override public void setCbReadout(android.widget.TextView value) { activity.cbReadout = value; }
     @Override public int getCbZone() { return activity.cbZone; }
     @Override public void setCbZone(int value) { activity.cbZone = value; }
-    @Override public app.spektralab.MainActivity.ColorWheel getColorWheel() { return activity.colorWheel; }
-    @Override public void setColorWheel(app.spektralab.MainActivity.ColorWheel value) { activity.colorWheel = value; }
+    @Override public ColorWheel getColorWheel() { return activity.colorWheel; }
+    @Override public void setColorWheel(ColorWheel value) { activity.colorWheel = value; }
     @Override public int getCurveChannel() { return activity.curveChannel; }
     @Override public void setCurveChannel(int value) { activity.curveChannel = value; }
-    @Override public app.spektralab.MainActivity.CurveView getCurveView() { return activity.curveView; }
-    @Override public void setCurveView(app.spektralab.MainActivity.CurveView value) { activity.curveView = value; }
+    @Override public CurveView getCurveView() { return activity.curveView; }
+    @Override public void setCurveView(CurveView value) { activity.curveView = value; }
     @Override public android.widget.TextView[] getEffectChips() { return activity.effectChips; }
     @Override public void setEffectChips(android.widget.TextView[] value) { activity.effectChips = value; }
     @Override public android.widget.LinearLayout[] getEffectPages() { return activity.effectPages; }
@@ -137,7 +139,7 @@ final class ViewPagesHostImpl implements app.spektralab.ui.panels.ViewPagesHost 
     @Override public void toggleCellHostCall(android.widget.LinearLayout a0, java.lang.String a1, java.lang.String a2, Square a3, java.util.function.BooleanSupplier a4, java.util.function.Consumer<java.lang.Boolean> a5) { activity.toggleCell(a0, a1, a2, a3, a4, a5); }
     @Override public void toolHeaderHostCall(android.widget.LinearLayout a0, java.lang.String a1) { activity.toolHeader(a0, a1); }
     @Override public int uiToggleOffViaHost() { return activity.uiToggleOff(); }
-    @Override public app.spektralab.MainActivity.ColorWheel newColorWheel() { return activity.new ColorWheel(); }
-    @Override public app.spektralab.MainActivity.CurveView newCurveView() { return activity.new CurveView(); }
+    @Override public ColorWheel newColorWheel() { return new app.spektralab.ui.ColorWheel(activity, activity.colorWheelDelegate); }
+    @Override public CurveView newCurveView() { return new app.spektralab.ui.CurveView(activity, activity.curveViewDelegate); }
     @Override public android.content.Context context() { return activity; }
 }

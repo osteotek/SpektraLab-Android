@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.CompareView;
 
 import android.content.Context;
 import android.graphics.Bitmap;

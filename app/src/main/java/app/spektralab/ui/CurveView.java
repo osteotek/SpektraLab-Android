@@ -1,4 +1,5 @@
 package app.spektralab.ui;
+import app.spektralab.ui.CurveView;
 import app.spektralab.ui.HistogramView;
 
 import app.spektralab.ui.UiPalette;

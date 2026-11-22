@@ -1,4 +1,6 @@
 package app.spektralab;
+import app.spektralab.ui.CompareView;
+import app.spektralab.ui.RotateScale;
 import app.spektralab.ui.HistogramView;
 
 // Narrow Activity surface used by RenderWorker. Implemented by MainActivity.
@@ -7,8 +9,8 @@ interface RenderWorkerHost {
     android.content.Context context();
     android.widget.TextView getBusyLabel();
     void setBusyLabel(android.widget.TextView value);
-    app.spektralab.MainActivity.CompareView getCompare();
-    void setCompare(app.spektralab.MainActivity.CompareView value);
+    CompareView getCompare();
+    void setCompare(CompareView value);
     int getCurrentFrame();
     void setCurrentFrame(int value);
     int getEdgeCanvasSends();
@@ -48,8 +50,8 @@ interface RenderWorkerHost {
     java.lang.Object getRenderMutex();
     boolean getRendering();
     void setRendering(boolean value);
-    app.spektralab.MainActivity.RotateScale getRotateArc();
-    void setRotateArc(app.spektralab.MainActivity.RotateScale value);
+    RotateScale getRotateArc();
+    void setRotateArc(RotateScale value);
     boolean getRotating();
     void setRotating(boolean value);
     float getRotationBeforeDrag();

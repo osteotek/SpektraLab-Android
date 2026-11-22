@@ -1,4 +1,6 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.CropOverlay;
+import app.spektralab.ui.RotateScale;
 
 /** Narrow Activity surface for the ComposePages builders. Implemented by ComposePagesHostImpl. */
 public interface ComposePagesHost {
@@ -24,8 +26,8 @@ public interface ComposePagesHost {
     void setComposeRotateTab(android.widget.TextView value);
     int getComposeSubPage();
     void setComposeSubPage(int value);
-    app.spektralab.MainActivity.CropOverlay getCropOverlay();
-    void setCropOverlay(app.spektralab.MainActivity.CropOverlay value);
+    CropOverlay getCropOverlay();
+    void setCropOverlay(CropOverlay value);
     int getCropRatioIndex();
     void setCropRatioIndex(int value);
     android.widget.HorizontalScrollView getCropScroll();
@@ -46,8 +48,8 @@ public interface ComposePagesHost {
     void setPendingCropX(float value);
     float getPendingCropY();
     void setPendingCropY(float value);
-    app.spektralab.MainActivity.RotateScale getRotateArc();
-    void setRotateArc(app.spektralab.MainActivity.RotateScale value);
+    RotateScale getRotateArc();
+    void setRotateArc(RotateScale value);
     boolean getRotateGridOn();
     void setRotateGridOn(boolean value);
     android.graphics.Typeface getTfBody();
@@ -67,6 +69,6 @@ public interface ComposePagesHost {
     void syncRotateGridHostCall();
     void turnByHostCall(int a0);
     void underlineViaHost(android.widget.TextView a0, boolean a1);
-    app.spektralab.MainActivity.RotateScale newRotateScale();
+    RotateScale newRotateScale();
     android.content.Context context();
 }

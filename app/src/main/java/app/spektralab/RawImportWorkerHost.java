@@ -1,4 +1,5 @@
 package app.spektralab;
+import app.spektralab.ui.CompareView;
 
 // Narrow Activity surface used by RawImportWorker. Implemented by MainActivity.
 // Extracted in architecture Phase 2; maintained by hand from here on.
@@ -10,8 +11,8 @@ interface RawImportWorkerHost {
     void setBatchExportRunning(boolean value);
     android.graphics.Bitmap getBeforeBitmap();
     void setBeforeBitmap(android.graphics.Bitmap value);
-    app.spektralab.MainActivity.CompareView getCompare();
-    void setCompare(app.spektralab.MainActivity.CompareView value);
+    CompareView getCompare();
+    void setCompare(CompareView value);
     int getCurrentFrame();
     void setCurrentFrame(int value);
     java.lang.String getDateText();

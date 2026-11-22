@@ -1,4 +1,6 @@
 package app.spektralab.ui.panels;
+import app.spektralab.ui.CropOverlay;
+import app.spektralab.ui.RotateScale;
 import app.spektralab.ui.RatioMark;
 
 import static app.spektralab.AppLanguage.tr;
@@ -7,8 +9,6 @@ import android.widget.*;
 import app.spektralab.DebugSink;
 import app.spektralab.Diagnostics;
 import app.spektralab.Probe;
-import app.spektralab.MainActivity.CropOverlay;
-import app.spektralab.MainActivity.RotateScale;
 
 /** ComposePages builders extracted from MainActivity (architecture Phase C). */
 public final class ComposePages {

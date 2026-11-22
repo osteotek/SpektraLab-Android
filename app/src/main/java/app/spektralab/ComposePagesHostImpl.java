@@ -1,4 +1,6 @@
 package app.spektralab;
+import app.spektralab.ui.CropOverlay;
+import app.spektralab.ui.RotateScale;
 
 /** Delegating implementation of ComposePagesHost. */
 final class ComposePagesHostImpl implements app.spektralab.ui.panels.ComposePagesHost {
@@ -27,8 +29,8 @@ final class ComposePagesHostImpl implements app.spektralab.ui.panels.ComposePage
     @Override public void setComposeRotateTab(android.widget.TextView value) { activity.composeRotateTab = value; }
     @Override public int getComposeSubPage() { return activity.composeSubPage; }
     @Override public void setComposeSubPage(int value) { activity.composeSubPage = value; }
-    @Override public app.spektralab.MainActivity.CropOverlay getCropOverlay() { return activity.cropOverlay; }
-    @Override public void setCropOverlay(app.spektralab.MainActivity.CropOverlay value) { activity.cropOverlay = value; }
+    @Override public CropOverlay getCropOverlay() { return activity.cropOverlay; }
+    @Override public void setCropOverlay(CropOverlay value) { activity.cropOverlay = value; }
     @Override public int getCropRatioIndex() { return activity.cropRatioIndex; }
     @Override public void setCropRatioIndex(int value) { activity.cropRatioIndex = value; }
     @Override public android.widget.HorizontalScrollView getCropScroll() { return activity.cropScroll; }
@@ -49,8 +51,8 @@ final class ComposePagesHostImpl implements app.spektralab.ui.panels.ComposePage
     @Override public void setPendingCropX(float value) { activity.pendingCropX = value; }
     @Override public float getPendingCropY() { return activity.pendingCropY; }
     @Override public void setPendingCropY(float value) { activity.pendingCropY = value; }
-    @Override public app.spektralab.MainActivity.RotateScale getRotateArc() { return activity.rotateArc; }
-    @Override public void setRotateArc(app.spektralab.MainActivity.RotateScale value) { activity.rotateArc = value; }
+    @Override public RotateScale getRotateArc() { return activity.rotateArc; }
+    @Override public void setRotateArc(RotateScale value) { activity.rotateArc = value; }
     @Override public boolean getRotateGridOn() { return activity.rotateGridOn; }
     @Override public void setRotateGridOn(boolean value) { activity.rotateGridOn = value; }
     @Override public android.graphics.Typeface getTfBody() { return activity.tfBody; }
@@ -70,6 +72,6 @@ final class ComposePagesHostImpl implements app.spektralab.ui.panels.ComposePage
     @Override public void syncRotateGridHostCall() { activity.syncRotateGrid(); }
     @Override public void turnByHostCall(int a0) { activity.turnBy(a0); }
     @Override public void underlineViaHost(android.widget.TextView a0, boolean a1) { activity.underline(a0, a1); }
-    @Override public app.spektralab.MainActivity.RotateScale newRotateScale() { return activity.new RotateScale(activity); }
+    @Override public RotateScale newRotateScale() { return new app.spektralab.ui.RotateScale(activity, app.spektralab.MainActivity.tfBody, activity.rotateScaleDelegate); }
     @Override public android.content.Context context() { return activity; }
 }

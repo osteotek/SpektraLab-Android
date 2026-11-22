@@ -1,4 +1,5 @@
 package app.spektralab.ui;
+import app.spektralab.ui.RotateScale;
 
 import app.spektralab.ui.UiPalette;
 import android.graphics.Typeface;
@@ -14,12 +15,15 @@ public final class RotateScale extends android.view.View {
         private float angle = 0f;
         private float downX = 0f;
         private boolean dragging = false;
+        private long lastTapMs = 0L;
 
         /** The Activity keeps the geometry state; the View only reports deltas. */
         public interface Delegate {
             void onDragStart();
             void onPreview(float deltaDegrees);
             void onCommit(float deltaDegrees);
+            /** Double tap on the ticks means "reset the rotation". */
+            void onReset();
         }
 
         private final Delegate delegate;
@@ -48,12 +52,21 @@ public final class RotateScale extends android.view.View {
 
         @Override public boolean onTouchEvent(android.view.MotionEvent e) {
             switch (e.getActionMasked()) {
-                case android.view.MotionEvent.ACTION_DOWN:
+                case android.view.MotionEvent.ACTION_DOWN: {
+                    final long now = android.os.SystemClock.uptimeMillis();
+                    if (now - lastTapMs < 420L) {
+                        lastTapMs = 0L;
+                        dragging = false;
+                        delegate.onReset();
+                        return true;
+                    }
+                    lastTapMs = now;
                     downX = e.getX();
                     delegate.onDragStart();
                     dragging = true;
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                     return true;
+                }
                 case android.view.MotionEvent.ACTION_MOVE:
                     if (!dragging) return true;
                     // **Relative to where the finger landed**, not to the last
@@ -65,7 +78,11 @@ public final class RotateScale extends android.view.View {
                 case android.view.MotionEvent.ACTION_UP:
                     if (dragging) {
                         dragging = false;
-                        delegate.onCommit((e.getX() - downX) / pxPerDeg());
+                        // A tap is not a zero-degree drag: committing one used
+                        // to run a full render for merely touching the scale.
+                        if (Math.abs(e.getX() - downX) >= dip(2)) {
+                            delegate.onCommit((e.getX() - downX) / pxPerDeg());
+                        }
                     }
                     return true;
                 case android.view.MotionEvent.ACTION_CANCEL:
