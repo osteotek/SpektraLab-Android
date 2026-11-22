@@ -92,13 +92,33 @@ Classify each of the 26 engine commits as:
   three-way merge;
 - **defer**: changes wire semantics or adds large vendor payloads.
 
-Expected initial classification:
+Triage completed 2026-11-22 against `Windows_Linux_v2` tip `f87c5212`:
 
-- take: `7766b847`, `dc440a34`, `0cc25987` (CMake/tests), most doc commits
-- take with adaptation: `53299f73` (device-lost guard)
-- defer: `3fbd9bd3`, `61f79d2b`, `2ca735ad`, `8cd9992c`, `b5467e83`
+| Commit | Class | Reason |
+|---|---|---|
+| `7766b847` | take | Rename only; avoids Windows `rpcndr.h` collision |
+| `dc440a34` | take | CMake C++ standard; no source or wire change |
+| `a6bcacf6` | take | Merge of the MSVC fix above |
+| `0cc25987` | take | Vulkan DI/headroom test targets only |
+| `dcdab292` | take with adaptation | Restores MoltenVK guards in `engine.cpp`; small edit beside our C ABI additions |
+| `53299f73` | take with adaptation | Device-lost guard in `vulkan_gpu.cpp`; useful, but edits the file our banded dispatch changes |
+| `6dd3d47d` | defer | Docs about the MoltenVK Vulkan-Headers pin |
+| `a764653c` | defer | Windows packaging docs |
+| `05c5b23b` | defer | Windows dependency fetch script |
+| `255ea880` | defer | Windows cross-build check |
+| `6fa28dfa`, `268af5f0` | defer | Windows PNG XMP metadata, desktop host only |
+| `223205fd`, `0799cf73` | defer | Fuji X-E5 RAF calibration; camera table only |
+| `d978ba9b` | defer | Canon R6 III CR3 colour; camera table only |
+| `8cd9992c` | defer | GFX100RF RAW support; adds `raw_camera.hpp` |
+| `b5467e83`, `68b78bec` | defer | Sony ARW6 vendor overlay (~17.6k lines) and new LibRaw build path |
+| `61aee26d`, `c59d0c2a`, `4dec4cf3` | defer | Moves LibRaw to upstream master and removes the ARW6 overlay; conflicts with our pinned LibRaw 0.22.2 |
+| `aaec9528` | defer | Merge of the Windows/Linux work already classified individually |
+| `30eb6930` | defer | Desktop host scheduler trim, not the C ABI; our `spk_trim_pool` stays |
+| `2ca735ad` | defer | Adds `camera.exposure_baseline_ev` — wire change, Phase 4 decision |
+| `61f79d2b` | defer | No-film precision and wire semantics, Phase 4 decision |
+| `3fbd9bd3` | defer | Memory/lifetime work with the largest overlap; Phase 3 decision |
 
-**Gate 1:** written triage table with a reason for every commit.
+**Gate 1:** triage table above — complete.
 
 ### Phase 2 — Land low-risk commits
 
@@ -110,6 +130,18 @@ Expected initial classification:
   the full NDK/CMake build.
 
 **Gate 2:** all three pass; JNI symbol count unchanged.
+
+**Progress (2026-11-22):** Phase 0 was explicitly skipped by the operator; no
+physical-device equivalence baseline was recorded. Cherry-picked into a temp
+engine tree: `0cc25987` (DI/headroom test probes), `dc440a34` (C++ standard),
+`7766b847` (`meter_frame` rename) and `53299f73` (Vulkan device-lost guard).
+`dcdab292` was skipped: after conflict resolution it was empty because our
+`out->owner` line was preserved. Conflicts in `engine/CMakeLists.txt` and
+`vulkan_gpu.cpp` were resolved by keeping our banded dispatch and `host_storage`
+exclusion while adding the upstream device checks. The regenerated patch has
+**63 sections**, applies cleanly to `445e314`, passes `check-patch.py`, and the
+NDK/CMake build of `libspektrafilm_engine.so` succeeds. No pixel-equivalence
+claim is made because Phase 0 was skipped.
 
 ### Phase 3 — Reconcile the memory work (`3fbd9bd3`)
 
