@@ -4138,3 +4138,98 @@ index 6a86f10..ba62608 100644
  #else
  	void* module = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
  	if (!module)
+diff --git a/engine/src/pipeline/tiling.hpp b/engine/src/pipeline/tiling.hpp
+new file mode 100644
+--- /dev/null
++++ b/engine/src/pipeline/tiling.hpp
+@@ -0,0 +1,90 @@
++// tiling.hpp -- the banded-dispatch helper shared by the Vulkan execution layer.
++//
++// The GPU interface (gpu/gpu.hpp) owns the primitives: TilePlan describes the
++// row band, Gpu::dispatch_banded walks the bands and windows each argument, and
++// Gpu::dispatch_at carries a frame-wide origin for kernels that seed noise or
++// read geometry from the index. This header is only the bridge between an
++// image-shaped plane (spk::Image) and those primitives.
++//
++// Keeping the helper here, rather than in the GPU layer, is deliberate: the
++// GPU layer must not know what a row or an image channel is. All it sees is a
++// flat thread count, a plan, and an origin in elements.
++#pragma once
++
++#include <algorithm>
++#include <cstdint>
++#include <cstdlib>
++#include <string>
++#include <vector>
++
++#include "gpu/gpu.hpp"
++#include "image.hpp"
++
++namespace spk {
++
++// Dispatch `kernel` over `elements` threads of an image-shaped plane.
++//
++// `strides[i]` is bytes per element for argument i; 0 means the argument is not
++// a per-element plane and stays bound whole. `halo[i]` asks that argument's
++// window to expose that many extra rows above and below the band. When no
++// banding is needed the call becomes a plain dispatch_at, so grain and geometry
++// kernels still receive the frame-wide `band_row0` origin.
++//
++// A band is used only when the plane cannot be bound in one piece, or when
++// SPK_FORCE_BAND_ROWS is set to prove banding exact on a device that does not
++// need it. The backend is responsible for offset alignment and the 2^24
++// dispatch limit; this helper only chooses the requested band height.
++inline bool dispatch_tiled(gpu::Gpu* gpu,
++                           const char* kernel,
++                           const std::vector<gpu::Arg>& args,
++                           const std::vector<uint32_t>& strides,
++                           const Image& shape,
++                           size_t elements,
++                           std::string& error,
++                           const std::vector<uint32_t>& halo = {},
++                           uint32_t band_row0 = 0) {
++    if (!gpu) {
++        error = std::string(kernel ? kernel : "dispatch") + ": dispatch_tiled has no GPU";
++        return false;
++    }
++
++    gpu::TilePlan plan;
++    plan.rows = shape.h;
++    plan.columns = shape.w;
++    plan.stride = strides;
++    plan.halo = halo;
++
++    const size_t plane_threads = size_t(shape.h) * size_t(shape.w);
++    // A non-image-shaped dispatch (for example a packed LUT walk) has no row
++    // geometry to band; pass it through with the frame-wide origin.
++    if (!plan.rows || !plan.columns || plane_threads != elements) {
++        plan.band_rows = 0;
++        return gpu->dispatch_at(kernel, args, elements, band_row0 * plan.columns, error);
++    }
++
++    uint32_t band_rows = plan.rows;
++    if (const char* forced = std::getenv("SPK_FORCE_BAND_ROWS")) {
++        const unsigned long requested = std::strtoul(forced, nullptr, 10);
++        if (requested > 0 && requested < band_rows) band_rows = uint32_t(requested);
++    } else {
++        uint64_t widest = 0;
++        for (uint32_t stride : strides) widest = std::max<uint64_t>(widest, stride);
++        const uint64_t limit = gpu->max_storage_buffer_range();
++        if (limit && widest) {
++            const uint64_t whole = uint64_t(plan.rows) * plan.columns * widest;
++            if (whole > limit) {
++                uint64_t rows = limit / (uint64_t(plan.columns) * widest);
++                if (rows == 0) rows = 1;
++                if (rows < band_rows) band_rows = uint32_t(rows);
++            }
++        }
++    }
++    plan.band_rows = band_rows;
++
++    if (plan.band_rows && plan.rows > plan.band_rows)
++        return gpu->dispatch_banded(kernel, args, elements, plan, error);
++
++    return gpu->dispatch_at(kernel, args, elements, band_row0 * plan.columns, error);
++}
++
++}  // namespace spk
