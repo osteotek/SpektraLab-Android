@@ -15,6 +15,31 @@ branch were removed afterwards.
 - **Feature scope:** full 1.7.0 product line, with our architecture (domain/data/
   ui boundaries, workers, verification harness) re-ported on top.
 
+### Stage 1 outcome (2026-11-22)
+
+- Merged `upstream/master` (`9709412`) into `feat/adopt-upstream-170`. All six
+  conflicts resolved: Manifest/JNI/SpkError/README combined additively;
+  `MainActivity` and `patches/engine-android.patch` taken from upstream
+  (1.7.0 product baseline).
+- Re-ported minimum compatibility: `DebugSink.bytes` no-op shim, `EngineApi`
+  switched to upstream's pointer-based `openSession(long,…)`, 391 inherited
+  silent catches converted to `Diagnostics.ignored`, version identity aligned
+  to `1.7.0i / 752`.
+- Our six worker classes and `HostWorker` are **temporarily set aside** (backed
+  up under `%TEMP%\spk-workers-stage1`, recoverable from `9990a8a`): upstream's
+  MainActivity has private nested `Look`/`Frame`/`CompareView` and a different
+  API surface, so they need re-porting rather than a visibility tweak.
+- Verified: `scripts/verify.ps1` all PASS; NDK/CMake source build succeeds with
+  upstream's patch, LibRaw 0.22.2, `contrast_mask.cpp`, `lrglow.cpp` and
+  `ultrahdr.cpp` → signed 19.8 MB APK. App installs and launches on the
+  emulator (first-run feedback sheet shown, no crash).
+- **Gate 5 device golden is blocked:** upstream removed our `spk_band_rows` /
+  `spk_deterministic` / `spk_auto_film` intent hooks and the `SpektraLabHash`
+  log line, so `device-golden.ps1` cannot read a hash. Re-porting those hooks
+  into the 1.7.0 render path is Stage 2 work.
+- `-UsePrebuiltNative` now ships a stale 1.6.2m payload and must not be used
+  for 1.7.0 builds until the new payload is captured and verified.
+
 ## 1. Verified starting state (2026-11-22)
 
 | Item | State |

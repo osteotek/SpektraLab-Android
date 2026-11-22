@@ -15,6 +15,10 @@ add_compile_definitions(SPK_ANDROID_SYSTEM_VULKAN=1)
 add_compile_options(-O2 -fno-fast-math -ffp-contract=off)
 add_subdirectory("${ENGINE_ROOT}" engine)
 
+# The 1.7.0 engine needs the contrast-mask pipeline even when the portable
+# backend is enabled (its CMakeLists otherwise omits this translation unit).
+target_sources(spektralab_pipeline PRIVATE "${ENGINE_ROOT}/src/pipeline/contrast_mask.cpp")
+
 # Unlike the Termux build, build the codecs for the APK's API level and link
 # them into the JNI library. This avoids shipping Termux's versioned SONAMEs.
 add_library(spk_jpeg STATIC IMPORTED)
@@ -30,7 +34,9 @@ target_link_libraries(spk_libraw PRIVATE spk_jpeg spk_lcms z)
 set(jni "${CMAKE_CURRENT_SOURCE_DIR}/../../src/main/cpp")
 add_library(spektrafilm_engine SHARED
     "${jni}/spektralab_jni.cpp"
-    "${jni}/spektralab_raw_jni.cpp")
+    "${jni}/spektralab_raw_jni.cpp"
+    "${jni}/lrglow.cpp"
+    "${jni}/ultrahdr.cpp")
 target_compile_features(spektrafilm_engine PRIVATE cxx_std_20)
 target_include_directories(spektrafilm_engine PRIVATE "${ENGINE_ROOT}/include")
 target_link_libraries(spektrafilm_engine PRIVATE

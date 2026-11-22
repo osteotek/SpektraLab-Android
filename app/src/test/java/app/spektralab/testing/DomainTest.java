@@ -16,7 +16,6 @@ import app.spektralab.domain.RenderPreviewUseCase;
 import app.spektralab.domain.PixelHash;
 import app.spektralab.domain.SessionApi;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /** Runnable JVM tests for the domain layer; no Android classes. */
@@ -76,7 +75,7 @@ public final class DomainTest {
         check(smallScratch.calls.contains("renderEnd"), "renderEnd runs after a bad scratch buffer");
 
         EngineApi engine = new FakeEngine();
-        SessionApi opened = engine.openSession(ByteBuffer.allocate(4), 2, 2, 3);
+        SessionApi opened = engine.openSession(4L, 2, 2, 3);
         check(opened != null && !opened.isClosed(), "fake engine opens a session");
         check(engine.trimPool() == 1024L, "fake engine trims the pool");
 

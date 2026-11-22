@@ -7,6 +7,12 @@ OUT="$ROOT/app/build/SpektraLab-debug.apk"
 TMP="$ROOT/app/build/SpektraLab-complete.apk"
 python3 "$ROOT/app/build/check-locales.py"
 cp "$ROOT/app/src/main/AndroidManifest.xml" "$STAGE/AndroidManifest.xml"
+
+# The staging tree keeps its own copies of res/ and assets/, and that has now
+# cost two releases: a shader that only reached one of them, and a theme that
+# stayed black under a paper-coloured app. Sync from source every time.
+cp -a "$ROOT/app/src/main/res/." "$STAGE/res/"
+cp -a "$ROOT/app/src/main/assets/." "$STAGE/assets/"
 cd "$STAGE"
 aapt package -f -m -M AndroidManifest.xml -S res -A assets -I "$SDK/platforms/android-36/android.jar" -F "$OUT" >/dev/null
 # The DI LUTs are two 7.4 MB tables for a view the app has no path to (the JNI
