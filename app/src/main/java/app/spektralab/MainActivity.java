@@ -69,6 +69,7 @@ import app.spektralab.ui.panels.ViewPages;
 import app.spektralab.ui.panels.ComposePages;
 import app.spektralab.ui.panels.LiveClipRenderer;
 import app.spektralab.ui.panels.ExitReport;
+import app.spektralab.ui.panels.LookDefaults;
 import app.spektralab.ui.panels.UriFiles;
 import app.spektralab.ui.panels.SessionRestore;
 import app.spektralab.ui.panels.InfoDialogs;
@@ -1372,11 +1373,11 @@ public class MainActivity extends Activity implements
 
     public static final class Look {
         public String filmStock;
-        String printStock;
-        float printExposure, grainAmount, halationAmount, glareAmount, filmFormatMm;
-        String meterMethod;
+        public String printStock;
+        public float printExposure, grainAmount, halationAmount, glareAmount, filmFormatMm;
+        public String meterMethod;
         /** RFC-023's highlight room, in stops; 0 leaves the stage off. */
-        float highlightRoom;
+        public float highlightRoom;
         /**
          * RFC-024's contrast mask, as five clicks: 0 off, 1 standard,
          * 2 strong, 3 brute, 4 limit. This is the one control that puts a
@@ -1384,54 +1385,54 @@ public class MainActivity extends Activity implements
          * contrast -- a global curve cannot, because it flattens everything
          * with the same slope.
          */
-        int printLatitude;
+        public int printLatitude;
         /** RFC-023's shadow side: lift the toe instead of the shoulder. */
-        float shadowRoom;
+        public float shadowRoom;
         /** The same curve by hand: where it starts, how soft, how many stops. */
-        boolean hlManual;
-        float hlKnee = 2.0f, hlRolloff = 2.0f, hlRoom = 2.4f;
+        public boolean hlManual;
+        public float hlKnee = 2.0f, hlRolloff = 2.0f, hlRoom = 2.4f;
         /** RFC-025: stops added to the highlights *before* the halo is drawn. */
-        float halationBoost;
+        public float halationBoost;
         /** RFC-025: the in-emulsion scatter, a mix weight (0..1). */
-        float halationScatter;
+        public float halationScatter;
         /** How far that scatter spreads, 0..1 -> 1x..12x the film's radius. */
-        float scatterRadius;
+        public float scatterRadius;
         /** Lens blur in micrometres, before the film sees anything. */
-        float lensBlur;
+        public float lensBlur;
         /** The view layer: tone and colour on the finished print. */
-        float viewTemperature, viewTint, viewExposure, viewContrast, viewBrightness;
-        float viewSaturation, viewHighlights, viewShadows, viewBlack, viewWhite, viewVignette;
+        public float viewTemperature, viewTint, viewExposure, viewContrast, viewBrightness;
+        public float viewSaturation, viewHighlights, viewShadows, viewBlack, viewWhite, viewVignette;
         /** Camera exposure compensation, in stops (engine side). */
-        float cameraEv;
-        float viewVibrance;
+        public float cameraEv;
+        public float viewVibrance;
         /** HSL: eight bands x hue/saturation/luminance. Circular, so a band is
          *  a hue *range*, not a bucket -- see `ViewAdjust::build_hsl_tables`. */
-        float[] hslHue, hslSat, hslLum;
+        public float[] hslHue, hslSat, hslLum;
         /** 细节: an unsharp mask (amount/radius/mask) and a texture push. */
-        float viewSharpen, viewSharpenRadius, viewSharpenMask, viewTexture;
-        int wbPreset;
-        float wbKelvin, wbTint;
+        public float viewSharpen, viewSharpenRadius, viewSharpenMask, viewTexture;
+        public int wbPreset;
+        public float wbKelvin, wbTint;
         /** The LibRaw gains that produced this frame's preview. White balance
          *  lives in the demosaic, not in `spk_set_params`, so a frame reopened
          *  from the strip has to carry them or it comes back as-shot while the
          *  sliders still say 4000 K. Null = as-shot. */
-        float[] wbMul;
+        public float[] wbMul;
         /** Enlarger dichroic filters: -1 is 30 CC of the opposite colour. */
-        int geometryTurns = 0;
-        float geometryRotation = 0.0f;
-        float geometryCropW = 1.0f, geometryCropH = 1.0f;
-        float geometryCropX = 0.0f, geometryCropY = 0.0f;
-        int cropRatioIndex = -1;
-        boolean geometryFlipH, geometryFlipV;
-        float yFilter, mFilter;
+        public int geometryTurns = 0;
+        public float geometryRotation = 0.0f;
+        public float geometryCropW = 1.0f, geometryCropH = 1.0f;
+        public float geometryCropX = 0.0f, geometryCropY = 0.0f;
+        public int cropRatioIndex = -1;
+        public boolean geometryFlipH, geometryFlipV;
+        public float yFilter, mFilter;
         /** CC value those two shifts are scaled to. */
-        float filterScale;
+        public float filterScale;
         /** Pre-flash, as a fraction of the clear-base exposure (0..1). */
-        float preflash;
+        public float preflash;
         /** Rebate: base fog and light leaks. */
-        float edgeFog, edgeLeaks, frameNumber;
+        public float edgeFog, edgeLeaks, frameNumber;
         /** 印刷边框: fotufilm's finishing layer -- paper, carrier, mount, canvas. */
-        String pfKind;
+        public String pfKind;
         /**
          * Somebody actually asked for a print frame.
          *
@@ -1443,49 +1444,49 @@ public class MainActivity extends Activity implements
          * 8), and the host then drew a whole Super 8 frame where the rebate
          * should have been. No marker, no print frame.
          */
-        boolean pfChosen;
-        float pfMargin, pfFx, pfFy;
+        public boolean pfChosen;
+        public float pfMargin, pfFx, pfFy;
         /** Switches: 1 is on. Kept as floats so one knob can drive them. */
-        float halationOn = 1f, grainOn = 1f, couplersOn = 1f, antihalationRemoved = 0f;
-        float scannerWhite = 0f, scannerBlack = 0f, edrOn = 0f;
-        float glareActive = 1f;
-        float scannerLensBlur = 0f, halationHeadroom = 4f, densityGamma = 1f;
-        boolean digitalIntermediate = false, outputCctf = true;
-        boolean diBlueComp = false;
-        float hueCorrection = 1f;
+        public float halationOn = 1f, grainOn = 1f, couplersOn = 1f, antihalationRemoved = 0f;
+        public float scannerWhite = 0f, scannerBlack = 0f, edrOn = 0f;
+        public float glareActive = 1f;
+        public float scannerLensBlur = 0f, halationHeadroom = 4f, densityGamma = 1f;
+        public boolean digitalIntermediate = false, outputCctf = true;
+        public boolean diBlueComp = false;
+        public float hueCorrection = 1f;
         /** RFC-023's remaining curve shape. */
-        float shadowRolloff = 2f, maxLift = 4f;
+        public float shadowRolloff = 2f, maxLift = 4f;
         /** Choices: lens filter, the norm, and the rebate/date layout. */
-        String cameraFilter = "", sceneNorm = "power";
-        String edgeMode = "strip", edgeGate = "auto", edgeHoles = "white", edgeCarrier = "none";
-        String datePlacement = "frame", dateCorner = "br", dateStyle = "lcd";
+        public String cameraFilter = "", sceneNorm = "power";
+        public String edgeMode = "strip", edgeGate = "auto", edgeHoles = "white", edgeCarrier = "none";
+        public String datePlacement = "frame", dateCorner = "br", dateStyle = "lcd";
         /** mm from the gate's edge to the text, frame placement only. */
-        float dateInsetX = 3f, dateInsetY = 2.4f;
-        float edgeFNumber = 0f, dateSize = 1f, dateEv = 5.5f;
+        public float dateInsetX = 3f, dateInsetY = 2.4f;
+        public float edgeFNumber = 0f, dateSize = 1f, dateEv = 5.5f;
         /** The manufacturer's edge print: its own switch, because it is the
          *  one part of the rebate that has been landing inside the picture. */
-        boolean edgeTextOn = true;
+        public boolean edgeTextOn = true;
         /** Free text: the shooting data, and a pair's second frame's date. */
-        String dataText = "", dateTextB = "";
+        public String dataText = "", dateTextB = "";
         /** The rebate's own draws. */
-        int cameraSeed = 1, frameSeed = 1;
-        boolean overscanOn, dateOn;
-        String overscanFormat;
-        boolean overscanPair, pairTone;
-        float pairSplit = 0.514f;
-        float pairHighKnee = 1.0f, pairHighRoom = 2.0f;
-        float pairShadowKnee = -1.0f, pairShadowRoom = 0.0f;
+        public int cameraSeed = 1, frameSeed = 1;
+        public boolean overscanOn, dateOn;
+        public String overscanFormat;
+        public boolean overscanPair, pairTone;
+        public float pairSplit = 0.514f;
+        public float pairHighKnee = 1.0f, pairHighRoom = 2.0f;
+        public float pairShadowKnee = -1.0f, pairShadowRoom = 0.0f;
         /** The four grading wheels, in 主/阴影/中间调/高光 order. */
-        final float[] cbHue = new float[4];
-        final float[] cbSat = new float[4];
-        final float[] cbLum = new float[4];
+        public final float[] cbHue = new float[4];
+        public final float[] cbSat = new float[4];
+        public final float[] cbLum = new float[4];
         /**
          * The five curve channels (rgb, luma, r, g, b), each a flat
          * x,y,x,y,... list. A null entry means "never touched", which is what
          * `defaultLook` leaves behind and `applyLook` turns back into the
          * default two points.
          */
-        final float[][] curves = new float[5][];
+        public final float[][] curves = new float[5][];
         /**
          * fotufilm, the second engine: its own tone controls.
          *
@@ -1493,30 +1494,30 @@ public class MainActivity extends Activity implements
          * to a second engine must not cost the first engine's look on the
          * photograph next door.
          */
-        float fotuEv, fotuHighlights, fotuShadows, fotuSaturation = 1f, fotuVibrance;
-        float fotuWarmth, fotuTint, fotuFlare, fotuGradeLift, fotuGradeGain;
-        float fotuExpired, fotuBleach, fotuPush;
+        public float fotuEv, fotuHighlights, fotuShadows, fotuSaturation = 1f, fotuVibrance;
+        public float fotuWarmth, fotuTint, fotuFlare, fotuGradeLift, fotuGradeGain;
+        public float fotuExpired, fotuBleach, fotuPush;
         /** The three that reach the second engine's configuration directly. */
-        float fotuGrain, fotuPreflash, fotuFringe;
-        boolean fotuFilmGrain;
-        float fotuGrainSize, fotuGrainColour, fotuGrainSoft;
-        float fotuShadowDetail, fotuHighlightDetail, fotuPrintCorrection;
-        float fotuGrainR, fotuGrainG, fotuGrainB;
+        public float fotuGrain, fotuPreflash, fotuFringe;
+        public boolean fotuFilmGrain;
+        public float fotuGrainSize, fotuGrainColour, fotuGrainSoft;
+        public float fotuShadowDetail, fotuHighlightDetail, fotuPrintCorrection;
+        public float fotuGrainR, fotuGrainG, fotuGrainB;
         /** A multiplier on the stock's halation sigma, applied to the physics. */
-        float fotuHalation, fotuHalationColour;
+        public float fotuHalation, fotuHalationColour;
         /** The coupler strength, in the catalogue's own units. */
-        float fotuCouplers;
+        public float fotuCouplers;
         /** Reach per interlayer, self-retention scale, and the fringe that rides them. */
-        float fotuCouplerReach, fotuCouplerRG, fotuCouplerGB, fotuCouplerSelf;
-        float fotuMottle;
-        float fotuEncodedGrade, fotuCondenser;
-        String fotuPrintLight;
-        float fotuPrinter, fotuPrinterLamp, fotuPrinterM, fotuPrinterY, fotuPrinterEv;
-        float fotuPrinterR, fotuPrinterG, fotuPrinterB, fotuLocalTone;
-        String fotuDigitalRef;
-        float fotuFringeRadius;
-        float fotuBlackPoint, fotuWhitePoint;
-        float fotuPrinterPreflash;
+        public float fotuCouplerReach, fotuCouplerRG, fotuCouplerGB, fotuCouplerSelf;
+        public float fotuMottle;
+        public float fotuEncodedGrade, fotuCondenser;
+        public String fotuPrintLight;
+        public float fotuPrinter, fotuPrinterLamp, fotuPrinterM, fotuPrinterY, fotuPrinterEv;
+        public float fotuPrinterR, fotuPrinterG, fotuPrinterB, fotuLocalTone;
+        public String fotuDigitalRef;
+        public float fotuFringeRadius;
+        public float fotuBlackPoint, fotuWhitePoint;
+        public float fotuPrinterPreflash;
     }
     public static final class Frame {
         /** Not final: a revoked grant is repaired by pointing the chip at the
@@ -8813,145 +8814,7 @@ public class MainActivity extends Activity implements
      *  a frame that has never been developed has no look, and inheriting the
      *  previous one made an untouched import come back with somebody else's
      *  grain and rebate. */
-    Look defaultLook() {
-        final Look look = new Look();
-        look.filmStock = null;
-        look.printStock = "kodak_portra_endura";
-        look.printExposure = 1.0f;
-        // A raw is scene-referred and has no exposure decision of its own; a
-        // camera JPEG has already been metered once, by the camera, and
-        // metering it again is how "import this photo" turned into a grey wash.
-        look.meterMethod = isRawFile ? "protect_highlights" : "";
-        look.grainAmount = 1.0f;
-        look.halationAmount = 1.0f;
-        look.glareAmount = 1.0f;
-        look.highlightRoom = 1.0f;
-        look.shadowRoom = 0.0f;
-        look.hlManual = false;
-        look.hlKnee = 2.0f;
-        look.hlRolloff = 2.0f;
-        look.hlRoom = 2.4f;
-        look.halationBoost = 0.0f;
-        look.halationScatter = 1.0f;
-        look.scatterRadius = 0.0f;
-        look.lensBlur = 0.0f;
-        look.viewVignette = 0.0f;
-        look.hslHue = new float[8];
-        look.hslSat = new float[8];
-        look.hslLum = new float[8];
-        look.viewSharpen = 0.0f;
-        look.viewSharpenRadius = 1.0f;
-        look.viewSharpenMask = 0.0f;
-        look.viewTexture = 0.0f;
-        look.cameraEv = 0.0f;
-        look.wbPreset = 0;
-        look.wbKelvin = 5500f;
-        look.wbTint = 0.0f;
-        look.wbMul = null;
-        look.geometryTurns = 0;
-        look.geometryRotation = 0.0f;
-        look.geometryCropW = 1.0f;
-        look.geometryCropH = 1.0f;
-        look.geometryCropX = 0.0f;
-        look.geometryCropY = 0.0f;
-        look.cropRatioIndex = -1;
-        look.geometryFlipH = false;
-        look.geometryFlipV = false;
-        look.yFilter = 0.0f;
-        look.mFilter = 0.0f;
-        look.filterScale = 1.0f;
-        look.preflash = 0.0f;
-        look.edgeFog = 1.0f;
-        look.edgeLeaks = 0.0f;
-        look.frameNumber = 0.0f;
-        look.pfKind = "none";
-        look.pfMargin = 3.0f;
-        look.pfFx = 0.0f;
-        look.pfFy = 0.0f;
-        look.halationOn = 1f;
-        look.grainOn = 1f;
-        look.couplersOn = 1f;
-        look.antihalationRemoved = 0f;
-        look.scannerWhite = 0f;
-        look.scannerBlack = 0f;
-        look.edrOn = 1f;
-        look.glareActive = 1f;
-        look.scannerLensBlur = 0f;
-        look.halationHeadroom = 4f;
-        look.densityGamma = 1f;
-        look.digitalIntermediate = false;
-        look.diBlueComp = false;
-        look.outputCctf = true;
-        look.hueCorrection = 1f;
-        look.shadowRolloff = 2f;
-        look.maxLift = 4f;
-        look.cameraFilter = "";
-        look.sceneNorm = "power";
-        look.edgeMode = "strip";
-        look.edgeGate = "auto";
-        look.edgeHoles = "white";
-        look.edgeCarrier = "none";
-        look.datePlacement = "frame";
-        look.dateCorner = "br";
-        look.dateStyle = "lcd";
-        look.dateInsetX = 3f;
-        look.dateInsetY = 2.4f;
-        look.edgeTextOn = true;
-        look.edgeFNumber = 0f;
-        look.dateSize = 1f;
-        look.dateEv = 5.5f;
-        look.dataText = "";
-        look.dateTextB = "";
-        look.cameraSeed = 1;
-        look.frameSeed = 1;
-        look.filmFormatMm = FORMAT_MM[0];
-        look.overscanOn = false;
-        look.overscanFormat = "135";
-        look.dateOn = false;
-        // fotufilm's controls are per frame as well.
-        //
-        // **`new Look()` holds 0 for every one of them, and 0 is not neutral for
-        // the multipliers.** `fotuSlots` writes a multiplier whenever it differs
-        // from 1, so a zeroed look asked the engine for `mul:30..32=0` (no
-        // grain), `mul:58/59=0` + `mulrange:66-449=0` (no couplers) and
-        // `physmul:halationSigmaMM_*=0` (no halation) -- three of the model's
-        // physical stages switched off on every freshly imported frame, and the
-        // panel's 重置 turned them back on. That is why the grain only appeared
-        // after opening 冲印 and pressing reset.
-        look.fotuSaturation = 1f;
-        look.fotuGrain = 1f;
-        look.fotuGrainSize = 1f;
-        look.fotuGrainColour = 1f;
-        look.fotuGrainSoft = 1f;
-        look.fotuGrainR = 1f;
-        look.fotuGrainG = 1f;
-        look.fotuGrainB = 1f;
-        look.fotuCouplers = 1f;
-        look.fotuHalation = 1f;
-        look.fotuCouplerReach = 1f;
-        look.fotuCouplerRG = 1f;
-        look.fotuCouplerGB = 1f;
-        look.fotuCouplerSelf = 1f;
-        look.fotuMottle = 0f;
-        look.fotuEncodedGrade = 0f;
-        look.fotuCondenser = 0f;
-        look.fotuPrintLight = "";
-        look.fotuPrinter = 0f;
-        look.fotuPrinterLamp = 3200f;
-        look.fotuPrinterM = 0.4f;
-        look.fotuPrinterY = 0.5f;
-        look.fotuPrinterEv = 0f;
-        look.fotuPrinterR = 25f;
-        look.fotuPrinterG = 25f;
-        look.fotuPrinterB = 25f;
-        look.fotuLocalTone = 1f;
-        look.fotuDigitalRef = "";
-        look.fotuFringeRadius = 100f;
-        look.fotuBlackPoint = 0f;
-        look.fotuWhitePoint = 1f;
-        look.fotuPrinterPreflash = 0f;
-        return look;
-    }
+    Look defaultLook() { return LookDefaults.create(isRawFile, FORMAT_MM[0]); }
 
     @Override public void saveLookIntoFrames() {
         if (currentFrame < 0 || currentFrame >= frames.size()) return;
