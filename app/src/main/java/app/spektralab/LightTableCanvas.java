@@ -37,7 +37,7 @@ import java.util.Random;
  * <p>预渲染三张图：云斑/颗粒 tile、辉光（1/4 分辨率放大，等效高斯）、灯箱投影。
  * 其余每帧现画。所有比例、颜色、间距都取自 index.html 与 app.js 里的字面量。
  */
-final class LightTableCanvas extends View {
+final public class LightTableCanvas extends View {
 
     interface OnToggle { void onToggle(boolean on); }
 

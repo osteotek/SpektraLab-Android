@@ -71,6 +71,7 @@ import app.spektralab.ui.panels.ComposePages;
 import app.spektralab.ui.panels.LiveClipRenderer;
 import app.spektralab.ui.panels.ExitReport;
 import app.spektralab.ui.panels.FilmCoverStyles;
+import app.spektralab.ui.panels.LightTable;
 import app.spektralab.ui.panels.LookDefaults;
 import app.spektralab.ui.panels.UriFiles;
 import app.spektralab.ui.panels.SessionRestore;
@@ -4135,16 +4136,16 @@ public class MainActivity extends Activity implements
         return (aa << 24) | (ar << 16) | (ag << 8) | ab;
     }
 
-    private static final int LT_KLEIN = 0xFF002FA7;    // the app's accent
+    static final int LT_KLEIN = 0xFF002FA7;    // the app's accent
     /**
      * **暗房的墙不是黑洞.** 一面炭灰的墙（不是 #05060A 的「屏幕关了」），中间偏上
      * 一池暖光：照片挂在一个有深度的表面上，四周的暗角才读得出「走出了光」。
      */
-    private static final int LT_WALL = 0xFF151310;
+    static final int LT_WALL = 0xFF151310;
     private static final int LT_WALL_POOL = 0x2C2721;   // 只有 RGB
-    private static final int LT_INK = 0xFF14161C;      // type on white
-    private static final int LT_MUTED = 0x9914161C;    // its label
-    private static final int LT_PAPER = 0xFFFFFFFF;    // a print's paper
+    static final int LT_INK = 0xFF14161C;      // type on white
+    static final int LT_MUTED = 0x9914161C;    // its label
+    static final int LT_PAPER = 0xFFFFFFFF;    // a print's paper
     /** **The whole album**, not a shelf of it: every export the app has made. */
     private static final int ALBUM_MAX = 400;
     /** How many prints stay decoded; the rest are fetched as they come into view. */
@@ -4164,25 +4165,25 @@ public class MainActivity extends Activity implements
 
     View lightTable, editorRoot;
     /** The two HUD pieces the crossing moves: the corner chips and 去冲印. */
-    private View lightTopRight, lightGo;
+    View lightTopRight, lightGo;
     // ---- 观片台（灯箱拼贴）----
-    private NegativeDesk negDesk;
+    NegativeDesk negDesk;
     /** 观片台的真身：assets/lt 里那一份网页，跑在 WebView 里（一比一）。 */
-    private LightTableCanvas ltWeb;
+    LightTableCanvas ltWeb;
     /** 网页版没起来（ROM 阉了 WebGL）：观片台退回原生那一版。 */
     private boolean ltFailed;
-    private boolean negMode;
-    private android.widget.HorizontalScrollView negStrip;
-    private LinearLayout negStripRow, negBar;
-    private TextView negModeBtn, negAdd, negFold, negReopen, negLoupeBtn;
+    boolean negMode;
+    android.widget.HorizontalScrollView negStrip;
+    LinearLayout negStripRow, negBar;
+    TextView negModeBtn, negAdd, negFold, negReopen, negLoupeBtn;
     /** 收起了照片栏：整条让开，只留一颗钉子把它叫回来。 */
-    private boolean negStripOpen = true;
+    boolean negStripOpen = true;
     /** 照片栏的那层底色与它的小钉子，跟着灯改颜色（不每帧新建 drawable）。 */
-    private android.graphics.drawable.GradientDrawable negBarBg, negReopenBg;
+    android.graphics.drawable.GradientDrawable negBarBg, negReopenBg;
     /** 已经摆在条子上的键，用来判断「换没换过相册」而不是「选没选中」。 */
     private java.util.List<String> negStripKeys;
     /** 这盏灯走到了哪里（0 暗房 / 1 灯箱），照片栏的颜色跟着它。 */
-    private float negLitT;
+    float negLitT;
     /** 上一次点亮的帧，用来只在「换了」的时候播那一下。 */
     private int negSelShown = -1;
     /** 正在往回飞：第二次返回（连按两下 back）不该再起一段。 */
@@ -4231,20 +4232,20 @@ public class MainActivity extends Activity implements
     /** 控制台右边那块现在画的是哪一态（省得每帧都换背景）。 */
     private Boolean loupeDrawnOn;
     /** 胶片琥珀橙：图三的选中框，也是暗房态下唯一的暖色。 */
-    private static final int NEG_AMBER = 0xFFE08A3C;
+    static final int NEG_AMBER = 0xFFE08A3C;
     /** 观片台的安全区（dp）：上面让给顶栏，下面让给照片栏（136–198）+ 控制台（10–128）。 */
-    private static final float NEG_SAFE_TOP_DP = 68f, NEG_SAFE_BOTTOM_DP = 206f;
+    static final float NEG_SAFE_TOP_DP = 68f, NEG_SAFE_BOTTOM_DP = 206f;
     /** 照片栏缩略图的长边（px）：自己的一份小图，不占墙的那 96 MB。 */
     private static final int NEG_THUMB_PX = 168;
     /** The three pieces of the editor the crossing lands one at a time. */
     private View editorTopBar, editorPickCard, editorSourceBar;
-    private View lightEmptyBlock;
+    View lightEmptyBlock;
     /** "pinch to fly" -- shown only while the sheet is what is on screen. */
     TextView lightGridHint;
     /** The loupe, which only exists while the light is on. */
-    private TextView lightLoupe;
-    private app.spektralab.ui.LightBox lightBoxBg;
-    private TextView lightEmpty1, lightEmpty2;
+    TextView lightLoupe;
+    app.spektralab.ui.LightBox lightBoxBg;
+    TextView lightEmpty1, lightEmpty2;
 
     /**
      * **The desk's one piece of hardware.**
@@ -4255,14 +4256,14 @@ public class MainActivity extends Activity implements
      * buttons: one device, arranged the way a camera is.
      */
     View lightZoomBar;
-    private RockerSwitch lightRocker;
-    private TextView lightZoomBtn;
-    private static String[] LT_ZOOM_NAMES = {tr("ui170.053"), tr("ui170.054"), tr("ui170.055"), tr("ui170.056")};
+    RockerSwitch lightRocker;
+    TextView lightZoomBtn;
+    static String[] LT_ZOOM_NAMES = {tr("ui170.053"), tr("ui170.054"), tr("ui170.055"), tr("ui170.056")};
     /** How tall the console is; the caption sits above it. */
-    private final float LT_ARC_H = 118f;
+    final float LT_ARC_H = 118f;
 
     /** **The wall's size, in words.** One tap walks to the next detent. */
-    private void refreshZoomBar() {
+    void refreshZoomBar() {
         if (lightZoomBtn == null) return;
         final String want = consoleLeftLabel();
         // 每帧都会被叫到：同一个字不重设（setText 会触发一次 layout）。
@@ -4277,7 +4278,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 换字：先淡掉，再换，再淡回来 —— 同一块按钮换了个用处，不是闪一下。 */
-    private void morphConsoleLabel(long delay) {
+    void morphConsoleLabel(long delay) {
         if (lightZoomBtn == null) return;
         final String want = consoleLeftLabel();
         if (want == null || want.contentEquals(lightZoomBtn.getText())) return;
@@ -4926,316 +4927,7 @@ public class MainActivity extends Activity implements
      * `yA` and a half-width `halfW` where it meets the bottom edge,
      * `cy = (halfW² + h² - yA²) / 2(h - yA)`.
      */
-    private View buildLightTable() {
-        final android.widget.FrameLayout root = new android.widget.FrameLayout(this);
-        root.setBackgroundColor(LT_WALL);
-        root.setClickable(true);
-
-        lightBoxBg = new app.spektralab.ui.LightBox(this);
-        root.addView(lightBoxBg, new android.widget.FrameLayout.LayoutParams(-1, -1));
-        lightDesk = new app.spektralab.ui.LightDesk(this, new LightDeskHostImpl(this));
-        root.addView(lightDesk, new android.widget.FrameLayout.LayoutParams(-1, -1));
-        lightDesk.zoomChanged = this::refreshZoomBar;
-        lightDesk.litChanged = this::applyLitHud;
-
-        // **The second view of the same album.** The wall shows the work; this
-        // shows the *negative* of one frame, on the same lamp. It is a sibling
-        // and not a mode inside `LightDesk` because the two share nothing but
-        // the bitmap: one is a wall of seventy-two cells, the other is a single
-        // sheet of film with a recurrence of its own for zoom and pan.
-        negDesk = new NegativeDesk(this);
-        negDesk.setFaces(tfHan);
-        // **安全区.** 上面让给顶栏（照片墙 / 设置），下面让给照片栏 + 控制台：新放上
-        // 去的、整理出来的、双击放大的，都落在这一段里，不压在按钮底下。
-        negDesk.setSafeInsets(dp(NEG_SAFE_TOP_DP), dp(NEG_SAFE_BOTTOM_DP));
-        negDesk.setOnLayoutChanged(packed -> getSharedPreferences("ui", MODE_PRIVATE)
-                .edit().putString("neg_layout", packed).apply());
-        negDesk.setVisibility(View.GONE);
-        negDesk.setOnSwipe(dir -> showNegativeAt((lightIndex < 0 ? 0 : lightIndex) + dir));
-        // **One lamp for the two rooms.** The console's rocker throws both; the
-        // desk only reports how far its own light has got.
-        negDesk.setOnLightToggle(on -> {
-            if (lightDesk != null) lightDesk.setLit(on);
-            if (lightRocker != null) lightRocker.setThrown(on);
-        });
-        negDesk.setOnLit(t -> {
-            negLitT = t;
-            applyNegHud();
-        });
-        // 台面上有谁、选中谁：照片栏的琥珀点和琥珀框跟着它
-        negDesk.setOnDeskChanged(this::syncNegStripColors);
-        // 整理 ⇄ 复原：控制台左边那一块的字
-        negDesk.setOnArrangeState(can -> morphConsoleLabel(0L));
-        // 画得比位图大了：去要一张清楚的
-        negDesk.setOnWantSharp(this::requestNegSharp);
-        // **红光里没有照片栏，也没有控制台。** 「拖到底部移出」要一个干净的落点：
-        // 照片栏（136–198 dp）和控制台（10–128 dp）正好压在最下面 —— 两样一起让开。
-        negDesk.setOnRemoveMode(on -> {
-            if (lightZoomBar != null) {
-                lightZoomBar.animate().cancel();
-                lightZoomBar.animate().alpha(on ? 0f : 1f)
-                        .translationY(on ? dp(30) : 0f)
-                        .setStartDelay(0).setDuration(on ? 150 : 220)
-                        .setInterpolator(xfEase()).start();
-            }
-            if (negBar == null) return;
-            negBar.animate().cancel();
-            if (negReopen != null) {
-                negReopen.animate().cancel();
-                negReopen.animate().alpha(on ? 0f : 1f).setStartDelay(0).setDuration(140).start();
-            }
-            if (on) {
-                negBar.animate().alpha(0f).translationY(dp(44)).setStartDelay(0)
-                        .setDuration(150).start();
-            } else if (negStripOpen) {
-                raiseNegBar(0L);
-            } else {
-                negBar.setAlpha(1f);
-                negBar.setTranslationY(0f);
-            }
-        });
-        // ★ 单张观片台已移除：negDesk 只留实例（接口还在），不进视图树。
-        negDesk.setVisibility(View.GONE);
-
-        // 观片台：原生 Canvas —— 逐层照抄 `assets/lt` 那一版网页（同一个台面、
-        // 同一块磨砂导光板、同一张带真镂空齿孔的底片、同一套辉光与暗角）。
-        // negDesk 退场：从树里摘掉之后任何 setVisibility 都叫不回来。
-        // ★ 单张观片台（Canvas 版 + 网页版）都已移除：ltWeb 不创建、不进树。
-
-        // **The same strip as 冲印.** A plus, the frames, a chevron -- one shape
-        // for "the photographs I am working with", so it does not have to be
-        // learned twice. Its three states are the lamp's: obsidian in the dark
-        // room, paper under the light, and the current frame always ringed in
-        // the same amber (the brand is the one thing the lamp does not change).
-        negStripRow = new LinearLayout(this);
-        negStripRow.setOrientation(LinearLayout.HORIZONTAL);
-        negStripRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        negStrip = new android.widget.HorizontalScrollView(this);
-        negStrip.setHorizontalScrollBarEnabled(false);
-        negStrip.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        negStrip.addView(negStripRow);
-        negAdd = label("＋", 17, NEG_AMBER, tfHan);
-        negAdd.setGravity(android.view.Gravity.CENTER);
-        negAdd.setOnClickListener(v -> showImportMenu());
-        negFold = label("‹", 15, NEG_AMBER, tfHan);
-        negFold.setGravity(android.view.Gravity.CENTER);
-        negFold.setOnClickListener(v -> setNegStripOpen(false));
-        negBarBg = ltCard(0xFF121212, 0, 0);
-        negBar = new LinearLayout(this);
-        negBar.setOrientation(LinearLayout.HORIZONTAL);
-        negBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        negBar.setPadding(dp(10), 0, dp(4), 0);
-        negBar.setBackground(negBarBg);
-        negBar.addView(negAdd, new LinearLayout.LayoutParams(dp(40), dp(48)));
-        negBar.addView(negStrip, new LinearLayout.LayoutParams(0, dp(48), 1f));
-        negBar.addView(negFold, new LinearLayout.LayoutParams(dp(28), dp(48)));
-        negBar.setVisibility(View.GONE);
-        final android.widget.FrameLayout.LayoutParams negBarLp =
-                new android.widget.FrameLayout.LayoutParams(-1, dp(62));
-        negBarLp.gravity = android.view.Gravity.BOTTOM;
-        // 控制台占 10–128 dp：照片栏落在它上面，中间留 8 dp。
-        negBarLp.bottomMargin = dp(136);
-        // ★ 单张观片台已移除：照片栏不进树。
-        // root.addView(negBar, negBarLp);
-
-        // **收起之后的那一颗钉子.** The bar leaves, but the way back cannot:
-        // a screen with no controls and no door is a screen you have to guess
-        // your way out of. It sits where the chevron was.
-        negReopenBg = ltCard(0xFF121212, NEG_AMBER, dp(1));
-        negReopen = label("›", 13, NEG_AMBER, tfHan);
-        negReopen.setGravity(android.view.Gravity.CENTER);
-        negReopen.setBackground(negReopenBg);
-        negReopen.setVisibility(View.GONE);
-        negReopen.setOnClickListener(v -> setNegStripOpen(true));
-        final android.widget.FrameLayout.LayoutParams nrLp =
-                new android.widget.FrameLayout.LayoutParams(dp(46), dp(30),
-                        android.view.Gravity.BOTTOM | android.view.Gravity.END);
-        nrLp.rightMargin = dp(16);
-        nrLp.bottomMargin = dp(140);
-        root.addView(negReopen, nrLp);
-
-        final TextView settings = label(tr("editor.settings"), 9, LT_KLEIN, tfHan);
-        settings.setGravity(android.view.Gravity.CENTER);
-        settings.setPadding(dp(13), dp(8), dp(13), dp(8));
-        settings.setBackground(ltCard(LT_PAPER, LT_KLEIN, dp(1.2f)));
-        settings.setOnClickListener(v -> showSettings());
-
-        final LinearLayout topRight = new LinearLayout(this);
-        lightTopRight = topRight;
-        topRight.setOrientation(LinearLayout.HORIZONTAL);
-        topRight.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        topRight.addView(settings);
-        // **照片墙 / 观片台**, left of 设置, same card language as the rest.
-        // 单张观片台已移除：右上角不再有「观片台 / 照片墙」那颗双态按钮。
-        negModeBtn = null;
-
-        // **放大镜在控制台上**（与照片墙同一块），右上角不再另放一颗：一个房间
-        // 一套按钮，换房间只换它们管的是谁。
-        final android.widget.FrameLayout.LayoutParams setLp =
-                new android.widget.FrameLayout.LayoutParams(-2, -2,
-                        android.view.Gravity.TOP | android.view.Gravity.END);
-        setLp.setMargins(0, dp(24), dp(24), 0);
-        root.addView(topRight, setLp);
-
-        // ---- the one gesture the sheet has
-        lightGridHint = label(tr("ui170.062"), 7.5f, 0xB3FFFFFF, tfHan);
-        lightGridHint.setLetterSpacing(0.06f);
-        lightGridHint.setAlpha(0.85f);
-        final android.widget.FrameLayout.LayoutParams hintLp =
-                new android.widget.FrameLayout.LayoutParams(-2, -2,
-                        android.view.Gravity.TOP | android.view.Gravity.START);
-        hintLp.setMargins(dp(24), dp(28), 0, 0);
-        root.addView(lightGridHint, hintLp);
-
-        // ---- nothing exported yet
-        final LinearLayout empty = new LinearLayout(this);
-        empty.setOrientation(LinearLayout.VERTICAL);
-        empty.setGravity(android.view.Gravity.CENTER);
-        final TextView e1 = label(tr("ui170.063"), 10.5f, LT_PAPER, tfHan);
-        lightEmpty1 = e1;
-        e1.setGravity(android.view.Gravity.CENTER);
-        empty.addView(e1);
-        final TextView e2 = label(tr("ui170.064"), 8.5f, 0x99FFFFFF, tfHan);
-        lightEmpty2 = e2;
-        e2.setGravity(android.view.Gravity.CENTER);
-        e2.setPadding(0, dp(8), 0, 0);
-        empty.addView(e2);
-        // **The empty wall needs its own way out.** 去冲印 lives inside
-        // `lightZoomBar`, and `applyAlbum` hides that whole console when the
-        // album is empty -- so a first launch showed a sentence telling the user
-        // to go and develop something, with no way to do it. Same control, same
-        // paint (a solid Klein block at 10 sp), so it reads as the one that
-        // appears once there is a wall to look at.
-        final TextView goEmpty = label(tr("ui170.065"), 10, LT_PAPER, tfHan);
-        goEmpty.setGravity(android.view.Gravity.CENTER);
-        goEmpty.setBackground(ltCard(LT_KLEIN, 0, 0));
-        goEmpty.setOnClickListener(v -> crossToEditor(goEmpty));
-        final LinearLayout.LayoutParams goEmptyLp =
-                new LinearLayout.LayoutParams(dp(124), dp(36));
-        goEmptyLp.topMargin = dp(20);
-        goEmptyLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
-        empty.addView(goEmpty, goEmptyLp);
-        empty.setVisibility(View.GONE);
-        root.addView(empty, new android.widget.FrameLayout.LayoutParams(-1, -1));
-        lightEmptyBlock = empty;
-
-        // ---- what this frame is: EXIF (typed), then the film and paper cards
-        lightInfo = new LinearLayout(this);
-        lightInfo.setOrientation(LinearLayout.VERTICAL);
-        lightInfo.setAlpha(0f);
-        lightInfo.setVisibility(View.INVISIBLE);
-        // **One white block.** A dark wall needs a place for the small type to
-        // be read on, and an outline is not enough when the wall behind can be
-        // any photograph: the caption gets a solid sheet of paper.
-        lightInfo.setBackground(ltCard(LT_PAPER, 0, 0));
-        lightInfo.setPadding(dp(13), dp(10), dp(15), dp(11));
-        lightInfoMeta = label("", 8.5f, LT_INK, tfBody);
-        lightInfoMeta.setLetterSpacing(0.03f);
-        lightInfo.addView(lightInfoMeta);
-        lightInfoFile = label("", 7.5f, LT_MUTED, tfHan);
-        lightInfoFile.setPadding(0, dp(5), 0, dp(10));
-        lightInfo.addView(lightInfoFile);
-        final LinearLayout cards = new LinearLayout(this);
-        cards.setOrientation(LinearLayout.HORIZONTAL);
-        // **Words, plainly.** The stock is a caption, not a shelf: two lines of
-        // text read at arm's length, and nothing here competes with the picture
-        // for attention.
-        lightFilmValue = infoCard(cards, tr("navigation.film"), true);
-        lightPaperValue = infoCard(cards, tr("ui170.066"), false);
-        lightInfo.addView(cards);
-        final android.widget.FrameLayout.LayoutParams infoLp =
-                new android.widget.FrameLayout.LayoutParams(-2, -2,
-                        android.view.Gravity.START | android.view.Gravity.BOTTOM);
-        // **Bottom-aligned with 去冲印.** Same 24 dp the button keeps, so the
-        // caption and the action share one baseline; the block is narrower than
-        // the gap the button leaves, so they never touch.
-        infoLp.setMargins(dp(24), 0, dp(24), Math.round(dp(LT_ARC_H + 20f)));
-        root.addView(lightInfo, infoLp);
-
-        // ---- the console: two accent blocks, a switch between them
-        //
-        // **One language on the bottom line.** 去冲印 has always been a solid
-        // accent block; the size and the loupe are the same block now, so the
-        // three read as one row of actions instead of three inventions. The lamp
-        // keeps its metal, because a switch is not an action.
-        final android.widget.FrameLayout console = new android.widget.FrameLayout(this);
-
-        // ---- 缩放, bottom left: one tap, one step, all the way round
-        lightZoomBtn = label(tr("ui170.054"), 10, LT_PAPER, tfHan);
-        lightZoomBtn.setGravity(android.view.Gravity.CENTER);
-        lightZoomBtn.setBackground(ltCard(LT_KLEIN, 0, 0));
-        lightZoomBtn.setOnClickListener(v -> {
-            // **观片台上它是「整理 / 复原」**：排成网格，再按一次每张飞回去。
-            if (negMode) {
-                if (negDesk != null) negDesk.toggleArrange();
-                return;
-            }
-            if (lightDesk == null) return;
-            lightDesk.zoomTo((Math.max(0, lightDesk.zoomStep()) + 1) % LT_ZOOM_NAMES.length);
-        });
-        final android.widget.FrameLayout.LayoutParams zLp =
-                new android.widget.FrameLayout.LayoutParams(Math.round(dp(68f)),
-                        Math.round(dp(36f)),
-                        android.view.Gravity.BOTTOM | android.view.Gravity.START);
-        zLp.leftMargin = dp(14f);
-        console.addView(lightZoomBtn, zLp);
-
-        // ---- 放大镜, bottom right: the same block, inverted while it is on
-        lightLoupe = label(tr("ui170.067"), 10, LT_PAPER, tfHan);
-        lightLoupe.setGravity(android.view.Gravity.CENTER);
-        lightLoupe.setBackground(ltCard(LT_KLEIN, 0, 0));
-        lightLoupe.setOnClickListener(v -> {
-            if (negMode) {
-                if (negDesk != null) negDesk.setLens(!negDesk.isLensOn());
-            } else {
-                if (lightDesk == null) return;
-                lightDesk.setTool(!lightDesk.isToolOn());
-            }
-            refreshLoupeButton();
-        });
-        final android.widget.FrameLayout.LayoutParams lLp =
-                new android.widget.FrameLayout.LayoutParams(Math.round(dp(68f)),
-                        Math.round(dp(36f)),
-                        android.view.Gravity.BOTTOM | android.view.Gravity.END);
-        lLp.rightMargin = dp(14f);
-        console.addView(lightLoupe, lLp);
-        lightLoupe.setVisibility(android.view.View.GONE);
-
-        lightRocker = new app.spektralab.ui.RockerSwitch(this);
-        final android.widget.FrameLayout.LayoutParams rkLp =
-                new android.widget.FrameLayout.LayoutParams(Math.round(dp(48f)),
-                        Math.round(dp(72f)),
-                        android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
-        rkLp.bottomMargin = dp(46f);
-        console.addView(lightRocker, rkLp);
-        lightRocker.setOnClickListener(v -> toggleLights(lightRocker));
-
-        final TextView go = label(tr("ui170.065"), 10, LT_PAPER, tfHan);
-        lightGo = go;
-        go.setGravity(android.view.Gravity.CENTER);
-        go.setBackground(ltCard(LT_KLEIN, 0, 0));
-        // **The crossing, not a cut.** 去冲印 hands the stage to the editor and
-        // lets the editor build itself; the picker is the button in the middle
-        // of the new page, so nothing is thrown in front of the arrival.
-        go.setOnClickListener(v -> crossToEditor(go));
-        final android.widget.FrameLayout.LayoutParams goLp =
-                new android.widget.FrameLayout.LayoutParams(dp(104), dp(36),
-                        android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
-        console.addView(go, goLp);
-
-        final android.widget.FrameLayout.LayoutParams barLp =
-                new android.widget.FrameLayout.LayoutParams(-1, Math.round(dp(LT_ARC_H)),
-                        android.view.Gravity.BOTTOM);
-        barLp.setMargins(0, 0, 0, dp(10));
-        root.addView(console, barLp);
-        lightZoomBar = console;
-        // **Catch up with the desk.** It outlives this view, so the light can
-        // already be on and the wall already on a step when this is built.
-        lightRocker.setThrown(lightDesk.isLit(), false);
-        refreshZoomBar();
-
-        return root;
-    }
+    private View buildLightTable() { return LightTable.buildLightTable(new LightTableHostImpl(this)); }
 
     /**
      * One caption card: a small name and the value under it.
@@ -5252,7 +4944,7 @@ public class MainActivity extends Activity implements
      * retreats. Turning it off is the same move backwards -- the same curve,
      * the same clock, so the return reads as the same object being put back.
      */
-    private void toggleLights(View from) {
+    void toggleLights(View from) {
         if (lightDesk == null) return;
         // 观片台上看的是台面自己的灯（墙这时不在屏幕上，它的灯只记个状态）。
         final boolean on = negMode && negDesk != null ? !negDesk.isLit() : !lightDesk.isLit();
@@ -5288,7 +4980,7 @@ public class MainActivity extends Activity implements
 
 
     /** Everything on the HUD that follows the lamp. Called every frame it moves. */
-    private void applyLitHud() {
+    void applyLitHud() {
         if (lightDesk == null) return;
         final float t = lightDesk.litAmount();
         if (lightGridHint != null) lightGridHint.setTextColor(blend(0xB3FFFFFF, 0xB340352A, t));
@@ -5311,7 +5003,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 观片台跟着灯走的那些：照片栏的三种颜色、控制台上的放大镜、系统栏。 */
-    private void applyNegHud() {
+    void applyNegHud() {
         syncNegStripColors();
         refreshNegLoupe();
         syncRoomBars();
@@ -5324,7 +5016,7 @@ public class MainActivity extends Activity implements
      * plastic -- or lit, with the accent behind it. Nothing here touches the
      * zoom chip: its own text is the whole of its state.
      */
-    private void refreshLoupeButton() {
+    void refreshLoupeButton() {
         if (lightLoupe == null) return;
         final boolean on = negMode ? negDesk != null && negDesk.isLensOn()
                 : lightDesk != null && lightDesk.isToolOn();
@@ -5337,7 +5029,7 @@ public class MainActivity extends Activity implements
         lightLoupe.setTextColor(on ? LT_KLEIN : LT_PAPER);
     }
 
-    private TextView infoCard(LinearLayout row, String kind, boolean first) {
+    TextView infoCard(LinearLayout row, String kind, boolean first) {
         final LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(10), dp(7), dp(13), dp(8));
@@ -5561,7 +5253,7 @@ public class MainActivity extends Activity implements
     }
 
     /** A flat card: fill, and an optional 1 px stroke. No corners, no shadow. */
-    private android.graphics.drawable.GradientDrawable ltCard(int fill, int stroke, int widthPx) {
+    android.graphics.drawable.GradientDrawable ltCard(int fill, int stroke, int widthPx) {
         final android.graphics.drawable.GradientDrawable g =
                 new android.graphics.drawable.GradientDrawable();
         g.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
@@ -5978,7 +5670,7 @@ public class MainActivity extends Activity implements
         }
     }
 
-    private void showNegativeAt(int at) {
+    void showNegativeAt(int at) {
         if (negDesk == null || album.isEmpty()) return;
         int i = at;
         if (i < 0) i = 0;
@@ -6004,7 +5696,7 @@ public class MainActivity extends Activity implements
     }
 
     /** 收起 / 展开照片栏，给一块干净的观片视野。 */
-    private void setNegStripOpen(boolean open) {
+    void setNegStripOpen(boolean open) {
         negStripOpen = open;
         if (negBar == null) return;
         if (open) {
@@ -6041,7 +5733,7 @@ public class MainActivity extends Activity implements
         });
     }
 
-    private void raiseNegBar(long delay) {
+    void raiseNegBar(long delay) {
         if (negBar == null || !negStripOpen) return;
         negBar.animate().cancel();
         negBar.setVisibility(View.VISIBLE);
@@ -6228,7 +5920,7 @@ public class MainActivity extends Activity implements
         return negThumbFor(key);
     }
 
-    private void requestNegSharp(String key, int edge) {
+    void requestNegSharp(String key, int edge) {
         if (key == null || !negMode) return;
         queueNeg(key, edge, true);
     }
@@ -6288,7 +5980,7 @@ public class MainActivity extends Activity implements
      * 条子的三种颜色都是**灯的**：底色（黑曜石 ↔ 半透纸）、图标（琥珀 ↔
      * 深琥珀，浅底上要读得出）、以及那圈永远琥珀的选中框。
      */
-    private void syncNegStripColors() {
+    void syncNegStripColors() {
         final float t = negLitT;
         final String selKey = negDesk != null ? negDesk.selectedKey() : null;
         final int selected = selKey != null && negStripKeys != null
@@ -6765,10 +6457,10 @@ public class MainActivity extends Activity implements
     /** Coming back, ms. Shorter: leaving is a decision, returning is a memory. */
     private static final long XF_OUT_MS = 550L;
 
-    private boolean crossing;
+    boolean crossing;
 
     /** `cubic-bezier(0.22, 1, 0.36, 1)` -- the whole crossing rides this one. */
-    private static android.view.animation.Interpolator xfEase() {
+    static android.view.animation.Interpolator xfEase() {
         return new android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f);
     }
 
@@ -15892,7 +15584,7 @@ public class MainActivity extends Activity implements
      * left untyped -- is not one. Long-press used to hold this and nobody
      * found it; a tap asking a question costs one tap and answers it.
      */
-    private void showImportMenu() {
+    void showImportMenu() {
         if (batchExportRunning) {
             showInAppToast(tr("file.wait_for_batch_export_to"));
             return;
@@ -16310,9 +16002,9 @@ public class MainActivity extends Activity implements
     String settingsSection;
     boolean settingsOpen;
 
-    private void showSettings() { showSettings(null); }
+    void showSettings() { showSettings(null); }
 
-    private void showSettings(String section) { SettingsDialogs.showSettings(new SettingsDialogsHostImpl(this), section); }
+    void showSettings(String section) { SettingsDialogs.showSettings(new SettingsDialogsHostImpl(this), section); }
 
     private void closeSettings() { SettingsDialogs.closeSettings(new SettingsDialogsHostImpl(this)); }
 

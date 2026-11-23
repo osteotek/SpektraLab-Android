@@ -50,17 +50,17 @@ import android.view.View;
  */
 public final class NegativeDesk extends View {
 
-    interface OnLightToggle { void onLight(boolean lit); }
-    interface OnLit { void onLit(float t); }
-    interface OnSwipe { void onSwipe(int dir); }
-    interface OnLayoutChanged { void onLayout(String packed); }
-    interface OnRemoveMode { void onRemove(boolean on); }
+    public interface OnLightToggle { void onLight(boolean lit); }
+    public interface OnLit { void onLit(float t); }
+    public interface OnSwipe { void onSwipe(int dir); }
+    public interface OnLayoutChanged { void onLayout(String packed); }
+    public interface OnRemoveMode { void onRemove(boolean on); }
     /** 台面上有哪些、选中的是哪一张变了：照片栏的琥珀点与选中框跟着它。 */
-    interface OnDeskChanged { void onDeskChanged(); }
+    public interface OnDeskChanged { void onDeskChanged(); }
     /** 「整理」之后能「复原」：控制台左边那颗按钮的字跟着它。 */
-    interface OnArrangeState { void onArrange(boolean canRestore); }
+    public interface OnArrangeState { void onArrange(boolean canRestore); }
     /** 这一张画得比它的位图大了：要一张更清楚的（长边 `edge`）。 */
-    interface OnWantSharp { void onWantSharp(String key, int edge); }
+    public interface OnWantSharp { void onWantSharp(String key, int edge); }
 
     // ---- 拼贴的物理 ----------------------------------------------------
     //
@@ -225,14 +225,14 @@ public final class NegativeDesk extends View {
     private long readAt;
 
     // ---- 回调 ----
-    private OnLightToggle onLight;
-    private OnLit onLit;
-    private OnSwipe onSwipe;
-    private OnLayoutChanged onLayout;
-    private OnRemoveMode onRemove;
-    private OnDeskChanged onDesk;
-    private OnArrangeState onArrange;
-    private OnWantSharp onSharp;
+    public OnLightToggle onLight;
+    public OnLit onLit;
+    public OnSwipe onSwipe;
+    public OnLayoutChanged onLayout;
+    public OnRemoveMode onRemove;
+    public OnDeskChanged onDesk;
+    public OnArrangeState onArrange;
+    public OnWantSharp onSharp;
     /** 每张要过多大的清晰版（长边 px）：放得更大了可以再要一次更大的。 */
     private final java.util.HashMap<String, Integer> sharpAsked = new java.util.HashMap<>();
 
@@ -247,7 +247,7 @@ public final class NegativeDesk extends View {
     private int panelPatchColour;
     private float panelPatchGain;
 
-    NegativeDesk(Context c) {
+    public NegativeDesk(Context c) {
         super(c);
         setClickable(true);
         setFocusable(false);
@@ -257,23 +257,23 @@ public final class NegativeDesk extends View {
 
     // ================================================================ API
 
-    void setOnLightToggle(OnLightToggle l) { onLight = l; }
-    void setOnLit(OnLit l) { onLit = l; }
-    void setOnSwipe(OnSwipe l) { onSwipe = l; }
-    void setOnLayoutChanged(OnLayoutChanged l) { onLayout = l; }
-    void setOnRemoveMode(OnRemoveMode l) { onRemove = l; }
-    void setOnDeskChanged(OnDeskChanged l) { onDesk = l; }
-    void setOnArrangeState(OnArrangeState l) { onArrange = l; }
-    void setOnWantSharp(OnWantSharp l) { onSharp = l; }
+    public void setOnLightToggle(OnLightToggle l) { onLight = l; }
+    public void setOnLit(OnLit l) { onLit = l; }
+    public void setOnSwipe(OnSwipe l) { onSwipe = l; }
+    public void setOnLayoutChanged(OnLayoutChanged l) { onLayout = l; }
+    public void setOnRemoveMode(OnRemoveMode l) { onRemove = l; }
+    public void setOnDeskChanged(OnDeskChanged l) { onDesk = l; }
+    public void setOnArrangeState(OnArrangeState l) { onArrange = l; }
+    public void setOnWantSharp(OnWantSharp l) { onSharp = l; }
 
     /** App 的中文字体（OPPO Sans）。这一页的字全是中文，不能落到系统字体上。 */
-    void setFaces(Typeface h) {
+    public void setFaces(Typeface h) {
         if (h != null) han = h;
         text.setTypeface(han);
         invalidate();
     }
 
-    void setSafeInsets(float top, float bottom) {
+    public void setSafeInsets(float top, float bottom) {
         safeTop = Math.max(0f, top);
         safeBottom = Math.max(0f, bottom);
         invalidate();
@@ -294,7 +294,7 @@ public final class NegativeDesk extends View {
 
     boolean isLit() { return litTo > 0.5f; }
 
-    boolean isLensOn() { return lensOn; }
+    public boolean isLensOn() { return lensOn; }
 
     /** 同一张照片每次摆上去的倾角都一样 —— 位置存得住，倾角也要存得住。 */
     static float tiltFor(String key) {
@@ -505,7 +505,7 @@ public final class NegativeDesk extends View {
     }
 
     /** 玻璃：一枚可以拿起来的镜片。关掉时不留痕迹。 */
-    void setLens(boolean on) {
+    public void setLens(boolean on) {
         lensOn = on;
         if (on) {
             if (!lensPlaced || lensX <= 0f || lensY <= 0f) {
@@ -526,7 +526,7 @@ public final class NegativeDesk extends View {
     }
 
     /** 「整理」⇄「复原」。 */
-    void toggleArrange() {
+    public void toggleArrange() {
         if (arrangeSaved) restoreArrange();
         else arrange();
     }
