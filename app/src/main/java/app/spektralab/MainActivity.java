@@ -71,6 +71,7 @@ import app.spektralab.ui.panels.ComposePages;
 import app.spektralab.ui.panels.LiveClipRenderer;
 import app.spektralab.ui.panels.ExitReport;
 import app.spektralab.ui.panels.FilmCoverStyles;
+import app.spektralab.ui.panels.EditorChrome;
 import app.spektralab.ui.panels.LightTable;
 import app.spektralab.ui.panels.LookDefaults;
 import app.spektralab.ui.panels.UriFiles;
@@ -290,7 +291,7 @@ public class MainActivity extends Activity implements
     /** The before/after toggle, bottom-right of the canvas. */
     private TextView comparePill;
     /** The canvas itself, so a window-level pinch knows where the picture is. */
-    private android.widget.FrameLayout canvasStage;
+    android.widget.FrameLayout canvasStage;
 
     // **The pinch lives at the window, not in a child view.** Two attempts to
     // put it inside `CompareView` produced no movement at all, which means the
@@ -511,7 +512,7 @@ public class MainActivity extends Activity implements
         persistHandler.postDelayed(persistSession, 1200);
     }
     private final Runnable undoPush = this::pushUndoNow;
-    private android.widget.ImageView undoPill;
+    android.widget.ImageView undoPill;
     float grainAmount = 1.0f;      // 0..2, engine default 1
     float halationAmount = 1.0f;   // 0..4
     // The paper's own veil is 1.0 on the wire (`GlareParams::amount`), and the
@@ -1021,7 +1022,7 @@ public class MainActivity extends Activity implements
      * the canvas turned black. On the canvas the contrast colour is what is
      * wanted, and it is white in both themes.
      */
-    private static int uiOnCanvas() { return 0xFFF1F1EE; }
+    static int uiOnCanvas() { return 0xFFF1F1EE; }
     /** True when the dark palette is in force; the canvas chrome asks. */
     static boolean darkTheme = false;
 
@@ -1282,19 +1283,19 @@ public class MainActivity extends Activity implements
      * 画布那一栏：竖屏时它就是整个 app（画布在上、照片栏在下），
      * 横屏时它是左半边。
      */
-    private LinearLayout leftColumn;
+    LinearLayout leftColumn;
     /** 页签那一行。竖屏在屏幕最底、横屏在右栏顶上 —— 同一个对象，换父。 */
-    private android.widget.FrameLayout tabsRoot;
+    android.widget.FrameLayout tabsRoot;
     /** 横屏右栏里包着 panelHolder 的滚动器；竖屏不存在。 */
-    private android.widget.ScrollView panelScroll;
+    android.widget.ScrollView panelScroll;
     /** 横屏钉在右栏底部的相纸行（竖屏里它属于胶片页）。 */
-    private LinearLayout paperDock;
+    LinearLayout paperDock;
     View filmPaperRow;
     /** 货架卡片的容器：竖屏装着那个横向滚动器，横屏直接装两列网格。 */
     LinearLayout filmShelfHost;
     private View editorRule;
     /** 两栏之间那根 1 px 的线，横屏才有。 */
-    private boolean landscapeMode;
+    boolean landscapeMode;
     /** 货架每行几张卡：1 = 竖屏的一条横的。 */
     private volatile int filmCols = 1;
     private LinearLayout filmGridRow;
@@ -1681,10 +1682,10 @@ public class MainActivity extends Activity implements
     /** True while the export's clip loop owns the engine; see {@link #renderImage}. */
     volatile boolean liveClipRendering;
     /** The LIVE pill on the canvas: the frame has a clip, and it is the play control. */
-    private TextView liveBadge;
+    TextView liveBadge;
     /** The same pill for the HDR screen preview: it changes what the canvas
      *  *is*, and nothing else on screen says so. */
-    private TextView hdrBadge;
+    TextView hdrBadge;
     /** The clip, played back over the canvas. Hidden the rest of the time. */
     private android.widget.ImageView livePlayer;
     /**
@@ -1722,7 +1723,7 @@ public class MainActivity extends Activity implements
     private LinearLayout originalAction;
     private ToolGlyph originalGlyph;
     int activeTabIndex = 0;
-    private boolean panelCollapsed = false;
+    boolean panelCollapsed = false;
     /** The shelf opens on 原图, never on a stock the user did not pick. */
     boolean showingOriginal = true;
     /** 原图 + 辉光的那一份。原图是 `beforeBitmap`，不能就地改它（它是基准），
@@ -2067,9 +2068,9 @@ public class MainActivity extends Activity implements
                 .setInterpolator(EASE_OUT)
                 .withEndAction(() -> { if (inAppToast != null) inAppToast.setVisibility(View.GONE); }).start();
     };
-    private final View[] panels = new View[6];
+    final View[] panels = new View[6];
     /** The strip above the tool bar, and which strip it is showing. */
-    private android.widget.FrameLayout subBar, subRowHost;
+    android.widget.FrameLayout subBar, subRowHost;
     private ChipRow subRow;
     /** -1 nothing built yet; 0 none; 1 the print pages; 2 the optics sub-pages. */
     private int subBarKind = -1;
@@ -2573,7 +2574,7 @@ public class MainActivity extends Activity implements
      * one step. Walking it over 300 ms makes the canvas follow, which is what
      * the layout already said it should do.
      */
-    private void cancelHeight(final View v) {
+    void cancelHeight(final View v) {
         final Object t = v.getTag();
         if (t instanceof android.animation.ValueAnimator) {
             ((android.animation.ValueAnimator) t).cancel();
@@ -3834,7 +3835,7 @@ public class MainActivity extends Activity implements
     }
 
     /** Stop whatever the last arrival left running on `v`. */
-    private void cancelLine(View v) {
+    void cancelLine(View v) {
         if (v == null) return;
         if (lineRows != null) {
             for (int i = 0; i < lineRows.size(); ++i) {
@@ -3902,7 +3903,7 @@ public class MainActivity extends Activity implements
      * while `buildUi` is still adding views), and that first placement is
      * written without motion the moment the row has a size.
      */
-    private void moveTabUnderline(int index, boolean animate) {
+    void moveTabUnderline(int index, boolean animate) {
         if (tabUnderline == null || index < 0 || index >= tabCells.length) return;
         final View cell = tabCells[index];
         if (cell == null) return;
@@ -4238,7 +4239,7 @@ public class MainActivity extends Activity implements
     /** 照片栏缩略图的长边（px）：自己的一份小图，不占墙的那 96 MB。 */
     private static final int NEG_THUMB_PX = 168;
     /** The three pieces of the editor the crossing lands one at a time. */
-    private View editorTopBar, editorPickCard, editorSourceBar;
+    View editorTopBar, editorPickCard, editorSourceBar;
     View lightEmptyBlock;
     /** "pinch to fly" -- shown only while the sheet is what is on screen. */
     TextView lightGridHint;
@@ -7027,18 +7028,18 @@ public class MainActivity extends Activity implements
     // ============================================================== 横屏两栏
 
     /** 现在是不是横着拿的。 */
-    private boolean isLandscapeNow() {
+    boolean isLandscapeNow() {
         return getResources().getConfiguration().orientation
                 == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
     }
 
     /** 右栏的宽：屏幕的 40 %，两头各有一个不讲道理的边。 */
-    private int controlsWidthPx() {
+    int controlsWidthPx() {
         final int w = getResources().getDisplayMetrics().widthPixels;
         return Math.max(dp(288), Math.min(dp(430), Math.round(w * 0.40f)));
     }
 
-    private View editorRule() {
+    View editorRule() {
         if (editorRule == null) {
             editorRule = new View(this);
             editorRule.setBackgroundColor(UI_LINE);
@@ -7064,119 +7065,10 @@ public class MainActivity extends Activity implements
      * 再按当前方向装回去；`rebuildFilmCards()` 也只是把卡片按新列数重排，
      * 缩略图全部命中 `filmThumbs`。
      */
-    private void applyEditorLayout() {
-        if (!(editorRoot instanceof LinearLayout) || leftColumn == null || controls == null
-                || canvasStage == null || editorSourceBar == null || panelHolder == null
-                || tabsRoot == null || subBar == null) return;
-        final LinearLayout app = (LinearLayout) editorRoot;
-        final boolean land = isLandscapeNow();
-        landscapeMode = land;
-        try {
-            markFile("layout " + (land ? "landscape" : "portrait")
-                    + " " + getResources().getDisplayMetrics().widthPixels
-                    + "x" + getResources().getDisplayMetrics().heightPixels
-                    + " rail=" + controlsWidthPx() + " cols=" + (land ? 2 : 1));
-        } catch (Throwable ignored) { Diagnostics.ignored("MainActivity:13486", ignored); }
-
-        app.removeAllViews();
-        leftColumn.removeAllViews();
-        controls.removeAllViews();
-        if (panelScroll != null) panelScroll.removeAllViews();
-        // **Not `paperDock.removeAllViews()`.** The dock owns a hairline as well,
-        // and emptying it would take that with it the first time the phone
-        // turned back to portrait. Only the paper row travels.
-        if (filmPaperRow != null && filmPaperRow.getParent() instanceof android.view.ViewGroup) {
-            ((android.view.ViewGroup) filmPaperRow.getParent()).removeView(filmPaperRow);
-        }
-
-        leftColumn.addView(canvasStage, new LinearLayout.LayoutParams(-1, 0, 1f));
-        leftColumn.addView(editorSourceBar, new LinearLayout.LayoutParams(-1, dp(62)));
-
-        if (land) {
-            app.setOrientation(LinearLayout.HORIZONTAL);
-            app.addView(leftColumn, new LinearLayout.LayoutParams(0, -1, 1f));
-            app.addView(editorRule(), new LinearLayout.LayoutParams(Math.max(1, dp(0.6f)), -1));
-
-            // **页签在右栏顶上。** 竖屏时它在屏幕最底（拇指够得到）；横屏时
-            // 屏幕最底离右栏的正文最远，一列工具的第一个东西应该是它的目录。
-            if (panelScroll == null) {
-                panelScroll = new android.widget.ScrollView(this);
-                panelScroll.setFillViewport(false);
-                panelScroll.setVerticalScrollBarEnabled(true);
-            }
-            panelScroll.addView(panelHolder, new LinearLayout.LayoutParams(-1, -2));
-            if (paperDock == null) {
-                paperDock = new LinearLayout(this);
-                paperDock.setOrientation(LinearLayout.VERTICAL);
-                paperDock.setBackgroundColor(UI_PAPER);
-                final View rule = new View(this);
-                rule.setBackgroundColor(UI_LINE);
-                paperDock.addView(rule, new LinearLayout.LayoutParams(-1, Math.max(1, dp(0.6f))));
-            }
-            if (filmPaperRow != null) {
-                paperDock.addView(filmPaperRow, new LinearLayout.LayoutParams(-1, dp(35)));
-            }
-
-            controls.addView(tabsRoot, new LinearLayout.LayoutParams(-1, dp(TAB_BAR_DP)));
-            controls.addView(subBar, new LinearLayout.LayoutParams(-1, -2));
-            controls.addView(panelScroll, new LinearLayout.LayoutParams(-1, 0, 1f));
-            controls.addView(paperDock, new LinearLayout.LayoutParams(-1, -2));
-            app.addView(controls, new LinearLayout.LayoutParams(controlsWidthPx(), -1));
-        } else {
-            app.setOrientation(LinearLayout.VERTICAL);
-            app.addView(leftColumn, new LinearLayout.LayoutParams(-1, 0, 1f));
-            if (filmPaperRow != null && panels.length > 0 && panels[0] instanceof android.view.ViewGroup) {
-                ((android.view.ViewGroup) panels[0]).addView(filmPaperRow,
-                        new LinearLayout.LayoutParams(-1, dp(35)));
-            }
-            controls.addView(panelHolder, new LinearLayout.LayoutParams(-1, -2));
-            controls.addView(subBar, new LinearLayout.LayoutParams(-1, -2));
-            controls.addView(tabsRoot, new LinearLayout.LayoutParams(-1, dp(TAB_BAR_DP)));
-            app.addView(controls, new LinearLayout.LayoutParams(-1, -2));
-        }
-
-        // 折叠只在竖屏有意义：横屏的右栏是定高的，收起面板也换不回画面。
-        panelCollapsed = false;
-        cancelHeight(panelHolder);
-        panelHolder.animate().cancel();
-        panelHolder.setVisibility(View.VISIBLE);
-        panelHolder.setAlpha(1f);
-        panelHolder.setTranslationY(0f);
-        final android.view.ViewGroup.LayoutParams hl = panelHolder.getLayoutParams();
-        if (hl != null) {
-            hl.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
-            panelHolder.setLayoutParams(hl);
-        }
-
-        // **每个面板都还给自己的内容。** 上一次 `enterPanel` 留下的固定高度
-        // 是竖屏的尺寸；换成两栏之后，横屏那面网格会被它按 222 dp 剪掉。
-        for (int i = 0; i < panelHolder.getChildCount(); ++i) {
-            final View pv = panelHolder.getChildAt(i);
-            final android.view.ViewGroup.LayoutParams plp = pv.getLayoutParams();
-            if (plp != null) {
-                plp.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
-                pv.setLayoutParams(plp);
-            }
-        }
-
-        // 横屏的舞台矮，顶栏让出 12 dp 给照片。
-        if (editorTopBar != null && editorTopBar.getLayoutParams() != null) {
-            final android.view.ViewGroup.LayoutParams tl = editorTopBar.getLayoutParams();
-            tl.height = dp(land ? 52 : 64);
-            editorTopBar.setLayoutParams(tl);
-        }
-
-        applyFilmShelfMode();
-        // 照片栏可能是收起的（`shelfCollapsed`）：重装一遍才知道它该多高。
-        updateShelfVisibility();
-        moveTabUnderline(activeTabIndex, false);
-        refreshSubBar();
-        applyEditorChrome();
-        app.requestLayout();
-    }
+    private void applyEditorLayout() { EditorChrome.applyEditorLayout(new EditorChromeHostImpl(this)); }
 
     /** 相纸行只在胶片页出现：它跟着胶片走，别的页没有它要回答的问题。 */
-    private void applyEditorChrome() {
+    void applyEditorChrome() {
         if (paperDock != null) {
             paperDock.setVisibility(landscapeMode && activeTabIndex == 0
                     ? View.VISIBLE : View.GONE);
@@ -7192,7 +7084,7 @@ public class MainActivity extends Activity implements
      * <p>卡片本身不动（同一批 view），只换父亲和宽度。右栏只有三百来 dp，
      * 横条一次只能看见三张；网格一眼六张，而且顺着滚动方向排。
      */
-    private void applyFilmShelfMode() {
+    void applyFilmShelfMode() {
         if (filmShelfHost == null || filmCardStrip == null || filmScroll == null) return;
         filmCols = landscapeMode ? 2 : 1;
         final android.view.ViewParent p = filmCardStrip.getParent();
@@ -7762,172 +7654,13 @@ public class MainActivity extends Activity implements
      * canvas colour at three opacities, so it is orange over the dark palette
      * and navy over the light one.
      */
-    private int[] topWash() {
+    int[] topWash() {
         final int rgb = UI_STAGE & 0x00FFFFFF;
         return new int[]{0xC9 << 24 | rgb, 0x66 << 24 | rgb, 0x00 << 24 | rgb};
     }
 
     /** Brand and export are painted over the photograph, not stacked above it. */
-    private void addCanvasChrome(android.widget.FrameLayout stage) {
-        LinearLayout top = new LinearLayout(this);
-        editorTopBar = top;
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(android.view.Gravity.TOP);
-        top.setPadding(dp(16), dp(12), dp(16), dp(8));
-        top.setBackground(new android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                topWash()));
-        top.setClickable(false);
-
-        LinearLayout brand = new LinearLayout(this);
-        brand.setOrientation(LinearLayout.VERTICAL);
-        brand.setPadding(0, dp(2), 0, 0);
-        LinearLayout wordRow = new LinearLayout(this);
-        wordRow.setOrientation(LinearLayout.HORIZONTAL);
-        wordRow.setGravity(android.view.Gravity.TOP);
-        // `UI_PAPER` is the panel colour: white on the light theme (correct on
-        // the navy canvas) and near-black on the dark one, where it vanished
-        // into the black. The wordmark is always the canvas's *contrast* colour.
-        TextView word = label("SpektraLab", 18, uiOnCanvas(), tfDisplay);
-        word.setLetterSpacing(-0.045f);
-        word.setSingleLine(true);
-        wordRow.addView(word);
-        // **The menu is a drawn glyph, not a text "≡".** Next to a real icon a
-        // font character reads as a mistake; Material's `menu` path is the
-        // designed 24 dp shape. It replaces the long-press on the wordmark,
-        // which nothing on screen advertised.
-        final android.widget.ImageView menuPill = new android.widget.ImageView(this);
-        menuPill.setImageResource(getResources().getIdentifier(
-                "ic_menu_white", "drawable", getPackageName()));
-        menuPill.setAlpha(0.85f);
-        menuPill.setPadding(dp(6), dp(6), dp(6), dp(6));
-        menuPill.setContentDescription(tr("editor.settings"));
-        menuPill.setOnClickListener(v -> showSettings());
-        // **Left of the wordmark, not between it and the version.** The menu
-        // belongs at the edge of the bar, where every other app puts it;
-        // between the name and its version number it reads as part of the name.
-        final LinearLayout.LayoutParams menuLp = new LinearLayout.LayoutParams(dp(30), dp(30));
-        menuLp.rightMargin = dp(10);
-        menuLp.topMargin = dp(1);
-        wordRow.addView(menuPill, 0, menuLp);
-        TextView version = label("v" + UpdateCheck.versionName(this), 6.5f, uiOnCanvas(), tfBody);
-        version.setAlpha(0.7f);
-        LinearLayout.LayoutParams versionLp = new LinearLayout.LayoutParams(-2, -2);
-        versionLp.leftMargin = dp(4);
-        versionLp.topMargin = 0;
-        wordRow.addView(version, versionLp);
-        brand.addView(wordRow);
-        top.addView(brand, new LinearLayout.LayoutParams(0, -2, 1f));
-
-        // **A drawn glyph, not a text arrow.** "↶" is whatever the device's font
-        // decides it is -- different weight, different curve, sometimes a tofu --
-        // and next to a real icon it reads as a mistake. Material's `undo` path
-        // is a designed 24 dp shape with predictable proportions.
-        undoPill = new android.widget.ImageView(this);
-        // No `R` class in this project -- resources are looked up by name.
-        undoPill.setImageResource(getResources().getIdentifier(
-                "ic_undo_white", "drawable", getPackageName()));
-        undoPill.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
-        undoPill.setPadding(dp(7), dp(4), dp(7), dp(4));
-        undoPill.setVisibility(View.GONE);
-        undoPill.setOnClickListener(v -> undoStep());
-        LinearLayout.LayoutParams undoLp = new LinearLayout.LayoutParams(-2, dp(32));
-        undoLp.rightMargin = dp(6);
-        top.addView(undoPill, undoLp);
-
-        sharePill = label(tr("editor.share"), 11, uiOnCanvas(), tfHan);
-        sharePill.setGravity(android.view.Gravity.CENTER);
-        sharePill.setShadowLayer(dp(3), 0, dp(1), 0xCC000000);
-        sharePill.setBackground(null);
-        sharePill.setPadding(dp(8), 0, dp(8), 0);
-        sharePill.setVisibility(View.GONE);
-        sharePill.setOnClickListener(v -> shareLastExport());
-        LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(-2, dp(32));
-        shareLp.rightMargin = dp(6);
-        top.addView(sharePill, shareLp);
-
-        // Material "file upload", for the same reason as the undo glyph: the
-        // tray-and-arrow I drew by hand had a thin stroke and a lopsided arrow.
-        final android.widget.ImageView export = new android.widget.ImageView(this);
-        export.setImageResource(getResources().getIdentifier(
-                "ic_export_white", "drawable", getPackageName()));
-        export.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
-        export.setOnClickListener(v -> showExportDialog());
-        top.addView(export, new LinearLayout.LayoutParams(dp(26), dp(26)));
-
-        stage.addView(top, new android.widget.FrameLayout.LayoutParams(-1, dp(64), android.view.Gravity.TOP));
-
-        // **The histogram lives on the photograph, not in a panel.** It is the
-        // one readout that is about *this* frame, so it sits where the frame is
-        // and updates with it; behind it a 30% wash keeps a bright sky from
-        // swallowing the traces.
-        // **Whether the histogram shows is a preference now.** It is the one
-        // readout that is about *this* frame, so it sits on the frame; but a
-        // plate over the top-left corner of a photograph is not always
-        // wanted, and the switch is in 光学 -> 亮度.
-        histogramOn = getSharedPreferences("ui", MODE_PRIVATE).getBoolean("histogram", true);
-        rotateGridOn = getSharedPreferences("ui", MODE_PRIVATE).getBoolean("rotate_grid", true);
-        rawAutoBright = getSharedPreferences("ui", MODE_PRIVATE)
-                .getBoolean("raw_auto_bright", false);
-        histogram = new HistogramView(this);
-        // The curve page draws the same bins as a backdrop; without this it
-        // would sit on the distribution from the last time *it* was laid out.
-        histogram.setOnChanged(() -> { if (curveView != null) curveView.invalidate(); });
-        final android.widget.FrameLayout.LayoutParams hlp =
-                new android.widget.FrameLayout.LayoutParams(dp(148), dp(54),
-                        android.view.Gravity.TOP | android.view.Gravity.START);
-        hlp.leftMargin = dp(14);
-        hlp.topMargin = dp(62);
-        stage.addView(histogram, hlp);
-        histogram.setVisibility(histogramOn ? View.VISIBLE : View.GONE);
-        // **Mirror of the histogram, on the right.** The pill says the frame has
-        // a clip and is the only control the feature needs: tap it (or rest a
-        // finger on the picture) and the clip plays, developed.
-        liveBadge = label("\u5b9e\u51b5", 7.5f, uiOnCanvas(), tfBold);
-        liveBadge.setLetterSpacing(0.10f);
-        liveBadge.setSingleLine(true);
-        liveBadge.setGravity(android.view.Gravity.CENTER);
-        liveBadge.setPadding(dp(10), dp(5), dp(10), dp(5));
-        final android.graphics.drawable.GradientDrawable badgeBg =
-                new android.graphics.drawable.GradientDrawable();
-        badgeBg.setColor(0xCC141414);
-        badgeBg.setCornerRadius(dp(3));
-        badgeBg.setStroke(Math.max(1, dp(1)), 0x59F6F3EA);
-        liveBadge.setBackground(badgeBg);
-        liveBadge.setContentDescription("\u5b9e\u51b5\u7167\u7247\uff1a\u70b9\u4e00\u4e0b\u770b\u52a8\u56fe");
-        liveBadge.setOnClickListener(v -> startLivePreview());
-        final android.widget.FrameLayout.LayoutParams blp =
-                new android.widget.FrameLayout.LayoutParams(-2, -2,
-                        android.view.Gravity.TOP | android.view.Gravity.END);
-        blp.rightMargin = dp(14);
-        blp.topMargin = dp(62);
-        stage.addView(liveBadge, blp);
-        liveBadge.setVisibility(android.view.View.GONE);
-        // **The same pill, one notch lower.** HDR 预览把画布换成半浮点副本（纸白
-        // 可以高过 SDR 白），画面上却没有一个字说这件事 —— 和实况一样，它得自己
-        // 说出来。点一下开档位表，和设置里那一行是同一个入口。
-        hdrBadge = label("HDR", 7.5f, uiOnCanvas(), tfBold);
-        hdrBadge.setLetterSpacing(0.10f);
-        hdrBadge.setSingleLine(true);
-        hdrBadge.setGravity(android.view.Gravity.CENTER);
-        hdrBadge.setPadding(dp(10), dp(5), dp(10), dp(5));
-        final android.graphics.drawable.GradientDrawable hdrBg =
-                new android.graphics.drawable.GradientDrawable();
-        hdrBg.setColor(0xCC141414);
-        hdrBg.setCornerRadius(dp(3));
-        hdrBg.setStroke(Math.max(1, dp(1)), 0x59F6F3EA);
-        hdrBadge.setBackground(hdrBg);
-        hdrBadge.setContentDescription(tr("ui170.086"));
-        hdrBadge.setOnClickListener(v -> showHdrSheet());
-        final android.widget.FrameLayout.LayoutParams hlp2 =
-                new android.widget.FrameLayout.LayoutParams(-2, -2,
-                        android.view.Gravity.TOP | android.view.Gravity.END);
-        hlp2.rightMargin = dp(14);
-        hlp2.topMargin = dp(90);
-        stage.addView(hdrBadge, hlp2);
-        hdrBadge.setVisibility(android.view.View.GONE);
-        if (lastRenderedBitmap != null) histogram.setBitmap(lastRenderedBitmap);
-    }
+    private void addCanvasChrome(android.widget.FrameLayout stage) { EditorChrome.addCanvasChrome(new EditorChromeHostImpl(this), stage); }
 
     /** File name and live state sit at the foot of the photograph. */
     private void addPreviewFooter(android.widget.FrameLayout stage) {
@@ -8541,7 +8274,7 @@ public class MainActivity extends Activity implements
      *  Before the first import it is not folded, it is absent -- the canvas's
      *  own 选择照片 button is the way in, and a 62 dp row of nothing above the
      *  panels is just a gap. */
-    private void updateShelfVisibility() {
+    void updateShelfVisibility() {
         if (sourceBar == null) return;
         final boolean show = !frames.isEmpty() && !shelfCollapsed;
         sourceBar.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -12533,7 +12266,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The tool bar's height -- and it is also `CONTROLS_CLOSED_DP`. */
-    private static final int TAB_BAR_DP = 58;
+    static final int TAB_BAR_DP = 58;
     /** The sub-page strip's height, immediately above it. */
     private static final int SUB_BAR_DP = 38;
 
@@ -12620,7 +12353,7 @@ public class MainActivity extends Activity implements
         return 0;
     }
 
-    private void refreshSubBar() {
+    void refreshSubBar() {
         if (subBar == null || subRowHost == null) return;
         final int kind = subKindNow();
         if (kind == 0) {
@@ -12740,7 +12473,7 @@ public class MainActivity extends Activity implements
      * up the tree is load-bearing: without it the source strip above kept its
      * old position and the panel slid under it.
      */
-    private void applyControlsHeight(boolean collapsed) {
+    void applyControlsHeight(boolean collapsed) {
         if (controls == null) return;
         // Landscape holds the column at match_parent; its height is not a knob.
         if (landscapeMode) return;
@@ -12755,7 +12488,7 @@ public class MainActivity extends Activity implements
     }
 
     /** The panel on screen right now, for the expand cascade to walk. */
-    private View currentPanel() {
+    View currentPanel() {
         if (activeTabIndex == 1 && fotuPanel != null && isFotuStock(filmStock)) return fotuPanel;
         if (activeTabIndex >= 0 && activeTabIndex < panels.length) return panels[activeTabIndex];
         return null;
@@ -12773,112 +12506,7 @@ public class MainActivity extends Activity implements
      * <p>Opening runs the same cascade a page arrival does, because from the
      * user's side this is the same event: rows of controls, one after another.
      */
-    private void setPanelCollapsed(boolean collapsed) {
-        // 横屏没有「收起」这回事：右栏是定高的，面板收起来也换不回画面。
-        if (landscapeMode) {
-            panelCollapsed = false;
-            if (panelHolder != null) {
-                panelHolder.setVisibility(View.VISIBLE);
-                panelHolder.setAlpha(1f);
-                panelHolder.setTranslationY(0f);
-            }
-            return;
-        }
-        // `controls` is what says the column is laid out at all. The holder's
-        // own height is 0 on the way *out* of a collapse, and that is exactly
-        // the case that still has a fold to show: 0 -> the panel's height.
-        final boolean animate = panelCollapsed != collapsed
-                && controls != null && controls.getHeight() > 0;
-        panelCollapsed = collapsed;
-        // **The strip cannot survive a fold.** `controls` is pinned to the bar's
-        // own height while collapsed, so a strip left on screen would push the
-        // bar itself out of the column.
-        if (collapsed && subBar != null) {
-            cancelHeight(subBar);
-            subBar.animate().cancel();
-            subBar.setAlpha(1f);
-            subBar.setVisibility(View.GONE);
-            final android.view.ViewGroup.LayoutParams sl = subBar.getLayoutParams();
-            sl.height = -2;
-            subBar.setLayoutParams(sl);
-        }
-        if (panelHolder == null) { applyControlsHeight(collapsed); return; }
-        cancelHeight(panelHolder);
-        panelHolder.animate().cancel();
-        if (!animate) {
-            panelHolder.setVisibility(collapsed ? View.GONE : View.VISIBLE);
-            panelHolder.setAlpha(1f);
-            panelHolder.setTranslationY(0f);
-            final android.view.ViewGroup.LayoutParams hl = panelHolder.getLayoutParams();
-            hl.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
-            panelHolder.setLayoutParams(hl);
-            applyControlsHeight(collapsed);
-            return;
-        }
-        // The state this transition is heading for; the completion callback
-        // refuses to run if a later tap has already changed its mind.
-        final int wanted = collapsed ? 1 : 0;
-        if (collapsed) {
-            // **Only on the way down.** This used to sit above the `!animate`
-            // early return, so it ran on every `setPanelCollapsed(false)` as
-            // well -- and `onTabClicked` calls exactly that one line after
-            // `setTab(index)`, which cancelled the run `setTab` had just
-            // started. That was tr("ui170.265").
-            cancelLine(null);
-            // The rows sink and fade while the space closes: folding a fully
-            // opaque panel would cut its top rows off one by one, which reads
-            // as a window being dragged over them rather than a panel leaving.
-            panelHolder.animate().alpha(0f).translationY(dp(24))
-                    .setDuration(MS_OUT + 40)
-                    .setInterpolator(EASE_OUT)
-                    .start();
-            animateHeightTo(panelHolder, panelHolder.getHeight(), 0, 0, () -> {
-                if ((panelCollapsed ? 1 : 0) != wanted) return;
-                panelHolder.setVisibility(View.GONE);
-                panelHolder.setAlpha(1f);
-                panelHolder.setTranslationY(0f);
-                final android.view.ViewGroup.LayoutParams hl = panelHolder.getLayoutParams();
-                hl.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
-                panelHolder.setLayoutParams(hl);
-                applyControlsHeight(true);
-            });
-        } else {
-            // **Only if the fold took it.** `onTabClicked` calls `setTab` and
-            // then this, and the tab has already put the right strip up with its
-            // own height travel -- re-deciding it here cancelled that travel and
-            // snapped 46 dp into the canvas in one frame.
-            if (subBar != null && subBar.getVisibility() != View.VISIBLE) refreshSubBar();
-            // Hand `controls` back to the layout *before* the holder has any
-            // height, so nothing is clipped on the way up.
-            applyControlsHeight(false);
-            panelHolder.setVisibility(View.VISIBLE);
-            // **The holder itself is not faded in.** Its children each cascade
-            // from alpha 0 already; fading the container as well would square
-            // the two curves and leave every row almost invisible for the first
-            // fifth of a second -- the cascade would be there and unseen.
-            panelHolder.setAlpha(1f);
-            panelHolder.setTranslationY(0f);
-            final android.view.ViewGroup.LayoutParams hl = panelHolder.getLayoutParams();
-            hl.height = 0;
-            panelHolder.setLayoutParams(hl);
-            final View shown = currentPanel();
-            final int w = controls != null ? controls.getWidth() : 0;
-            final int inner = panelHolder.getWidth()
-                    - panelHolder.getPaddingLeft() - panelHolder.getPaddingRight();
-            final int to = w > 0 ? naturalHeight(panelHolder, w) : 0;
-            // The components animate themselves again on the way up.
-            if (shown != null) componentArrival(shown);
-            if (to <= 0) {
-                // Never laid out: no fold to show, just be there.
-                hl.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
-                panelHolder.setLayoutParams(hl);
-                panelHolder.setAlpha(1f);
-                return;
-            }
-            animateHeightTo(panelHolder, 0, to,
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, null);
-        }
-    }
+    private void setPanelCollapsed(boolean collapsed) { EditorChrome.setPanelCollapsed(new EditorChromeHostImpl(this), collapsed); }
 
     // ---------------------------------------------------------------- presets
     // A preset is one Look, the same JSON the session already stores per frame.
@@ -15121,7 +14749,7 @@ public class MainActivity extends Activity implements
     /** The old four-step ribbon is gone; the render state is in the canvas foot. */
     void setStep(int active) { }
 
-    private void setTab(int active) {
+    void setTab(int active) {
         // **Two pages exist in both engines, and 构图 is the third.** Scale,
         // optics and border are the SpektraLab model (a session, a gate, a
         // rebate); fotufilm has none of them, and a page of controls that
@@ -15619,7 +15247,7 @@ public class MainActivity extends Activity implements
      * appears in it -- while an ACTION_SEND carrying "image/tiff" reaches it
      * fine. Same class of problem Adobe documents for CR3 on Android.
      */
-    private void shareLastExport() {
+    void shareLastExport() {
         if (lastExportUri == null) {
             showInAppToast(tr("file.no_files_have_been_exported"));
             return;
@@ -17622,7 +17250,7 @@ public class MainActivity extends Activity implements
      * which is why the button hides once `size() <= 1` -- there is nothing
      * before the import to go back to.
      */
-    private void undoStep() {
+    void undoStep() {
         undoHandler.removeCallbacks(undoPush);
         if (undoStack.size() <= 1) {
             showInAppToast(tr("render.restored_the_initial_edits"));
@@ -20702,7 +20330,7 @@ public class MainActivity extends Activity implements
      * first, at {@link #LIVE_PREVIEW_EDGE}, and thrown away whenever the look
      * moves -- `lastLookHash` is the whole test.
      */
-    private void startLivePreview() {
+    void startLivePreview() {
         final String clip = liveClipForCurrentFrame();
         if (clip == null) return;
         if (livePreviewPlaying) { stopLivePreview(); return; }
