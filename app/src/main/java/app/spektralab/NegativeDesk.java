@@ -48,7 +48,7 @@ import android.view.View;
  * <p>安全区：上面让给顶栏，下面让给照片栏 + 控制台（`setSafeInsets`）。新放上去
  * 的照片、整理出来的网格、双击放大，都落在安全区里，不会压在按钮底下。
  */
-final class NegativeDesk extends View {
+public final class NegativeDesk extends View {
 
     interface OnLightToggle { void onLight(boolean lit); }
     interface OnLit { void onLit(float t); }
@@ -2549,7 +2549,7 @@ final class NegativeDesk extends View {
     }
 
     /** `cubic-bezier(0.22, 1, 0.36, 1)`：拾片上台与这一页所有的补间同一条。 */
-    static float ease(float u) {
+    public static float ease(float u) {
         if (u <= 0f) return 0f;
         if (u >= 1f) return 1f;
         float t = u;
